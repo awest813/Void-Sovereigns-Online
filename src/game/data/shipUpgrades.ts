@@ -61,7 +61,7 @@ export const SHIP_UPGRADES: Record<string, ShipUpgradeDef> = {
         seller: 'jasso',
         statBonus: { cargoCapacity: 4 },
         relayContribution: false,
-        installNote: 'Nera hands you the assembly key. "Install it yourself. Instructions are on the side."',
+        installNote: 'Jasso slides a second crate across the counter. "Rack installs in the port bay. You\'ll figure it out."',
         tags: ['cargo', 'hauling', 'tier-1'],
     },
     'nav-computer': {

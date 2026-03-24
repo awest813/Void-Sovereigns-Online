@@ -756,7 +756,6 @@ export class HubScene extends Scene {
         const sellerNames: Record<string, string> = {
             'ilya-sorn':  'Ilya Sorn',
             'oziel-kaur': 'Oziel Kaur',
-            'nera-quill':  'Nera Quill',
             'jasso':       'Jasso',
         };
 
