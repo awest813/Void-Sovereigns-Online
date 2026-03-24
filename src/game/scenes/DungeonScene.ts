@@ -7,6 +7,7 @@ import { DUNGEON_REGISTRY as _DUNGEON_REGISTRY, DungeonDef, Room, loadDungeon } 
 import { starterContracts } from '../../../content/contracts/starter-contracts';
 import { phase2Contracts } from '../../../content/contracts/phase2-contracts';
 import { phase3Contracts } from '../../../content/contracts/phase3-contracts';
+import { phase4Contracts } from '../../../content/contracts/phase4-contracts';
 import { T } from '../ui/UITheme';
 import { DebugPanel } from '../ui/DebugPanel';
 
@@ -23,7 +24,7 @@ const C = {
 };
 
 // All contracts from all phases — used for ID→title lookups in completion screen.
-const ALL_CONTRACTS = [...starterContracts, ...phase2Contracts, ...phase3Contracts];
+const ALL_CONTRACTS = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts];
 
 // ── DungeonScene ────────────────────────────────────────────────────────────
 type DungeonPhase =
@@ -202,14 +203,17 @@ export class DungeonScene extends Scene {
         this.phase = 'intro';
         this.clearContent();
         const def = this.dungeonDef!;
+        const isRedlineRun = GameState.get().activeRunIsRedline;
 
         // Panel
         this.contentContainer.add(
-            this.add.rectangle(512, 330, 900, 380, C.panelBg).setStrokeStyle(1, C.border),
+            this.add.rectangle(512, 330, 900, 380, isRedlineRun ? 0x0f0005 : C.panelBg)
+                .setStrokeStyle(1, isRedlineRun ? 0xaa2222 : C.border),
         );
 
-        this.addContentText(512, 150, def.name.toUpperCase(), {
-            fontFamily: 'Arial Black', fontSize: 28, color: C.textWarn,
+        const titleColor = isRedlineRun ? '#ff6644' : C.textWarn;
+        this.addContentText(512, 150, (isRedlineRun ? '⚠ REDLINE — ' : '') + def.name.toUpperCase(), {
+            fontFamily: 'Arial Black', fontSize: 28, color: titleColor,
             stroke: '#000000', strokeThickness: 4, align: 'center',
         }).setOrigin(0.5);
 
@@ -229,7 +233,13 @@ export class DungeonScene extends Scene {
             }).setOrigin(0.5);
         }
 
-        this.addActionButton(350, 520, '[ ENTER SITE ]', () => this.enterRoom(0), C.textWarn);
+        if (isRedlineRun) {
+            this.addContentText(512, 452, '⚠ REDLINE RUN — Equipment loss on death. Extract alive.', {
+                fontFamily: 'Arial Black', fontSize: 13, color: '#ff3333', align: 'center',
+            }).setOrigin(0.5);
+        }
+
+        this.addActionButton(350, 520, '[ ENTER SITE ]', () => this.enterRoom(0), isRedlineRun ? '#ff4422' : C.textWarn);
         this.addActionButton(690, 520, '[ ABORT — RETURN ]', () => this.scene.start('SectorMap'), C.textSecond);
     }
 

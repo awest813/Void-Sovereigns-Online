@@ -50,6 +50,8 @@ interface State {
     lastRunSuccess: boolean;
     lastDungeonId: string | null;
     pendingDungeon: string | null;
+    /** Whether the active dungeon run is a Redline contract. */
+    activeRunIsRedline: boolean;
 }
 
 const state: State = {
@@ -82,6 +84,11 @@ const state: State = {
         'interstellar-commonwealth-authority': 0,
         'void-covenant': 0,
         'free-transit-compact': 0,
+        // Phase 4 factions
+        'frontier-compact': 0,
+        'sol-union-directorate': 0,
+        'aegis-division': 0,
+        'vanta-corsairs': 0,
     },
     flags: {},
     returnFromDungeon: false,
@@ -91,6 +98,7 @@ const state: State = {
     lastRunSuccess: false,
     lastDungeonId: null,
     pendingDungeon: null,
+    activeRunIsRedline: false,
 };
 
 function clampMin(n: number, min = 0): number {
@@ -247,6 +255,38 @@ export const GameState = {
         state.reputation[faction] = (state.reputation[faction] ?? 0) + amount;
     },
 
+    /** Returns the numeric reputation for a faction (0 if not tracked). */
+    getReputation(faction: string): number {
+        return state.reputation[faction] ?? 0;
+    },
+
+    /** Returns a short standing label for the given numeric reputation value. */
+    getReputationLabel(rep: number): string {
+        if (rep >= 150) return 'Honored';
+        if (rep >= 100) return 'Allied';
+        if (rep >= 50)  return 'Trusted';
+        if (rep >= 20)  return 'Friendly';
+        if (rep >= 0)   return 'Neutral';
+        if (rep >= -50) return 'Cold';
+        return 'Hostile';
+    },
+
+    /** Returns a color hex string for the given reputation label. */
+    getReputationColor(rep: number): string {
+        if (rep >= 150) return '#ffdd44';
+        if (rep >= 100) return '#44ff88';
+        if (rep >= 50)  return '#44ddff';
+        if (rep >= 20)  return '#88ccff';
+        if (rep >= 0)   return '#aaaaaa';
+        if (rep >= -50) return '#ff8844';
+        return '#ff4444';
+    },
+
+    /** Returns true if the player meets a faction reputation requirement. */
+    meetsReputationRequirement(factionId: string, minRep: number): boolean {
+        return GameState.getReputation(factionId) >= minRep;
+    },
+
     // ── Flags ──────────────────────────────────────────────────────────────
     setFlag(key: string, value: boolean) {
         state.flags[key] = value;
@@ -256,8 +296,9 @@ export const GameState = {
     },
 
     // ── Dungeon return ─────────────────────────────────────────────────────
-    launchDungeon(dungeonId: string) {
+    launchDungeon(dungeonId: string, isRedline = false) {
         state.pendingDungeon = dungeonId;
+        state.activeRunIsRedline = isRedline;
         GameState.damageShip(2); // fuel burn to reach site
     },
     setReturnFromDungeon(
@@ -287,5 +328,6 @@ export const GameState = {
         state.lastRunCredits = 0;
         state.lastRunXp = 0;
         state.lastRunSuccess = false;
+        state.activeRunIsRedline = false;
     },
 };

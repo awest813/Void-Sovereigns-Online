@@ -34,4 +34,12 @@ export interface Contract {
     objectives: string[];
     reward: ContractReward;
     tags: string[];
+    /** Primary faction ID associated with this contract. */
+    factionId?: string;
+    /** If true, this is a high-risk Redline Run. Gear loss may occur on failure. */
+    isRedline?: boolean;
+    /** Warning text shown to the player before accepting a Redline contract. */
+    redlineWarning?: string;
+    /** Minimum faction reputation required to accept this contract. */
+    reputationRequirement?: { factionId: string; minRep: number };
 }

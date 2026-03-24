@@ -4,7 +4,10 @@ import { GameState } from '../state/GameState';
 import { starterContracts } from '../../../content/contracts/starter-contracts';
 import { phase2Contracts } from '../../../content/contracts/phase2-contracts';
 import { phase3Contracts } from '../../../content/contracts/phase3-contracts';
+import { phase4Contracts } from '../../../content/contracts/phase4-contracts';
 import { meridianNPCs } from '../../../content/npcs/meridian-npcs';
+import { phase4NPCs } from '../../../content/npcs/phase4-npcs';
+import { factions } from '../../../content/factions/factions';
 import { SHIP_UPGRADES, HAULER_PURCHASE_COST } from '../data/shipUpgrades';
 import { ITEMS } from '../data/items';
 import { T } from '../ui/UITheme';
@@ -13,7 +16,7 @@ import { DebugPanel } from '../ui/DebugPanel';
 // Scene colour aliases — sourced from shared UITheme.
 const C = T;
 
-// All contracts shown on the Phase 3 board (Phase 1 + Phase 2 + Phase 3)
+// All contracts shown on the Phase 4 board (Phase 1 + Phase 2 + Phase 3 + Phase 4)
 const BOARD_CONTRACT_IDS = [
     // Phase 1
     'scrap-recovery-shalehook',
@@ -38,6 +41,17 @@ const BOARD_CONTRACT_IDS = [
     'farpoint-salvage-extraction',
     'anomaly-trace-farpoint',
     'relay-ghost-telemetry',
+    // Phase 4 — post-relay frontier (only shown after relay-jump-completed flag)
+    'frontier-supply-run-kalindra',
+    'frontier-route-survey-kalindra',
+    'frontier-salvage-certification',
+    'sol-union-compliance-check',
+    'sol-union-sector-enforcement',
+    'aegis-sealed-site-recovery',
+    'aegis-missing-team-kalindra',
+    'aegis-anomaly-trace-orin',
+    'vanta-off-book-salvage',
+    'redline-kalindra-core',
 ];
 
 // Contract IDs that require relay jump to be visible on the board
@@ -46,9 +60,20 @@ const POST_RELAY_CONTRACT_IDS = new Set([
     'farpoint-salvage-extraction',
     'anomaly-trace-farpoint',
     'relay-ghost-telemetry',
+    // Phase 4
+    'frontier-supply-run-kalindra',
+    'frontier-route-survey-kalindra',
+    'frontier-salvage-certification',
+    'sol-union-compliance-check',
+    'sol-union-sector-enforcement',
+    'aegis-sealed-site-recovery',
+    'aegis-missing-team-kalindra',
+    'aegis-anomaly-trace-orin',
+    'vanta-off-book-salvage',
+    'redline-kalindra-core',
 ]);
 
-// Phase 1 + Phase 2 + Phase 3 NPCs shown in hub contacts
+// NPCs shown in the main Station Contacts panel (Meridian locals)
 const HUB_NPC_IDS = [
     'tamsin-vale',
     'rook-mendera',
@@ -62,6 +87,14 @@ const HUB_NPC_IDS = [
     'ica-agent-vorren',
     'void-covenant-kestrel',
     'farpoint-kael',
+];
+
+// Phase 4 faction contact NPC IDs shown in the Faction Standings panel
+const FACTION_NPC_IDS = [
+    'frontier-agent-leva',
+    'commander-dresh',
+    'operative-sable',
+    'crow-veslin',
 ];
 
 // ── HubScene ────────────────────────────────────────────────────────────────
@@ -98,6 +131,7 @@ export class HubScene extends Scene {
         this.buildServicesPanel();
         this.buildShipStatusPanel();
         this.buildShipyardPanel();
+        this.buildFactionsPanel();
 
         if (gs.returnFromDungeon) {
             this.buildDebriefPanel();
@@ -330,6 +364,7 @@ export class HubScene extends Scene {
             { label: '[ SERVICES ]',       badge: '',             badgeColor: C.textSecond,       sub: 'Repair, fuel, sell salvage',         target: 'services' },
             { label: '[ SECTOR MAP ]',     badge: '',             badgeColor: C.textSecond,       sub: 'Launch to Ashwake Belt',             target: 'sectormap' },
             { label: '[ STATION CONTACTS ]', badge: '',           badgeColor: C.textSecond,       sub: 'Talk to the locals',                 target: 'npcs' },
+            { label: '[ FACTION STANDINGS ]', badge: '',          badgeColor: C.textSecond,       sub: 'Reputation + faction contacts',      target: 'factions' },
             { label: '[ SHIP STATUS ]',    badge: '',             badgeColor: C.textSecond,       sub: 'Current ship + relay goal',          target: 'shipstatus' },
             { label: '[ SHIPYARD ]',       badge: '',             badgeColor: C.textSecond,       sub: 'Upgrades from Ilya, Oziel & Jasso',  target: 'shipyard' },
         ];
@@ -400,7 +435,7 @@ export class HubScene extends Scene {
         c.removeAll(true);
         this.panelHeader(c, 'CONTRACT BOARD', 'Meridian Station — Tamsin Vale, Dispatcher');
 
-        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts];
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts];
         const relayJumped = GameState.getFlag('relay-jump-completed');
         const contracts = allContracts.filter(ct =>
             BOARD_CONTRACT_IDS.includes(ct.id) &&
@@ -418,7 +453,20 @@ export class HubScene extends Scene {
             investigation: '#bb88ff',
             station: C.textSuccess,
             survey: '#88ddff',
-            extraction: C.textSecond,
+            extraction: '#ff6644',
+        };
+
+        // Faction short-name map for contract labels
+        const factionShortNames: Record<string, string> = {
+            'meridian-dock-authority': 'MDA',
+            'ashwake-extraction-guild': 'Guild',
+            'void-covenant': 'Covenant',
+            'free-transit-compact': 'Transit',
+            'interstellar-commonwealth-authority': 'ICA',
+            'frontier-compact': 'Compact',
+            'sol-union-directorate': 'Sol Union',
+            'aegis-division': 'Aegis',
+            'vanta-corsairs': 'Vanta',
         };
 
         contracts.forEach((ct, i) => {
@@ -426,44 +474,82 @@ export class HubScene extends Scene {
             const isAccepted = GameState.isContractAccepted(ct.id);
             const isCompleted = GameState.isContractCompleted(ct.id);
 
-            c.add(this.add.rectangle(492, y + 34, 860, rowH - 8, C.panelBg).setStrokeStyle(1, C.border));
+            // Check reputation requirement
+            const repReq = ct.reputationRequirement;
+            const repLocked = repReq
+                ? !GameState.meetsReputationRequirement(repReq.factionId, repReq.minRep)
+                : false;
+            const isRedline = !!ct.isRedline;
+
+            const rowBg = isRedline ? 0x1a0505 : C.panelBg;
+            const rowBorder = isRedline ? 0x882222 : C.border;
+            c.add(this.add.rectangle(492, y + 34, 860, rowH - 8, rowBg).setStrokeStyle(1, rowBorder));
 
             // Tier badge
-            const tierColor = ct.tier === 1 ? C.textSuccess : C.textWarn;
+            const tierColor = ct.tier <= 2 ? C.textSuccess : ct.tier === 3 ? C.textWarn : C.textDanger;
             c.add(this.add.text(78, y + 8, `T${ct.tier}`, {
                 fontFamily: 'Arial Black', fontSize: 13, color: tierColor,
             }).setOrigin(0.5));
 
-            // Category
+            // Category + REDLINE badge
             const catLabel = ct.category.toUpperCase();
             const catColor = catColors[ct.category] ?? C.textSecond;
-            c.add(this.add.text(78, y + 28, catLabel, {
-                fontFamily: 'Arial', fontSize: 10, color: catColor,
-            }).setOrigin(0.5));
+            if (isRedline) {
+                c.add(this.add.text(78, y + 28, '⚠ REDLINE', {
+                    fontFamily: 'Arial Black', fontSize: 10, color: '#ff3333',
+                }).setOrigin(0.5));
+            } else {
+                c.add(this.add.text(78, y + 28, catLabel, {
+                    fontFamily: 'Arial', fontSize: 10, color: catColor,
+                }).setOrigin(0.5));
+            }
 
-            // Title
+            // Faction tag
+            if (ct.factionId) {
+                const fShort = factionShortNames[ct.factionId] ?? ct.factionId;
+                c.add(this.add.text(78, y + 46, `[${fShort}]`, {
+                    fontFamily: 'Arial', fontSize: 9, color: '#6688aa',
+                }).setOrigin(0.5));
+            }
+
+            // Title (dimmed if rep-locked)
+            const titleColor = repLocked ? '#555566' : (isRedline ? '#ff8866' : C.textPrimary);
             c.add(this.add.text(140, y + 6, ct.title, {
-                fontFamily: 'Arial Black', fontSize: 13, color: C.textPrimary,
+                fontFamily: 'Arial Black', fontSize: 13, color: titleColor,
             }));
 
-            // Description (truncated)
-            const desc = ct.description.length > 110 ? ct.description.slice(0, 107) + '…' : ct.description;
-            c.add(this.add.text(140, y + 26, desc, {
-                fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
-                wordWrap: { width: 560 },
-            }));
+            // Description (truncated) or rep-lock notice
+            if (repLocked && repReq) {
+                const fShort = factionShortNames[repReq.factionId] ?? repReq.factionId;
+                const playerRep = GameState.getReputation(repReq.factionId);
+                c.add(this.add.text(140, y + 26, `REQUIRES ${fShort} reputation ${repReq.minRep} (current: ${playerRep})`, {
+                    fontFamily: 'Arial', fontSize: 11, color: '#665544',
+                    wordWrap: { width: 560 },
+                }));
+            } else {
+                const desc = ct.description.length > 110 ? ct.description.slice(0, 107) + '…' : ct.description;
+                c.add(this.add.text(140, y + 26, desc, {
+                    fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
+                    wordWrap: { width: 560 },
+                }));
+            }
 
             // Reward
             const rewardParts = [`${ct.reward.credits}c`, `${ct.reward.xp} XP`];
             if (ct.reward.itemRewards && ct.reward.itemRewards.length > 0) {
                 rewardParts.push(`+item`);
             }
+            const rewardColor = isRedline ? '#ffaa44' : C.textWarn;
             c.add(this.add.text(140, y + 60, `REWARD: ${rewardParts.join('  ·  ')}`, {
-                fontFamily: 'Arial', fontSize: 11, color: C.textWarn,
+                fontFamily: 'Arial', fontSize: 11, color: rewardColor,
             }));
 
             // State button
-            if (isCompleted) {
+            if (repLocked) {
+                c.add(this.add.text(870, y + 34, '[ REP REQUIRED ]', {
+                    fontFamily: 'Arial', fontSize: 11, color: '#665544',
+                }).setOrigin(1, 0.5));
+            } else if (isCompleted) {
                 const turnInBtn = this.add.text(870, y + 34, '[ TURN IN ]', {
                     fontFamily: 'Arial Black', fontSize: 13, color: C.textSuccess,
                 }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
@@ -498,22 +584,82 @@ export class HubScene extends Scene {
                     fontFamily: 'Arial', fontSize: 12, color: C.textAccent,
                 }).setOrigin(1, 0.5));
             } else {
-                const acceptBtn = this.add.text(870, y + 34, '[ ACCEPT ]', {
-                    fontFamily: 'Arial Black', fontSize: 13, color: C.btnNormal,
+                const acceptLabel = isRedline ? '[ ACCEPT REDLINE ]' : '[ ACCEPT ]';
+                const acceptColor = isRedline ? '#ff4422' : C.btnNormal;
+                const acceptBtn = this.add.text(870, y + 34, acceptLabel, {
+                    fontFamily: 'Arial Black', fontSize: 13, color: acceptColor,
                 }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
                 acceptBtn.on('pointerover', () => acceptBtn.setColor(C.btnHover));
-                acceptBtn.on('pointerout', () => acceptBtn.setColor(C.btnNormal));
+                acceptBtn.on('pointerout', () => acceptBtn.setColor(acceptColor));
                 acceptBtn.on('pointerdown', () => {
-                    GameState.acceptContract(ct.id);
-                    this.buildContractPanel();
-                    this.showPanel('contracts');
-                    this.showToast(`Contract accepted: ${ct.title}`, C.textAccent);
+                    if (isRedline) {
+                        this.showRedlineWarning(ct.id, ct.title, ct.redlineWarning ?? '');
+                    } else {
+                        GameState.acceptContract(ct.id);
+                        this.buildContractPanel();
+                        this.showPanel('contracts');
+                        this.showToast(`Contract accepted: ${ct.title}`, C.textAccent);
+                    }
                 });
                 c.add(acceptBtn);
             }
         });
 
         this.makeButton(c, 512, 700, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
+    }
+
+    /** Show a Redline contract acceptance confirmation dialog. */
+    private showRedlineWarning(contractId: string, contractTitle: string, warningText: string) {
+        const existing = this.panels.get('redline-warn');
+        if (existing) existing.destroy();
+
+        const c = this.add.container(0, 0);
+        this.panels.set('redline-warn', c);
+
+        c.add(this.add.rectangle(512, 384, 840, 420, 0x0f0005).setStrokeStyle(2, 0xaa2222));
+        c.add(this.add.text(512, 210, '⚠  REDLINE CONTRACT', {
+            fontFamily: 'Arial Black', fontSize: 22, color: '#ff3333', align: 'center',
+        }).setOrigin(0.5));
+        c.add(this.add.text(512, 246, contractTitle, {
+            fontFamily: 'Arial', fontSize: 14, color: '#ff8866', align: 'center',
+        }).setOrigin(0.5));
+        c.add(this.add.rectangle(512, 270, 780, 1, 0x882222));
+
+        const warnText = warningText.length > 0 ? warningText
+            : 'If you are killed during this run, most equipped field gear will not be recovered. Accept with full knowledge of the risk.';
+        c.add(this.add.text(512, 380, warnText, {
+            fontFamily: 'Arial', fontSize: 12, color: '#cc8866', align: 'center',
+            wordWrap: { width: 740 },
+        }).setOrigin(0.5));
+
+        const acceptBtn = this.add.text(380, 540, '[ ACCEPT REDLINE CONTRACT ]', {
+            fontFamily: 'Arial Black', fontSize: 14, color: '#ff3333', align: 'center',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        acceptBtn.on('pointerover', () => acceptBtn.setColor('#ffffff'));
+        acceptBtn.on('pointerout', () => acceptBtn.setColor('#ff3333'));
+        acceptBtn.on('pointerdown', () => {
+            GameState.acceptContract(contractId);
+            c.destroy();
+            this.panels.delete('redline-warn');
+            this.buildContractPanel();
+            this.showPanel('contracts');
+            this.showToast(`REDLINE CONTRACT ACCEPTED: ${contractTitle}`, '#ff6644');
+        });
+        c.add(acceptBtn);
+
+        const cancelBtn = this.add.text(650, 540, '[ CANCEL ]', {
+            fontFamily: 'Arial Black', fontSize: 14, color: C.textSecond, align: 'center',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        cancelBtn.on('pointerover', () => cancelBtn.setColor(C.btnHover));
+        cancelBtn.on('pointerout', () => cancelBtn.setColor(C.textSecond));
+        cancelBtn.on('pointerdown', () => {
+            c.destroy();
+            this.panels.delete('redline-warn');
+            this.showPanel('contracts');
+        });
+        c.add(cancelBtn);
+
+        this.showPanel('redline-warn');
     }
 
     // ── NPC list panel ────────────────────────────────────────────────────
@@ -1052,6 +1198,193 @@ export class HubScene extends Scene {
         this.showPanel('install-note');
     }
 
+    // ── Faction Standings panel ───────────────────────────────────────────
+    private buildFactionsPanel() {
+        const c = this.add.container(0, 0);
+        this.panels.set('factions', c);
+        this.populateFactionsPanel(c);
+    }
+
+    private populateFactionsPanel(c: Phaser.GameObjects.Container) {
+        c.removeAll(true);
+        this.panelHeader(c, 'FACTION STANDINGS', 'Your reputation across the frontier');
+
+        const allNPCs = [...meridianNPCs, ...phase4NPCs];
+
+        // Show all tracked factions in two columns
+        const trackedFactionIds = Object.keys(GameState.get().reputation);
+        const displayFactions = factions.filter(f => trackedFactionIds.includes(f.id));
+
+        const colW = 480;
+        const rowH = 72;
+        const startY = 148;
+
+        displayFactions.forEach((faction, i) => {
+            const col = i % 2;
+            const row = Math.floor(i / 2);
+            const x = 80 + col * colW;
+            const y = startY + row * rowH;
+
+            const rep = GameState.getReputation(faction.id);
+            const label = GameState.getReputationLabel(rep);
+            const repColor = GameState.getReputationColor(rep);
+            const repPct = Math.max(0, Math.min(1, (rep + 50) / 250));
+
+            c.add(this.add.rectangle(x + colW / 2 - 40, y + 26, colW - 30, rowH - 10, C.panelBg).setStrokeStyle(1, C.border));
+
+            // Faction name
+            c.add(this.add.text(x, y + 6, faction.shortName ?? faction.name, {
+                fontFamily: 'Arial Black', fontSize: 13, color: repColor,
+            }));
+            c.add(this.add.text(x, y + 24, faction.name, {
+                fontFamily: 'Arial', fontSize: 10, color: C.textSecond,
+            }));
+
+            // Standing label
+            c.add(this.add.text(x + colW - 90, y + 6, label, {
+                fontFamily: 'Arial Black', fontSize: 12, color: repColor, align: 'right',
+            }).setOrigin(1, 0));
+            c.add(this.add.text(x + colW - 90, y + 22, `${rep > 0 ? '+' : ''}${rep}`, {
+                fontFamily: 'Arial', fontSize: 11, color: repColor, align: 'right',
+            }).setOrigin(1, 0));
+
+            // Rep bar
+            this.drawBar(c, x + 100, y + 44, 180, 6, repPct, parseInt(repColor.replace('#', '0x'), 16), 0x111122, true);
+
+            // Contact NPC button (if available and relay jumped for Phase 4 NPCs)
+            const factionNPC = allNPCs.find(n => n.faction === faction.id && FACTION_NPC_IDS.includes(n.id));
+            const relayJumped = GameState.getFlag('relay-jump-completed');
+            if (factionNPC && relayJumped) {
+                const contactBtn = this.add.text(x + colW - 90, y + 40, '[ CONTACT ]', {
+                    fontFamily: 'Arial', fontSize: 11, color: C.btnNormal, align: 'right',
+                }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+                contactBtn.on('pointerover', () => contactBtn.setColor(C.btnHover));
+                contactBtn.on('pointerout', () => contactBtn.setColor(C.btnNormal));
+                contactBtn.on('pointerdown', () => this.showFactionNpcDialogue(factionNPC.id));
+                c.add(contactBtn);
+            }
+        });
+
+        // Phase 4 contacts section header (only post-relay)
+        const relayJumped = GameState.getFlag('relay-jump-completed');
+        if (relayJumped) {
+            const sectionY = startY + Math.ceil(displayFactions.length / 2) * rowH + 16;
+            c.add(this.add.text(80, sectionY, 'FRONTIER CONTACTS', {
+                fontFamily: 'Arial Black', fontSize: 14, color: C.textWarn,
+            }));
+            c.add(this.add.text(80, sectionY + 18, 'New operators encountered in the post-relay frontier', {
+                fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
+            }));
+
+            const contactNPCs = phase4NPCs;
+            const npcColW = 220;
+            contactNPCs.forEach((npc, i) => {
+                const cx = 80 + i * npcColW;
+                const cy = sectionY + 50;
+                c.add(this.add.rectangle(cx + 100, cy + 38, 200, 70, C.panelBg).setStrokeStyle(1, C.border));
+                c.add(this.add.text(cx + 100, cy + 12, npc.name, {
+                    fontFamily: 'Arial Black', fontSize: 11, color: C.textPrimary, align: 'center',
+                }).setOrigin(0.5));
+
+                const factionOfNPC = factions.find(f => f.id === npc.faction);
+                const fRep = npc.faction ? GameState.getReputation(npc.faction) : 0;
+                const fRepColor = npc.faction ? GameState.getReputationColor(fRep) : C.textSecond;
+                c.add(this.add.text(cx + 100, cy + 28, factionOfNPC?.shortName ?? npc.faction ?? '', {
+                    fontFamily: 'Arial', fontSize: 10, color: fRepColor, align: 'center',
+                }).setOrigin(0.5));
+
+                const talkBtn = this.add.text(cx + 100, cy + 56, '[ TALK ]', {
+                    fontFamily: 'Arial Black', fontSize: 12, color: C.btnNormal, align: 'center',
+                }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+                talkBtn.on('pointerover', () => talkBtn.setColor(C.btnHover));
+                talkBtn.on('pointerout', () => talkBtn.setColor(C.btnNormal));
+                talkBtn.on('pointerdown', () => this.showFactionNpcDialogue(npc.id));
+                c.add(talkBtn);
+            });
+        } else {
+            const sectionY = startY + Math.ceil(displayFactions.length / 2) * rowH + 16;
+            c.add(this.add.text(512, sectionY, '▶ Reach the Void Relay to access frontier faction contacts', {
+                fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+            }).setOrigin(0.5));
+        }
+
+        this.makeButton(c, 512, 700, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
+    }
+
+    private showFactionNpcDialogue(npcId: string) {
+        const allNPCs = [...meridianNPCs, ...phase4NPCs];
+        const npc = allNPCs.find(n => n.id === npcId);
+        if (!npc) return;
+
+        // Tear down any previous wheel handler before rebuilding the panel.
+        if (this._npcScrollHandler) {
+            this.input.off('wheel', this._npcScrollHandler);
+            this._npcScrollHandler = null;
+        }
+
+        const existing = this.panels.get('npc-dialogue');
+        if (existing) existing.destroy();
+
+        const c = this.add.container(0, 0);
+        this.panels.set('npc-dialogue', c);
+
+        c.add(this.add.rectangle(512, 420, 800, 500, C.panelBg).setStrokeStyle(1, C.border));
+        c.add(this.add.text(512, 200, npc.name, {
+            fontFamily: 'Arial Black', fontSize: 22, color: C.textPrimary, align: 'center',
+        }).setOrigin(0.5));
+
+        const roleLine = npc.role.map(r => r.replace('-', ' ')).join('  ·  ').toUpperCase();
+        c.add(this.add.text(512, 232, roleLine, {
+            fontFamily: 'Arial', fontSize: 13, color: C.textAccent, align: 'center',
+        }).setOrigin(0.5));
+
+        const totalH = npc.dialogue.length * DIALOGUE_LINE_HEIGHT;
+        const maxScroll = Math.max(0, totalH - DIALOGUE_VIEWPORT_HEIGHT);
+        let scrollY = 0;
+
+        const maskGfx = this.make.graphics({ x: 0, y: 0 });
+        maskGfx.fillRect(112, DIALOGUE_VIEWPORT_TOP, 800, DIALOGUE_VIEWPORT_HEIGHT);
+        const mask = maskGfx.createGeometryMask();
+
+        const scrollCt = this.add.container(0, 0);
+        scrollCt.setMask(mask);
+        c.add(scrollCt);
+
+        npc.dialogue.forEach((line, i) => {
+            const y = DIALOGUE_VIEWPORT_TOP + i * DIALOGUE_LINE_HEIGHT;
+            scrollCt.add(this.add.rectangle(512, y + 32, 720, DIALOGUE_LINE_HEIGHT - 8, 0x0a0a1a).setStrokeStyle(1, C.border));
+            scrollCt.add(this.add.text(512, y + 32, `"${line.text}"`, {
+                fontFamily: 'Arial', fontSize: 13, color: C.textPrimary, align: 'center',
+                fontStyle: 'italic', wordWrap: { width: 680 },
+            }).setOrigin(0.5));
+        });
+
+        if (maxScroll > 0) {
+            c.add(this.add.text(512, DIALOGUE_VIEWPORT_TOP + DIALOGUE_VIEWPORT_HEIGHT + 6, '▼ scroll for more', {
+                fontFamily: 'Arial', fontSize: 11, color: C.textMuted, align: 'center',
+            }).setOrigin(0.5));
+
+            this._npcScrollHandler = (_pointer: unknown, _gameObjects: unknown, _deltaX: unknown, deltaY: unknown) => {
+                scrollY = Math.max(0, Math.min(maxScroll, scrollY + (deltaY as number) * DIALOGUE_SCROLL_SPEED));
+                scrollCt.setY(-scrollY);
+            };
+            this.input.on('wheel', this._npcScrollHandler);
+        }
+
+        if (npc.services && npc.services.length > 0) {
+            const servicesStr = npc.services.join('  ·  ').toUpperCase();
+            c.add(this.add.text(512, 596, `SERVICES: ${servicesStr}`, {
+                fontFamily: 'Arial', fontSize: 13, color: C.textWarn, align: 'center',
+            }).setOrigin(0.5));
+        }
+
+        this.makeButton(c, 512, 640, '[ ← BACK TO FACTIONS ]', () => {
+            this.showPanel('factions');
+        }, C.textSecond);
+
+        this.showPanel('npc-dialogue');
+    }
+
     // ── Debrief panel (post-dungeon) ──────────────────────────────────────
     private buildDebriefPanel() {
         const gs = GameState.get();
@@ -1073,10 +1406,12 @@ export class HubScene extends Scene {
 
         // Use lastDungeonId to show dungeon name
         const dungeonNames: Record<string, string> = {
-            'shalehook-dig-site':  'Shalehook Dig Site',
-            'coldframe-station-b': 'Coldframe Station-B',
-            'void-relay-7-9':      'Void Relay 7-9',
-            'farpoint-outer-ring': 'Farpoint Waystation — Outer Ring',
+            'shalehook-dig-site':          'Shalehook Dig Site',
+            'coldframe-station-b':         'Coldframe Station-B',
+            'void-relay-7-9':              'Void Relay 7-9',
+            'farpoint-outer-ring':         'Farpoint Waystation — Outer Ring',
+            'kalindra-processing-hub':     'Kalindra Processing Hub',
+            'orins-crossing-locked-sector': "Orin's Crossing — Locked Sector",
         };
         const siteName = dungeonNames[gs.lastDungeonId ?? ''] ?? 'Unknown Site';
         c.add(this.add.text(512, 132, `${siteName} — Run Complete`, {
@@ -1119,7 +1454,7 @@ export class HubScene extends Scene {
         }
 
         // Contracts updated — all phases
-        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts];
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts];
         const completedContracts = gs.contracts.filter(ct => ct.completed && !ct.turnedIn);
         if (completedContracts.length > 0) {
             const lootBottom = 278 + gs.lastRunLoot.length * 24 + 16;

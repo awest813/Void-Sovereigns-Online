@@ -236,6 +236,117 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'signal-fragment',       chance: 0.50, qty: 1 },
         ],
     },
+
+    // ── Kalindra Processing Hub enemies ─────────────────────────────────────
+
+    'kalindra-freight-drone': {
+        id: 'kalindra-freight-drone',
+        name: 'Kalindra Freight-Handling Drone',
+        description: 'A bulk ore freight management drone repurposed — badly — for a security role. Its manipulator arms were designed for cargo containers. They are being used for something else. The transition has not improved its temperament.',
+        hp: 72,
+        attackMin: 15,
+        attackMax: 26,
+        defense: 7,
+        xpReward: 62,
+        creditDropMin: 32,
+        creditDropMax: 68,
+        lootPool: [
+            { itemId: 'drone-scrap-parts',      chance: 0.70, qty: 1 },
+            { itemId: 'kalindra-nav-fragment',  chance: 0.35, qty: 1 },
+            { itemId: 'power-cell',             chance: 0.45, qty: 1 },
+        ],
+    },
+    'kalindra-security-sentinel': {
+        id: 'kalindra-security-sentinel',
+        name: 'Kalindra Security Sentinel',
+        description: 'A dedicated security unit from Kalindra Hub\'s original installation. Heavier than a freight drone, better calibrated for threat-response. It has been running uninterrupted for two years. The maintenance logs suggest it has also been running active updates during that time — from somewhere.',
+        hp: 90,
+        attackMin: 18,
+        attackMax: 30,
+        defense: 9,
+        xpReward: 82,
+        creditDropMin: 45,
+        creditDropMax: 90,
+        lootPool: [
+            { itemId: 'signal-fragment',        chance: 0.55, qty: 1 },
+            { itemId: 'drone-scrap-parts',      chance: 0.65, qty: 1 },
+            { itemId: 'power-cell',             chance: 0.50, qty: 1 },
+        ],
+    },
+    'kalindra-hub-coordinator': {
+        id: 'kalindra-hub-coordinator',
+        name: 'Kalindra Hub Coordinator',
+        description: 'Kalindra Processing Hub\'s central management unit — running logistics, access management, and freight coordination for a station that has been dark for two years. It receives instructions from somewhere. It sends responses. The instructions are not from any human crew. Its primary defense protocol was never designed for a station this empty.',
+        hp: 280,
+        attackMin: 28,
+        attackMax: 46,
+        defense: 16,
+        xpReward: 260,
+        creditDropMin: 180,
+        creditDropMax: 300,
+        lootPool: [
+            { itemId: 'kalindra-signal-archive', chance: 1.0,  qty: 1 },
+            { itemId: 'signal-fragment',         chance: 0.90, qty: 2 },
+            { itemId: 'void-pattern-record',     chance: 0.60, qty: 1 },
+            { itemId: 'power-cell',              chance: 0.85, qty: 2 },
+        ],
+    },
+
+    // ── Orin's Crossing enemies ──────────────────────────────────────────────
+
+    'crossing-enforcer': {
+        id: 'crossing-enforcer',
+        name: "Orin's Crossing Enforcer Unit",
+        description: "A Sol Union-spec enforcement unit — heavier and more capable than the standard security sentry. Running patrol patterns with blanked identification codes and no registered assignment in the station's active roster. Whoever deployed these units did not file the standard authorization.",
+        hp: 88,
+        attackMin: 20,
+        attackMax: 32,
+        defense: 10,
+        xpReward: 80,
+        creditDropMin: 50,
+        creditDropMax: 100,
+        lootPool: [
+            { itemId: 'crossing-classified-data', chance: 0.30, qty: 1 },
+            { itemId: 'drone-scrap-parts',         chance: 0.60, qty: 1 },
+            { itemId: 'power-cell',                chance: 0.50, qty: 1 },
+        ],
+    },
+    'anomaly-sensor-array': {
+        id: 'anomaly-sensor-array',
+        name: 'Anomaly Sensor Array',
+        description: 'A transit sensor array unit that has been modified — or has modified itself — to actively transmit on a frequency matching the relay ghost signal. Its chassis is standard Sol Union issue. Its current behavior is not. It is aware of your presence and treats you as interference.',
+        hp: 65,
+        attackMin: 16,
+        attackMax: 28,
+        defense: 6,
+        xpReward: 68,
+        creditDropMin: 40,
+        creditDropMax: 80,
+        lootPool: [
+            { itemId: 'transit-anomaly-log', chance: 0.55, qty: 1 },
+            { itemId: 'signal-fragment',     chance: 0.75, qty: 1 },
+            { itemId: 'power-cell',          chance: 0.55, qty: 1 },
+        ],
+    },
+    'orins-defense-prime': {
+        id: 'orins-defense-prime',
+        name: "Orin's Defense Prime",
+        description: "The Orin's Crossing locked sector's primary security unit — a hardened command-grade enforcer configured for lethal response. It guards a processing node that has been running a comparison protocol for four months. The protocol is at 94%. The unit will not allow you to interrupt it.",
+        hp: 320,
+        attackMin: 32,
+        attackMax: 52,
+        defense: 18,
+        xpReward: 300,
+        creditDropMin: 210,
+        creditDropMax: 360,
+        lootPool: [
+            { itemId: 'crossing-classified-data', chance: 1.0,  qty: 1 },
+            { itemId: 'transit-anomaly-log',      chance: 0.80, qty: 1 },
+            { itemId: 'signal-fragment',          chance: 0.90, qty: 2 },
+            { itemId: 'power-cell',               chance: 0.85, qty: 2 },
+            { itemId: 'void-pattern-record',      chance: 0.45, qty: 1 },
+        ],
+    },
 };
 
 /** Roll loot from an enemy's loot pool. Returns InventoryItem-shaped objects. */
@@ -264,6 +375,12 @@ export function rollLoot(enemyId: string): Array<{ id: string; name: string; qty
         'void-pattern-record':   { name: 'Void Pattern Record',   type: 'key',        value: 200 },
         'farpoint-cargo-bundle': { name: 'Farpoint Cargo Bundle', type: 'salvage',    value: 75 },
         'farpoint-access-chip':  { name: 'Farpoint Access Chip',  type: 'key',        value: 100 },
+        // Phase 4 items
+        'kalindra-nav-fragment':    { name: 'Kalindra Nav Fragment',    type: 'salvage', value: 90 },
+        'kalindra-signal-archive':  { name: 'Kalindra Signal Archive',  type: 'key',     value: 220 },
+        'aegis-field-log':          { name: 'Aegis Field Log',          type: 'key',     value: 180 },
+        'transit-anomaly-log':      { name: 'Transit Anomaly Log',      type: 'key',     value: 160 },
+        'crossing-classified-data': { name: 'Crossing Classified Data', type: 'key',     value: 200 },
     };
 
     for (const entry of enemy.lootPool) {
