@@ -79,6 +79,9 @@ const state: State = {
     reputation: {
         'meridian-dock-authority': 0,
         'ashwake-extraction-guild': 0,
+        'interstellar-commonwealth-authority': 0,
+        'void-covenant': 0,
+        'free-transit-compact': 0,
     },
     flags: {},
     returnFromDungeon: false,

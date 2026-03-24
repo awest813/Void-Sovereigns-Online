@@ -143,6 +143,99 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'salvage-crate-standard', chance: 0.65, qty: 1 },
         ],
     },
+
+    // ── Void Relay 7-9 enemies ──────────────────────────────────────────────
+
+    'relay-guardian-mk1': {
+        id: 'relay-guardian-mk1',
+        name: 'Relay Guardian Mk.I',
+        description: 'An aged automated security unit built into Relay 7-9\'s original design. Heavily outdated but well-maintained — by something. Responds to intrusion with methodical, unhurried precision.',
+        hp: 58,
+        attackMin: 12,
+        attackMax: 22,
+        defense: 5,
+        xpReward: 48,
+        creditDropMin: 22,
+        creditDropMax: 52,
+        lootPool: [
+            { itemId: 'signal-fragment',     chance: 0.70, qty: 1 },
+            { itemId: 'power-cell',          chance: 0.45, qty: 1 },
+            { itemId: 'drone-scrap-parts',   chance: 0.55, qty: 1 },
+        ],
+    },
+    'fractured-probe': {
+        id: 'fractured-probe',
+        name: 'Fractured Probe',
+        description: 'A compact signal probe of unidentified manufacture. Its chassis is partially degraded — as if subjected to something corrosive that left no residue. It is actively transmitting on a frequency that does not match any standard beacon protocol.',
+        hp: 44,
+        attackMin: 10,
+        attackMax: 19,
+        defense: 3,
+        xpReward: 38,
+        creditDropMin: 16,
+        creditDropMax: 40,
+        lootPool: [
+            { itemId: 'signal-fragment',     chance: 0.80, qty: 1 },
+            { itemId: 'anomaly-trace-log',   chance: 0.25, qty: 1 },
+            { itemId: 'scrap-metal',         chance: 0.60, qty: 1 },
+        ],
+    },
+    'relay-core-sentinel': {
+        id: 'relay-core-sentinel',
+        name: 'Relay Core Sentinel',
+        description: 'The primary automated guardian of Void Relay 7-9\'s core. Pre-Commonwealth manufacture. Its operating cycle has run continuously for an indeterminate period — the internal clock does not return a valid timestamp. It has been waiting for something that never arrived. It has decided you are close enough.',
+        hp: 225,
+        attackMin: 24,
+        attackMax: 42,
+        defense: 14,
+        xpReward: 200,
+        creditDropMin: 140,
+        creditDropMax: 240,
+        lootPool: [
+            { itemId: 'relay-data-core',       chance: 1.0,  qty: 1 },
+            { itemId: 'void-pattern-record',   chance: 0.75, qty: 1 },
+            { itemId: 'signal-fragment',       chance: 0.90, qty: 2 },
+            { itemId: 'power-cell',            chance: 0.85, qty: 2 },
+        ],
+    },
+
+    // ── Farpoint Waystation enemies ─────────────────────────────────────────
+
+    'farpoint-sentry': {
+        id: 'farpoint-sentry',
+        name: 'Farpoint Security Sentry',
+        description: 'A decommissioned commercial security unit reactivated by Farpoint\'s automated systems. Standard chassis, reinforced for a freight-protection role. Running a protocol that was never designed to run unsupervised for this long.',
+        hp: 64,
+        attackMin: 14,
+        attackMax: 24,
+        defense: 6,
+        xpReward: 54,
+        creditDropMin: 28,
+        creditDropMax: 58,
+        lootPool: [
+            { itemId: 'farpoint-cargo-bundle', chance: 0.40, qty: 1 },
+            { itemId: 'drone-scrap-parts',     chance: 0.65, qty: 1 },
+            { itemId: 'power-cell',            chance: 0.40, qty: 1 },
+        ],
+    },
+    'farpoint-security-prime': {
+        id: 'farpoint-security-prime',
+        name: 'Prime Security Coordinator',
+        description: 'Farpoint Waystation\'s outer ring security coordinator — a heavy multi-role command unit running crowd-control, lockdown, and threat-response routines simultaneously across a station that is mostly empty. The overload shows. It is still running all of them.',
+        hp: 195,
+        attackMin: 22,
+        attackMax: 38,
+        defense: 13,
+        xpReward: 185,
+        creditDropMin: 125,
+        creditDropMax: 210,
+        lootPool: [
+            { itemId: 'farpoint-access-chip',  chance: 1.0,  qty: 1 },
+            { itemId: 'farpoint-cargo-bundle', chance: 0.80, qty: 2 },
+            { itemId: 'power-cell',            chance: 0.85, qty: 2 },
+            { itemId: 'signal-fragment',       chance: 0.50, qty: 1 },
+        ],
+    },
 };
 
 /** Roll loot from an enemy's loot pool. Returns InventoryItem-shaped objects. */
@@ -164,6 +257,13 @@ export function rollLoot(enemyId: string): Array<{ id: string; name: string; qty
         'cryo-component':        { name: 'Cryo Component',        type: 'salvage',    value: 55 },
         'black-box-fragment':    { name: 'Black Box Fragment',    type: 'key',        value: 120 },
         'corrupted-maintenance-log': { name: 'Corrupted Maintenance Log', type: 'key', value: 40 },
+        // Phase 3 items
+        'signal-fragment':       { name: 'Signal Fragment',       type: 'salvage',    value: 80 },
+        'relay-data-core':       { name: 'Relay Data Core',       type: 'key',        value: 150 },
+        'anomaly-trace-log':     { name: 'Anomaly Trace Log',     type: 'key',        value: 120 },
+        'void-pattern-record':   { name: 'Void Pattern Record',   type: 'key',        value: 200 },
+        'farpoint-cargo-bundle': { name: 'Farpoint Cargo Bundle', type: 'salvage',    value: 75 },
+        'farpoint-access-chip':  { name: 'Farpoint Access Chip',  type: 'key',        value: 100 },
     };
 
     for (const entry of enemy.lootPool) {

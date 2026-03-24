@@ -70,17 +70,36 @@ export class SectorMapScene extends Scene {
 
         // ── Void Relay node
         const isRelayCapable = GameState.isRelayCapable();
+        const relayJumped = GameState.getFlag('relay-jump-completed');
         const relayColor = isRelayCapable ? C.textSuccess : '#444455';
+        const relaySubtitle = relayJumped
+            ? 'Relay Jump — TRANSITED'
+            : isRelayCapable ? 'Relay Jump — UNLOCKED' : 'Relay Jump — LOCKED';
         this.drawSectorNode(870, 340, 'VOID RELAY 7-9',
-            isRelayCapable ? 'Relay Jump — UNLOCKED' : 'Relay Jump — LOCKED',
-            relayColor, true, () => {
+            relaySubtitle,
+            relayJumped ? C.textAccent : relayColor, true, () => {
                 if (isRelayCapable) this.showRelayReadyMessage();
                 else this.showRelayLockedMessage();
             });
-        this.add.text(870, 400, isRelayCapable ? '✓ RELAY CAPABLE' : '✗ Relay ship required', {
+        this.add.text(870, 400, relayJumped ? '✓ TRANSITED' : (isRelayCapable ? '✓ RELAY CAPABLE' : '✗ Relay ship required'), {
             fontFamily: 'Arial', fontSize: 11,
-            color: isRelayCapable ? C.textSuccess : C.textDanger, align: 'center',
+            color: relayJumped ? C.textAccent : (isRelayCapable ? C.textSuccess : C.textDanger), align: 'center',
         }).setOrigin(0.5);
+
+        // ── Farpoint node (post-relay) ─────────────────────────────────────
+        if (relayJumped) {
+            // Connection line from relay
+            for (let x = 920; x < 1010; x += 14) {
+                this.add.rectangle(x, 340, 9, 2, 0x335566);
+            }
+            this.drawSectorNode(880, 500, 'FARPOINT WAYSTATION',
+                'Post-Relay Frontier Hub', C.textWarn, true, () => {
+                    this.showFarpointMessage();
+                });
+            this.add.text(880, 560, '▶ RELAY ROUTE OPEN', {
+                fontFamily: 'Arial', fontSize: 11, color: C.textWarn, align: 'center',
+            }).setOrigin(0.5);
+        }
 
         // ── Dungeon sites area
         this.add.rectangle(490, 550, 680, 130, C.panelBg).setStrokeStyle(1, C.border);
@@ -108,6 +127,43 @@ export class SectorMapScene extends Scene {
         coldframeBtn.on('pointerover', () => coldframeBtn.setColor(C.btnHover));
         coldframeBtn.on('pointerout',  () => coldframeBtn.setColor(C.btnNormal));
         coldframeBtn.on('pointerdown', () => this.launchToDungeon('coldframe-station-b'));
+
+        // ── Phase 3 relay and post-relay sites ────────────────────────────
+        if (isRelayCapable) {
+            const relayDungeonCleared = GameState.getFlag('relay-jump-completed');
+            this.add.rectangle(490, 440, 680, 50, C.panelBg).setStrokeStyle(1, 0x335544);
+            const relayLabel = relayDungeonCleared
+                ? '◆ Void Relay 7-9  ·  Tier 2  ·  Anomaly Site  [TRANSITED]'
+                : '◆ Void Relay 7-9  ·  Tier 2  ·  Anomaly Site  ★ NEW';
+            this.add.text(350, 426, relayLabel, {
+                fontFamily: 'Arial', fontSize: 12, color: relayDungeonCleared ? C.textSecond : C.textSuccess,
+            });
+            const relayLaunchBtn = this.add.text(350, 444, '  [ INITIATE RELAY JUMP — VOID RELAY 7-9 ]', {
+                fontFamily: 'Arial Black', fontSize: 14,
+                color: relayDungeonCleared ? C.textSecond : C.textSuccess,
+            }).setInteractive({ useHandCursor: true });
+            relayLaunchBtn.on('pointerover', () => relayLaunchBtn.setColor(C.btnHover));
+            relayLaunchBtn.on('pointerout',  () => relayLaunchBtn.setColor(relayDungeonCleared ? C.textSecond : C.textSuccess));
+            relayLaunchBtn.on('pointerdown', () => this.confirmRelayJump());
+        }
+
+        if (relayJumped) {
+            const farpointCleared = GameState.getFlag('farpoint-cleared');
+            this.add.rectangle(490, 390, 680, 28, 0x080e14).setStrokeStyle(1, 0x336655);
+            const fpLabel = farpointCleared
+                ? '◆ Farpoint Waystation  ·  Tier 3  ·  Frontier Salvage  [CLEARED]'
+                : '◆ Farpoint Waystation  ·  Tier 3  ·  Frontier Salvage  ★ NEW';
+            this.add.text(350, 380, fpLabel, {
+                fontFamily: 'Arial', fontSize: 12, color: farpointCleared ? C.textSecond : C.textWarn,
+            });
+            const fpBtn = this.add.text(500, 396, '[ LAUNCH TO FARPOINT ]', {
+                fontFamily: 'Arial Black', fontSize: 13,
+                color: farpointCleared ? C.textSecond : C.textWarn,
+            }).setInteractive({ useHandCursor: true });
+            fpBtn.on('pointerover', () => fpBtn.setColor(C.btnHover));
+            fpBtn.on('pointerout',  () => fpBtn.setColor(farpointCleared ? C.textSecond : C.textWarn));
+            fpBtn.on('pointerdown', () => this.launchToDungeon('farpoint-outer-ring'));
+        }
 
         // ── Relay goal strip
         this.buildRelayGoalStrip();
@@ -140,9 +196,22 @@ export class SectorMapScene extends Scene {
         const y = 640;
         this.add.rectangle(512, y + 18, 980, 50, 0x080815).setStrokeStyle(1, C.border);
 
+        const relayJumped = GameState.getFlag('relay-jump-completed');
+        const farpointCleared = GameState.getFlag('farpoint-cleared');
+
+        if (relayJumped) {
+            const nextGoal = farpointCleared
+                ? '✓  FARPOINT CLEARED — Watch for deeper anomaly contracts and Redline Run opportunities'
+                : '✓  RELAY TRANSITED — Farpoint Waystation is open. New contracts available.';
+            this.add.text(512, y + 18, nextGoal, {
+                fontFamily: 'Arial Black', fontSize: 13, color: C.textWarn, align: 'center',
+            }).setOrigin(0.5);
+            return;
+        }
+
         if (GameState.isRelayCapable()) {
-            this.add.text(512, y + 18, '✓  YOUR SHIP IS RELAY-CAPABLE  —  Void Relay 7-9 is within reach', {
-                fontFamily: 'Arial Black', fontSize: 14, color: C.textSuccess, align: 'center',
+            this.add.text(512, y + 18, '✓  YOUR SHIP IS RELAY-CAPABLE  —  Void Relay 7-9 is within reach — use INITIATE RELAY JUMP above', {
+                fontFamily: 'Arial Black', fontSize: 13, color: C.textSuccess, align: 'center',
             }).setOrigin(0.5);
             return;
         }
@@ -236,22 +305,123 @@ export class SectorMapScene extends Scene {
         const existing = this.children.getByName('relay-msg');
         if (existing) return;
 
+        const relayJumped = GameState.getFlag('relay-jump-completed');
         const panel = this.add.container(512, 300);
         panel.setName('relay-msg');
-        panel.add(this.add.rectangle(0, 0, 620, 160, C.panelBg).setStrokeStyle(1, C.border));
-        panel.add(this.add.text(0, -54, 'VOID RELAY 7-9 — RELAY JUMP AVAILABLE', {
+        panel.add(this.add.rectangle(0, 0, 680, 210, C.panelBg).setStrokeStyle(2, 0x335544));
+        panel.add(this.add.text(0, -84, 'VOID RELAY 7-9 — RELAY JUMP AVAILABLE', {
             fontFamily: 'Arial Black', fontSize: 17, color: C.textSuccess, align: 'center',
         }).setOrigin(0.5));
-        panel.add(this.add.text(0, -24, 'Your ship is relay-capable.', {
-            fontFamily: 'Arial', fontSize: 14, color: C.textPrimary, align: 'center',
+        panel.add(this.add.text(0, -56, 'Your ship is relay-capable. Void Relay 7-9 is within reach.', {
+            fontFamily: 'Arial', fontSize: 13, color: C.textPrimary, align: 'center',
         }).setOrigin(0.5));
-        panel.add(this.add.text(0, 0, 'But consider: Relay 7-9 has been dark for months.', {
-            fontFamily: 'Arial', fontSize: 13, color: C.textWarn, align: 'center',
+
+        if (relayJumped) {
+            panel.add(this.add.text(0, -30, '✓  Relay transited. Farpoint Waystation is open.', {
+                fontFamily: 'Arial', fontSize: 13, color: C.textAccent, align: 'center',
+            }).setOrigin(0.5));
+            panel.add(this.add.text(0, -6, 'Use the LAUNCH TO FARPOINT button to continue the frontier run.', {
+                fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+            }).setOrigin(0.5));
+        } else {
+            panel.add(this.add.text(0, -30, 'But consider: Relay 7-9 has been dark for months.', {
+                fontFamily: 'Arial', fontSize: 13, color: C.textWarn, align: 'center',
+            }).setOrigin(0.5));
+            panel.add(this.add.text(0, -6, 'Talk to Brother Caldus and Kestrel Vin before you go through.', {
+                fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+            }).setOrigin(0.5));
+
+            const launchBtn = this.add.text(0, 30, '[ INITIATE RELAY JUMP — VOID RELAY 7-9 ]', {
+                fontFamily: 'Arial Black', fontSize: 15, color: C.textSuccess, align: 'center',
+            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            launchBtn.on('pointerover', () => launchBtn.setColor(C.btnHover));
+            launchBtn.on('pointerout',  () => launchBtn.setColor(C.textSuccess));
+            launchBtn.on('pointerdown', () => {
+                panel.destroy();
+                this.confirmRelayJump();
+            });
+            panel.add(launchBtn);
+        }
+
+        const closeY = relayJumped ? 30 : 82;
+        const close = this.add.text(0, closeY, '[ DISMISS ]', {
+            fontFamily: 'Arial', fontSize: 13, color: C.btnNormal, align: 'center',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        close.on('pointerdown', () => panel.destroy());
+        panel.add(close);
+    }
+
+    private confirmRelayJump() {
+        const existing = this.children.getByName('relay-confirm');
+        if (existing) return;
+
+        const panel = this.add.container(512, 340);
+        panel.setName('relay-confirm');
+        panel.add(this.add.rectangle(0, 0, 720, 280, C.panelBg).setStrokeStyle(2, 0x335544));
+        panel.add(this.add.text(0, -116, '⚠  RELAY JUMP — CONFIRM', {
+            fontFamily: 'Arial Black', fontSize: 20, color: C.textWarn, align: 'center',
         }).setOrigin(0.5));
-        panel.add(this.add.text(0, 22, 'Talk to Brother Caldus before you go through.', {
+        panel.add(this.add.text(0, -82, 'Void Relay 7-9 has been non-functional for two years.', {
+            fontFamily: 'Arial', fontSize: 13, color: C.textPrimary, align: 'center',
+        }).setOrigin(0.5));
+        panel.add(this.add.text(0, -58, 'Brother Caldus has flagged inconsistent telemetry from the approach corridor.', {
+            fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+        }).setOrigin(0.5));
+        panel.add(this.add.text(0, -36, '"Something has been running in there without oversight."', {
+            fontFamily: 'Arial', fontSize: 13, color: C.textAccent, align: 'center', fontStyle: 'italic',
+        }).setOrigin(0.5));
+        panel.add(this.add.text(0, -10, 'You will be the first relay-capable ship to make approach in eighteen months.', {
+            fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+        }).setOrigin(0.5));
+
+        const confirmBtn = this.add.text(-100, 60, '[ INITIATE JUMP ]', {
+            fontFamily: 'Arial Black', fontSize: 16, color: C.textSuccess, align: 'center',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        confirmBtn.on('pointerover', () => confirmBtn.setColor(C.btnHover));
+        confirmBtn.on('pointerout',  () => confirmBtn.setColor(C.textSuccess));
+        confirmBtn.on('pointerdown', () => {
+            panel.destroy();
+            this.launchToDungeon('void-relay-7-9');
+        });
+        panel.add(confirmBtn);
+
+        const cancelBtn = this.add.text(100, 60, '[ NOT YET ]', {
+            fontFamily: 'Arial Black', fontSize: 16, color: C.textSecond, align: 'center',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        cancelBtn.on('pointerover', () => cancelBtn.setColor(C.btnHover));
+        cancelBtn.on('pointerout',  () => cancelBtn.setColor(C.textSecond));
+        cancelBtn.on('pointerdown', () => panel.destroy());
+        panel.add(cancelBtn);
+    }
+
+    private showFarpointMessage() {
+        const existing = this.children.getByName('farpoint-msg');
+        if (existing) return;
+
+        const farpointCleared = GameState.getFlag('farpoint-cleared');
+        const panel = this.add.container(512, 300);
+        panel.setName('farpoint-msg');
+        panel.add(this.add.rectangle(0, 0, 680, 200, C.panelBg).setStrokeStyle(2, 0x335533));
+        panel.add(this.add.text(0, -80, 'FARPOINT WAYSTATION', {
+            fontFamily: 'Arial Black', fontSize: 20, color: C.textWarn, align: 'center',
+        }).setOrigin(0.5));
+        panel.add(this.add.text(0, -52, 'Post-Relay Frontier Hub  ·  Tier 3', {
             fontFamily: 'Arial', fontSize: 13, color: C.textSecond, align: 'center',
         }).setOrigin(0.5));
-        const close = this.add.text(0, 60, '[ DISMISS ]', {
+        panel.add(this.add.text(0, -26, farpointCleared
+            ? '✓  Outer ring cleared. Farpoint contacts are available on Meridian Station.'
+            : 'The outer ring is uncontrolled. Abandoned cargo. Overloaded security automation.', {
+            fontFamily: 'Arial', fontSize: 13, color: farpointCleared ? C.textSuccess : C.textPrimary, align: 'center',
+            wordWrap: { width: 620 },
+        }).setOrigin(0.5));
+
+        if (!farpointCleared) {
+            panel.add(this.add.text(0, 6, 'Kael Mourne is at Meridian Station. Check the contract board for Farpoint jobs.', {
+                fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+            }).setOrigin(0.5));
+        }
+
+        const close = this.add.text(0, 70, '[ DISMISS ]', {
             fontFamily: 'Arial', fontSize: 14, color: C.btnNormal, align: 'center',
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         close.on('pointerdown', () => panel.destroy());
