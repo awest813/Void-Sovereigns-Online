@@ -3,6 +3,7 @@ import { Scene } from 'phaser';
 import { GameState } from '../state/GameState';
 import { starterContracts } from '../../../content/contracts/starter-contracts';
 import { phase2Contracts } from '../../../content/contracts/phase2-contracts';
+import { phase3Contracts } from '../../../content/contracts/phase3-contracts';
 import { meridianNPCs } from '../../../content/npcs/meridian-npcs';
 import { SHIP_UPGRADES, HAULER_PURCHASE_COST } from '../data/shipUpgrades';
 
@@ -25,7 +26,7 @@ const C = {
     barFuel:     0x4488cc,
 };
 
-// All contracts shown on the Phase 2 board (Phase 1 + Phase 2)
+// All contracts shown on the Phase 3 board (Phase 1 + Phase 2 + Phase 3)
 const BOARD_CONTRACT_IDS = [
     // Phase 1
     'scrap-recovery-shalehook',
@@ -41,9 +42,26 @@ const BOARD_CONTRACT_IDS = [
     'station-trouble-stolen-kit',
     'deep-survey-relay-static',
     'bounty-automated-sentinel-pack',
+    // Phase 3 — pre-relay (requires relay-capable ship but always visible)
+    'relay-approach-survey',
+    'ica-relay-assessment',
+    'covenant-relay-data',
+    // Phase 3 — post-relay (only shown after relay-jump-completed flag)
+    'farpoint-first-contact',
+    'farpoint-salvage-extraction',
+    'anomaly-trace-farpoint',
+    'relay-ghost-telemetry',
 ];
 
-// Phase 1 + Phase 2 NPCs shown in hub contacts
+// Contract IDs that require relay jump to be visible on the board
+const POST_RELAY_CONTRACT_IDS = new Set([
+    'farpoint-first-contact',
+    'farpoint-salvage-extraction',
+    'anomaly-trace-farpoint',
+    'relay-ghost-telemetry',
+]);
+
+// Phase 1 + Phase 2 + Phase 3 NPCs shown in hub contacts
 const HUB_NPC_IDS = [
     'tamsin-vale',
     'rook-mendera',
@@ -53,6 +71,10 @@ const HUB_NPC_IDS = [
     'oziel-kaur',
     'veera-mox',
     'jasso',
+    // Phase 3
+    'ica-agent-vorren',
+    'void-covenant-kestrel',
+    'farpoint-kael',
 ];
 
 // ── HubScene ────────────────────────────────────────────────────────────────
@@ -171,10 +193,17 @@ export class HubScene extends Scene {
             fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
         });
 
-        // Relay progress hint
-        this.add.text(590, y + 3, '▶ GOAL: Meridian Hauler II (relay-capable) — 3,800c needed', {
-            fontFamily: 'Arial', fontSize: 11, color: C.textWarn,
-        });
+        // Relay progress hint or post-relay status
+        const relayJumped = GameState.getFlag('relay-jump-completed');
+        if (relayJumped) {
+            this.add.text(590, y + 3, '✓ RELAY TRANSITED  ▶ Farpoint Waystation is open — explore the frontier', {
+                fontFamily: 'Arial', fontSize: 11, color: C.textWarn,
+            });
+        } else {
+            this.add.text(590, y + 3, '▶ GOAL: Meridian Hauler II (relay-capable) — 3,800c needed', {
+                fontFamily: 'Arial', fontSize: 11, color: C.textWarn,
+            });
+        }
     }
 
     private refreshShipBar() {
@@ -269,13 +298,23 @@ export class HubScene extends Scene {
             }).setOrigin(0.5));
         });
 
-        // Relay goal reminder
+        // Relay goal / milestone banner
         const relayCapable = GameState.isRelayCapable();
-        const goalText = relayCapable
-            ? '✓  Your ship is relay-capable. Void Relay 7-9 is within reach.'
-            : `▶ RELAY GOAL: Earn credits and upgrade your ship to reach Void Relay 7-9.`;
+        const relayJumped = GameState.getFlag('relay-jump-completed');
+        let goalText: string;
+        let goalColor: string;
+        if (relayJumped) {
+            goalText = '✓  RELAY TRANSITED — Farpoint Waystation is open. New contacts and contracts are available.';
+            goalColor = C.textWarn;
+        } else if (relayCapable) {
+            goalText = '✓  Your ship is relay-capable. Void Relay 7-9 is within reach. Speak to Brother Caldus and Kestrel Vin.';
+            goalColor = C.textSuccess;
+        } else {
+            goalText = `▶ RELAY GOAL: Earn credits and upgrade your ship to reach Void Relay 7-9.`;
+            goalColor = C.textWarn;
+        }
         c.add(this.add.text(512, 616, goalText, {
-            fontFamily: 'Arial', fontSize: 12, color: relayCapable ? C.textSuccess : C.textWarn, align: 'center',
+            fontFamily: 'Arial', fontSize: 12, color: goalColor, align: 'center',
         }).setOrigin(0.5));
 
         // Station flavor
@@ -295,8 +334,12 @@ export class HubScene extends Scene {
         c.removeAll(true);
         this.panelHeader(c, 'CONTRACT BOARD', 'Meridian Station — Tamsin Vale, Dispatcher');
 
-        const allContracts = [...starterContracts, ...phase2Contracts];
-        const contracts = allContracts.filter(ct => BOARD_CONTRACT_IDS.includes(ct.id));
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts];
+        const relayJumped = GameState.getFlag('relay-jump-completed');
+        const contracts = allContracts.filter(ct =>
+            BOARD_CONTRACT_IDS.includes(ct.id) &&
+            (!POST_RELAY_CONTRACT_IDS.has(ct.id) || relayJumped),
+        );
         const rowH = 86;
         const startY = 148;
 
@@ -691,19 +734,45 @@ export class HubScene extends Scene {
             }));
         }
 
-        // ── Relay Goal section ─────────────────────────────────────────
-        c.add(this.add.text(512, 394, 'RELAY GOAL — VOID RELAY 7-9', {
-            fontFamily: 'Arial Black', fontSize: 15, color: C.textWarn, align: 'center',
-        }).setOrigin(0.5));
+        // ── Relay Goal / Post-Relay section ───────────────────────────────
+        const relayJumped = GameState.getFlag('relay-jump-completed');
+        const farpointCleared = GameState.getFlag('farpoint-cleared');
 
-        if (isRelayCapable) {
+        if (relayJumped) {
+            c.add(this.add.text(512, 394, 'FRONTIER STATUS', {
+                fontFamily: 'Arial Black', fontSize: 15, color: C.textWarn, align: 'center',
+            }).setOrigin(0.5));
+            c.add(this.add.text(512, 422, '✓  Void Relay 7-9 — TRANSITED', {
+                fontFamily: 'Arial Black', fontSize: 13, color: C.textSuccess, align: 'center',
+            }).setOrigin(0.5));
+            c.add(this.add.text(512, 446, farpointCleared
+                ? '✓  Farpoint Waystation Outer Ring — CLEARED'
+                : '▶  Farpoint Waystation — Tier 3 site available', {
+                fontFamily: 'Arial', fontSize: 13, color: farpointCleared ? C.textSuccess : C.textWarn, align: 'center',
+            }).setOrigin(0.5));
+            c.add(this.add.text(512, 470, 'New factions active: ICA · Void Covenant · Farpoint contacts', {
+                fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+            }).setOrigin(0.5));
+            c.add(this.add.text(512, 494, 'Watch for Redline Runs, black-market ops, and deeper anomaly contracts.', {
+                fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+            }).setOrigin(0.5));
+        } else if (isRelayCapable) {
+            c.add(this.add.text(512, 394, 'RELAY GOAL — VOID RELAY 7-9', {
+                fontFamily: 'Arial Black', fontSize: 15, color: C.textWarn, align: 'center',
+            }).setOrigin(0.5));
             c.add(this.add.text(512, 422, '✓  Your ship is relay-capable. Void Relay 7-9 is within reach.', {
                 fontFamily: 'Arial Black', fontSize: 13, color: C.textSuccess, align: 'center',
             }).setOrigin(0.5));
-            c.add(this.add.text(512, 446, 'Speak to Brother Caldus before you go through.', {
+            c.add(this.add.text(512, 446, 'Speak to Brother Caldus and Kestrel Vin before you go through.', {
                 fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
             }).setOrigin(0.5));
+            c.add(this.add.text(512, 468, 'Use SECTOR MAP → INITIATE RELAY JUMP to transit Void Relay 7-9.', {
+                fontFamily: 'Arial', fontSize: 12, color: C.textAccent, align: 'center',
+            }).setOrigin(0.5));
         } else {
+            c.add(this.add.text(512, 394, 'RELAY GOAL — VOID RELAY 7-9', {
+                fontFamily: 'Arial Black', fontSize: 15, color: C.textWarn, align: 'center',
+            }).setOrigin(0.5));
             // Path A: buy Hauler
             const creditsToHauler = Math.max(0, HAULER_PURCHASE_COST - gs.credits);
             const pathAProgress = Math.min(gs.credits / HAULER_PURCHASE_COST, 1);
@@ -857,8 +926,13 @@ export class HubScene extends Scene {
         const c = this.add.container(0, 0);
         this.panels.set('debrief', c);
 
-        const title = gs.lastRunSuccess ? 'EXTRACTION SUCCESSFUL' : 'EMERGENCY EXTRACTION';
-        const titleColor = gs.lastRunSuccess ? C.textSuccess : C.textWarn;
+        // Special relay milestone debrief
+        const isRelayMilestone = gs.lastDungeonId === 'void-relay-7-9' && gs.lastRunSuccess;
+
+        const title = isRelayMilestone
+            ? 'RELAY TRANSIT COMPLETE'
+            : (gs.lastRunSuccess ? 'EXTRACTION SUCCESSFUL' : 'EMERGENCY EXTRACTION');
+        const titleColor = isRelayMilestone ? C.textWarn : (gs.lastRunSuccess ? C.textSuccess : C.textWarn);
 
         c.add(this.add.text(512, 90, title, {
             fontFamily: 'Arial Black', fontSize: 28, color: titleColor,
@@ -869,44 +943,54 @@ export class HubScene extends Scene {
         const dungeonNames: Record<string, string> = {
             'shalehook-dig-site':  'Shalehook Dig Site',
             'coldframe-station-b': 'Coldframe Station-B',
+            'void-relay-7-9':      'Void Relay 7-9',
+            'farpoint-outer-ring': 'Farpoint Waystation — Outer Ring',
         };
-        const siteName = dungeonNames[gs.lastDungeonId ?? ''] ?? 'Ashwake Belt';
+        const siteName = dungeonNames[gs.lastDungeonId ?? ''] ?? 'Unknown Site';
         c.add(this.add.text(512, 132, `${siteName} — Run Complete`, {
             fontFamily: 'Arial', fontSize: 16, color: C.textSecond, align: 'center',
         }).setOrigin(0.5));
 
-        c.add(this.add.rectangle(512, 370, 700, 450, C.panelBg).setStrokeStyle(1, C.border));
+        // Relay milestone highlight
+        if (isRelayMilestone) {
+            c.add(this.add.rectangle(512, 166, 800, 28, 0x0a1a0a).setStrokeStyle(1, 0x335544));
+            c.add(this.add.text(512, 166, '✓  FARPOINT WAYSTATION IS NOW ACCESSIBLE — Check the Sector Map and Contract Board', {
+                fontFamily: 'Arial Black', fontSize: 12, color: C.textSuccess, align: 'center',
+            }).setOrigin(0.5));
+        }
+
+        c.add(this.add.rectangle(512, 380, 700, 440, C.panelBg).setStrokeStyle(1, C.border));
 
         // Credits and XP
-        c.add(this.add.text(175, 168, `CREDITS EARNED:  +${gs.lastRunCredits}c`, {
+        c.add(this.add.text(175, 188, `CREDITS EARNED:  +${gs.lastRunCredits}c`, {
             fontFamily: 'Arial Black', fontSize: 16, color: C.textWarn,
         }));
-        c.add(this.add.text(175, 196, `XP EARNED:       +${gs.lastRunXp}`, {
+        c.add(this.add.text(175, 216, `XP EARNED:       +${gs.lastRunXp}`, {
             fontFamily: 'Arial', fontSize: 15, color: C.textAccent,
         }));
 
         // Loot
-        c.add(this.add.text(175, 232, 'ITEMS RECOVERED:', {
+        c.add(this.add.text(175, 252, 'ITEMS RECOVERED:', {
             fontFamily: 'Arial Black', fontSize: 15, color: C.textPrimary,
         }));
 
         if (gs.lastRunLoot.length === 0) {
-            c.add(this.add.text(175, 258, '  None.', {
+            c.add(this.add.text(175, 278, '  None.', {
                 fontFamily: 'Arial', fontSize: 14, color: C.textSecond,
             }));
         } else {
             gs.lastRunLoot.forEach((item, i) => {
-                c.add(this.add.text(175, 258 + i * 24, `  ◆ ${item.name}  x${item.qty}`, {
+                c.add(this.add.text(175, 278 + i * 24, `  ◆ ${item.name}  x${item.qty}`, {
                     fontFamily: 'Arial', fontSize: 14, color: C.textPrimary,
                 }));
             });
         }
 
-        // Contracts updated — look in both phase 1 and phase 2
-        const allContracts = [...starterContracts, ...phase2Contracts];
+        // Contracts updated — all phases
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts];
         const completedContracts = gs.contracts.filter(ct => ct.completed && !ct.turnedIn);
         if (completedContracts.length > 0) {
-            const lootBottom = 258 + gs.lastRunLoot.length * 24 + 16;
+            const lootBottom = 278 + gs.lastRunLoot.length * 24 + 16;
             c.add(this.add.text(175, lootBottom, 'CONTRACTS READY TO TURN IN:', {
                 fontFamily: 'Arial Black', fontSize: 14, color: C.textSuccess,
             }));

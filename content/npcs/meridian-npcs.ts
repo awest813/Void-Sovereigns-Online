@@ -371,4 +371,118 @@ export const meridianNPCs: NPC[] = [
         services: ['gray-market', 'trade'],
         tags: ['merchant', 'gray-market', 'parts', 'bay-14', 'phase-2'],
     },
+
+    // ── PHASE 3 NPCs ─────────────────────────────────────────────────────────
+
+    {
+        id: 'ica-agent-vorren',
+        name: 'Agent Vorren',
+        role: ['quest-giver', 'faction-rep'],
+        faction: 'interstellar-commonwealth-authority',
+        location: 'meridian-station',
+        description:
+            'An ICA field agent who arrived at Meridian Station three weeks ago on an administrative vessel ' +
+            'that was the first Commonwealth ship through this sector in eighteen months. ' +
+            'Vorren is precise, professional, and operates with the quiet authority of someone who ' +
+            'represents a government that most locals have stopped believing is real. ' +
+            'He has been politely ignored at every official meeting. He has not left.',
+        portrait: 'assets/npcs/vorren.png',
+        dialogue: [
+            {
+                id: 'greeting-default',
+                text: 'ICA Field Office — provisional. I am authorized to issue survey contracts and transit clearances. The Commonwealth has not forgotten this sector.',
+            },
+            {
+                id: 'relay-assessment-pitch',
+                text: 'Relay 7-9 showing active telemetry is not a local matter. The Commonwealth needs a formal assessment from a credentialed operator. You have a relay-capable ship. I have a contract.',
+            },
+            {
+                id: 'farpoint-briefing',
+                text: 'Farpoint Waystation has been operating without Commonwealth oversight for twenty-six months. Before we can restore normal transit authority, someone needs to go through and confirm the station is intact. That someone is you.',
+                condition: 'flag.relay-jump-completed',
+            },
+            {
+                id: 'anomaly-concern',
+                text: 'Three relay anomaly reports in the past four months, all originating from the 7-9 corridor. The Commonwealth has classified records that match this pattern. I am not at liberty to share them. I am asking you to keep collecting data.',
+                condition: 'flag.relay-jump-completed',
+            },
+        ],
+        services: ['contracts', 'ica-transit-clearance'],
+        tags: ['quest-giver', 'faction-rep', 'ica', 'official', 'relay', 'phase-3'],
+    },
+
+    {
+        id: 'void-covenant-kestrel',
+        name: 'Kestrel Vin',
+        role: ['quest-giver', 'info-broker'],
+        faction: 'void-covenant',
+        location: 'meridian-station',
+        description:
+            'Kestrel Vin arrived at Meridian eight months ago and has never explained why. ' +
+            'She occupies a table near the back of the Relay Chapel during off-hours, ' +
+            'maintains no official station presence, and pays her bay fees in advance. ' +
+            'The Void Covenant\'s relationship with the station authorities is deniable and ' +
+            'tolerated — they ask difficult questions but they have never been wrong about which questions matter.',
+        portrait: 'assets/npcs/kestrel.png',
+        dialogue: [
+            {
+                id: 'greeting-default',
+                text: 'I am not affiliated with the Chapel, before you ask. I am affiliated with something older. Sit down if you want to understand the difference.',
+            },
+            {
+                id: 'relay-warning',
+                text: 'The Relay did not fail two years ago. It was quieted. There is a distinction. We have been waiting for it to speak again. It has now spoken. I need to know what it said.',
+            },
+            {
+                id: 'fractured-probes-interest',
+                text: 'Those probe units — the ones without manufacture markings. I have seen their signal pattern before. In records that are officially sealed. Someone has been running a network that nobody has publicly acknowledged for a very long time.',
+                condition: 'flag.relay-jump-completed',
+            },
+            {
+                id: 'pattern-theory',
+                text: 'The waveform in the relay core. The one in Coldframe. Do not dismiss the coincidence. Coincidence at this scale is not coincidence. Something is broadcasting. We do not know what. We do not know to whom.',
+                condition: 'flag.relay-jump-completed',
+            },
+        ],
+        services: ['info', 'covenant-contracts'],
+        tags: ['quest-giver', 'info-broker', 'void-covenant', 'mystery', 'relay', 'phase-3', 'void-adjacent'],
+    },
+
+    {
+        id: 'farpoint-kael',
+        name: 'Kael Mourne',
+        role: ['quest-giver', 'info-broker'],
+        location: 'meridian-station',
+        description:
+            'The operations supervisor for Farpoint Waystation\'s core sections — ' +
+            'the man who has kept a skeleton crew alive and the station running for twenty-six months ' +
+            'with no relay access, no Commonwealth support, and a maintenance budget built from salvaged freight. ' +
+            'He arrived at Meridian via the first relay-sourced transit in two years, ' +
+            'with a list of things the station needs and a very specific set of questions about ' +
+            'what has been happening in the outer ring.',
+        portrait: 'assets/npcs/kael.png',
+        dialogue: [
+            {
+                id: 'greeting-default',
+                text: 'You went through the relay. That means you\'re the one I need to talk to. Kael Mourne. I run what\'s left of Farpoint. I have work, if you\'re interested.',
+                condition: 'flag.relay-jump-completed',
+            },
+            {
+                id: 'greeting-pre-relay',
+                text: 'I came through the relay with the first transit window. I manage Farpoint Waystation — or what is left of it. I have been waiting two years for someone to come through that door.',
+            },
+            {
+                id: 'farpoint-briefing',
+                text: 'The outer ring has been running on its own for two years. I haven\'t had the crew to go in. Whatever the automated systems have been doing in there — I don\'t know. I need someone who can handle themselves.',
+                condition: 'flag.relay-jump-completed',
+            },
+            {
+                id: 'anomaly-grid4',
+                text: 'Grid 4. I filed a distress ping eighteen months ago. Standard protocol. The relay was supposed to forward it. It was not in operation at the time. I do not understand how it was received. I do not understand how it was logged with a future timestamp.',
+                condition: 'flag.relay-jump-completed',
+            },
+        ],
+        services: ['contracts', 'farpoint-intel'],
+        tags: ['quest-giver', 'info-broker', 'farpoint', 'post-relay', 'frontier', 'phase-3'],
+    },
 ];

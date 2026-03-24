@@ -44,4 +44,19 @@ export const factions: Faction[] = [
         defaultStanding: 'friendly',
         tags: ['hauler', 'courier', 'trade', 'frontier'],
     },
+    {
+        id: 'interstellar-commonwealth-authority',
+        name: 'Interstellar Commonwealth Authority',
+        shortName: 'ICA',
+        description:
+            'The administrative and regulatory arm of the Interstellar Commonwealth — ' +
+            'the broad governing body that technically covers most inhabited space. ' +
+            'The ICA manages relay licensing, freight certification, and inter-station law. ' +
+            'In practice, their reach depends entirely on relay access. ' +
+            'When the relay network failed, the ICA\'s presence in the outer sectors collapsed with it. ' +
+            'Now that Relay 7-9 is back, they are watching closely — ' +
+            'and their agenda may not align with Meridian\'s survival.',
+        defaultStanding: 'neutral',
+        tags: ['government', 'law', 'relay', 'official', 'state', 'phase-3'],
+    },
 ];

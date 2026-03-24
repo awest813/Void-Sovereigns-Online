@@ -5,6 +5,8 @@ export interface Faction {
     /** Unique kebab-case identifier, e.g. "meridian-dock-authority". */
     id: string;
     name: string;
+    /** Abbreviated name for UI display, e.g. "ICA". */
+    shortName?: string;
     description: string;
     /** Primary station or location this faction operates from. */
     homeStation?: string;
