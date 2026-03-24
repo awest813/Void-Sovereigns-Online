@@ -3,8 +3,96 @@ import { Contract } from '../../shared/types/contract';
 /**
  * Starter contracts available at Meridian Station.
  * Three categories: salvage, bounty, delivery.
+ * Phase 1 adds Shalehook Dig Site contracts linked to the playable dungeon.
  */
 export const starterContracts: Contract[] = [
+
+    // ── PHASE 1 — SHALEHOOK DIG SITE ──────────────────────────────────────
+
+    {
+        id: 'scrap-recovery-shalehook',
+        title: 'Scrap Recovery: Shalehook Dig Site',
+        category: 'salvage',
+        tier: 1,
+        description:
+            'The Shalehook prospecting site on asteroid 44-Kheras has been offline for over a decade. ' +
+            'The Guild wants salvageable equipment recovered before the site is written off entirely. ' +
+            'A survey kit left behind by the last survey team is the priority. Scrap and power cells are a bonus.',
+        giver: 'tamsin-vale',
+        sector: 'ashwake-belt',
+        objectives: [
+            'Enter Shalehook Dig Site on asteroid 44-Kheras.',
+            'Recover the survey kit from the equipment depot.',
+            'Collect any salvageable components.',
+            'Return to Meridian Station and report to Tamsin Vale.',
+        ],
+        reward: {
+            credits: 280,
+            xp: 140,
+            reputationGain: {
+                'meridian-dock-authority': 5,
+                'ashwake-extraction-guild': 5,
+            },
+        },
+        tags: ['salvage', 'ashwake', 'shalehook', 'tier-1', 'phase-1'],
+    },
+
+    {
+        id: 'robot-suppression-shalehook',
+        title: 'Robot Suppression: Shalehook Dig Site',
+        category: 'bounty',
+        tier: 1,
+        description:
+            'Automated units at Shalehook Dig Site have been flagged hostile — two Guild survey crews have been driven off ' +
+            'in the past month. The Guild is authorizing suppression. ' +
+            'The Excavator Prime unit at the dig core is the primary target. Bring back its control module as proof.',
+        giver: 'tamsin-vale',
+        sector: 'ashwake-belt',
+        objectives: [
+            'Enter Shalehook Dig Site on asteroid 44-Kheras.',
+            'Clear rogue automated units throughout the site.',
+            'Destroy Excavator Prime and recover its control module.',
+            'Return the control module to Tamsin Vale at Meridian Station.',
+        ],
+        reward: {
+            credits: 450,
+            xp: 200,
+            reputationGain: {
+                'meridian-dock-authority': 8,
+                'ashwake-extraction-guild': 10,
+            },
+            itemRewards: ['control-module'],
+        },
+        tags: ['bounty', 'combat', 'ashwake', 'shalehook', 'tier-1', 'phase-1'],
+    },
+
+    {
+        id: 'equipment-retrieval-shalehook',
+        title: 'Equipment Retrieval: Survey Kit Alpha',
+        category: 'salvage',
+        tier: 1,
+        description:
+            'Survey Kit Alpha went dark with the rest of Shalehook. ' +
+            'The Guild\'s data recovery team says the unit\'s core is probably still intact. ' +
+            'Nera Quill is willing to pay separately for any functioning components you bring back. ' +
+            'Quick job if the site is clear.',
+        giver: 'nera-quill',
+        sector: 'ashwake-belt',
+        objectives: [
+            'Locate Survey Kit Alpha in the Shalehook Dig Site equipment depot.',
+            'Return the survey kit to Nera Quill at Meridian Station.',
+        ],
+        reward: {
+            credits: 200,
+            xp: 100,
+            reputationGain: {
+                'ashwake-extraction-guild': 5,
+            },
+        },
+        tags: ['salvage', 'retrieval', 'ashwake', 'shalehook', 'tier-1', 'phase-1'],
+    },
+
+
     // ── SALVAGE ──────────────────────────────────────────────────────────────
     {
         id: 'salvage-rig-alpha-7',

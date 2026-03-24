@@ -2,6 +2,7 @@ import { Boot } from './scenes/Boot';
 import { Preloader } from './scenes/Preloader';
 import { MainMenu } from './scenes/MainMenu';
 import { HubScene } from './scenes/HubScene';
+import { SectorMapScene } from './scenes/SectorMapScene';
 import { DungeonScene } from './scenes/DungeonScene';
 import { AUTO, Game } from 'phaser';
 
@@ -16,6 +17,7 @@ const config: Phaser.Types.Core.GameConfig = {
         Preloader,
         MainMenu,
         HubScene,
+        SectorMapScene,
         DungeonScene,
     ],
 };
@@ -23,3 +25,4 @@ const config: Phaser.Types.Core.GameConfig = {
 const StartGame = (parent: string) => new Game({ ...config, parent });
 
 export default StartGame;
+
