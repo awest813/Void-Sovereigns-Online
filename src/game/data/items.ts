@@ -318,7 +318,8 @@ export const ITEMS: Record<string, ItemDef> = {
         type: 'consumable',
         value: 90,
         description: 'An advanced composite trauma and environmental kit rated for void-adjacent field conditions. ' +
-            'Treats standard injuries plus void-exposure symptoms. Restores 50 pilot HP.',
+            'Treats standard injuries plus void-exposure symptoms. Restores 50 pilot HP. ' +
+            'The integrated signal disruptor suppresses enemy targeting for one turn — no counter-attack.',
         effect: { healPilot: 50 },
     },
 };
