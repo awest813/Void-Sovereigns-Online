@@ -153,7 +153,7 @@ export class SectorMapScene extends Scene {
             }).setInteractive({ useHandCursor: true });
             fpBtn.on('pointerover', () => fpBtn.setColor(C.btnHover));
             fpBtn.on('pointerout',  () => fpBtn.setColor(farpointCleared ? C.textSecond : C.textWarn));
-            fpBtn.on('pointerdown', () => this.launchToDungeon('farpoint-outer-ring'));
+            fpBtn.on('pointerdown', () => this.launchToDungeon('farpoint-waystation'));
 
             // ── Phase 4 sector nodes ──────────────────────────────────────
             const kalindraClear = GameState.getFlag('kalindra-cleared');
@@ -372,12 +372,15 @@ export class SectorMapScene extends Scene {
             fontFamily: 'Arial', fontSize: 12, color: '#ff6644', align: 'center',
         }).setOrigin(0.5));
 
-        const secureText = securedId
-            ? `Secure slot: ${securedId} — PROTECTED`
+        const securedName = securedId
+            ? (gs.inventory.find(i => i.id === securedId)?.name ?? securedId)
+            : null;
+        const secureText = securedName
+            ? `Secure slot: ${securedName} — PROTECTED`
             : 'Secure slot: not set — visit Services to set';
         panel.add(this.add.text(0, -58, secureText, {
             fontFamily: 'Arial', fontSize: 12,
-            color: securedId ? '#44ff88' : '#996644', align: 'center',
+            color: securedName ? '#44ff88' : '#996644', align: 'center',
         }).setOrigin(0.5));
 
         panel.add(this.add.text(0, -34, insuranceActive

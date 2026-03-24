@@ -27,6 +27,35 @@ const C = {
 // All contracts from all phases — used for ID→title lookups in completion screen.
 const ALL_CONTRACTS = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts];
 
+// ── Combat balance constants ─────────────────────────────────────────────────
+/** Player base damage range (min/max). Scales up by PLAYER_LEVEL_DAMAGE_BONUS per level. */
+const PLAYER_BASE_DMG_MIN = 12;
+const PLAYER_BASE_DMG_MAX = 22;
+/** Extra damage added to both min and max per player level above 1. */
+const PLAYER_LEVEL_DAMAGE_BONUS = 2;
+/** Probability of a player critical hit (1.5× damage). */
+const PLAYER_CRIT_CHANCE = 0.10;
+/** Probability of a perfect evasion on Dodge (zero incoming damage). */
+const PERFECT_EVASION_CHANCE = 0.15;
+/** Critical hit multiplier for both player and enemy. */
+const CRIT_MULTIPLIER = 1.5;
+/** Boss HP fraction below which the enrage/overcharge state activates. */
+const BOSS_ENRAGE_THRESHOLD = 0.33;
+/** Damage multiplier applied to all enemy attacks while enraged. */
+const BOSS_ENRAGE_MULTIPLIER = 1.35;
+/** Enemy crit chance for high-tier enemies (attackMax >= this threshold). */
+const HIGH_TIER_ATTACK_THRESHOLD = 35;
+const HIGH_TIER_CRIT_CHANCE = 0.08;
+/** Enemy crit chance for standard-tier enemies. */
+const NORMAL_ENEMY_CRIT_CHANCE = 0.05;
+/**
+ * Returns the combat damage reduction provided by the pilot's shielding upgrades.
+ * Each 4 points of shielding blocks 1 point of damage.
+ */
+function shieldDamageReduction(shieldingBonus: number): number {
+    return shieldingBonus > 0 ? Math.floor(shieldingBonus / 4) : 0;
+}
+
 // ── DungeonScene ────────────────────────────────────────────────────────────
 type DungeonPhase =
     | 'intro'
@@ -42,6 +71,8 @@ interface CombatState {
     enemyIndex: number;   // which enemy is active
     log: string[];
     playerDodging: boolean;
+    /** True once a boss drops below 33% HP — increases damage output. */
+    bossEnrageActive: boolean;
 }
 
 export class DungeonScene extends Scene {
@@ -413,6 +444,7 @@ export class DungeonScene extends Scene {
             enemyIndex: 0,
             log: [],
             playerDodging: false,
+            bossEnrageActive: false,
         };
 
         const firstEnemy = this.combat.enemies[0];
@@ -434,8 +466,9 @@ export class DungeonScene extends Scene {
 
         // Enemy block
         const enemyHpPct = enemy.currentHp / enemy.hp;
+        const enrageColor = cb.bossEnrageActive ? '#ff2222' : C.textDanger;
         this.addContentText(512, 82, enemy.name.toUpperCase(), {
-            fontFamily: 'Arial Black', fontSize: 18, color: C.textDanger, align: 'center',
+            fontFamily: 'Arial Black', fontSize: 18, color: enrageColor, align: 'center',
         }).setOrigin(0.5);
 
         this.addContentText(512, 104, enemy.description, {
@@ -528,11 +561,24 @@ export class DungeonScene extends Scene {
     private combatAttack() {
         const cb = this.combat!;
         const enemy = cb.enemies[cb.enemyIndex];
+        const gs = GameState.get();
 
-        // Player attack
-        const playerDmg = Math.max(1, Phaser.Math.Between(12, 22) - enemy.defense);
+        // Player attack — base damage scales +PLAYER_LEVEL_DAMAGE_BONUS per level above 1
+        const levelBonus = (gs.level - 1) * PLAYER_LEVEL_DAMAGE_BONUS;
+        const rawRoll = Phaser.Math.Between(PLAYER_BASE_DMG_MIN + levelBonus, PLAYER_BASE_DMG_MAX + levelBonus);
+        const isPlayerCrit = Math.random() < PLAYER_CRIT_CHANCE;
+        const playerDmg = Math.max(1, Math.floor(rawRoll * (isPlayerCrit ? CRIT_MULTIPLIER : 1.0)) - enemy.defense);
         enemy.currentHp = Math.max(0, enemy.currentHp - playerDmg);
-        cb.log.push(`You attack for ${playerDmg} damage. (${enemy.currentHp}/${enemy.hp} HP)`);
+
+        const critPrefix = isPlayerCrit ? '⚡ CRITICAL STRIKE — ' : '';
+        cb.log.push(`${critPrefix}You attack for ${playerDmg} damage. (${enemy.currentHp}/${enemy.hp} HP)`);
+
+        // Check for boss enrage (boss room, HP drops below BOSS_ENRAGE_THRESHOLD)
+        const room = this.rooms[this.currentRoomIdx];
+        if (room.type === 'boss' && !cb.bossEnrageActive && enemy.currentHp > 0 && enemy.currentHp / enemy.hp < BOSS_ENRAGE_THRESHOLD) {
+            cb.bossEnrageActive = true;
+            cb.log.push(`⚠  ${enemy.name}: OVERCHARGE INITIATED — critical systems engaged.`);
+        }
 
         if (enemy.currentHp <= 0) {
             this.onEnemyDefeated();
@@ -546,22 +592,28 @@ export class DungeonScene extends Scene {
     private combatDodge() {
         const cb = this.combat!;
         const enemy = cb.enemies[cb.enemyIndex];
+        const gs = GameState.get();
 
-        cb.log.push('You brace and dodge — reduced incoming damage this turn.');
-        cb.playerDodging = true;
-
-        // Enemy attack with halved damage
-        const rawDmg = Phaser.Math.Between(enemy.attackMin, enemy.attackMax);
-        const reduced = Math.max(1, Math.floor(rawDmg * 0.35));
-        GameState.damagePilot(reduced);
-        cb.log.push(`${enemy.name} attacks for ${reduced} damage (reduced). Pilot HP: ${GameState.get().pilotHull}`);
+        // 15% chance to fully evade the incoming attack
+        const isEvade = Math.random() < PERFECT_EVASION_CHANCE;
+        if (isEvade) {
+            cb.log.push('Perfect evasion — you slipped past the attack entirely. No damage taken.');
+        } else {
+            cb.log.push('You brace and dodge — reduced incoming damage this turn.');
+            const rawDmg = Phaser.Math.Between(enemy.attackMin, enemy.attackMax);
+            const reduced = Math.max(1, Math.floor(rawDmg * 0.35) - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus));
+            GameState.damagePilot(reduced);
+            cb.log.push(`${enemy.name} attacks for ${reduced} damage (reduced). Pilot HP: ${GameState.get().pilotHull}`);
+        }
         cb.playerDodging = false;
 
-        this.checkPlayerDeath();
+        this.buildHeader();
+        if (!this.checkPlayerDeath()) this.renderCombat();
     }
 
     private combatUseItem(itemId: string) {
         const cb = this.combat!;
+        const enemy = cb.enemies[cb.enemyIndex];
         const item = GameState.useItem(itemId);
         if (!item) return;
 
@@ -572,19 +624,40 @@ export class DungeonScene extends Scene {
         } else if (def?.effect?.healShip) {
             GameState.healShip(def.effect.healShip);
             cb.log.push(`Used ${item.name} — repaired ${def.effect.healShip} ship HP. (${GameState.get().shipHull}/${GameState.get().shipMaxHull})`);
+        } else {
+            cb.log.push(`Used ${item.name}.`);
         }
 
-        // Enemy still attacks
-        this.enemyAttack(false);
+        // Anomaly Field Kit suppresses the enemy's targeting this turn (no counter-attack)
+        if (itemId === 'anomaly-field-kit') {
+            cb.log.push(`Signal disruption from ${item.name} — ${enemy.name} targeting suppressed this turn.`);
+            this.buildHeader();
+            if (!this.checkPlayerDeath()) this.renderCombat();
+        } else {
+            // Enemy still attacks
+            this.enemyAttack(false);
+        }
     }
 
     private enemyAttack(logOnly: boolean) {
         const cb = this.combat!;
         const enemy = cb.enemies[cb.enemyIndex];
-        const dmg = Math.max(1, Phaser.Math.Between(enemy.attackMin, enemy.attackMax) - 2);
+        const gs = GameState.get();
+
+        const rawDmg = Phaser.Math.Between(enemy.attackMin, enemy.attackMax);
+        // Higher-tier enemies (high attack ceiling) have a slightly better crit chance
+        const enemyCritChance = enemy.attackMax >= HIGH_TIER_ATTACK_THRESHOLD ? HIGH_TIER_CRIT_CHANCE : NORMAL_ENEMY_CRIT_CHANCE;
+        const isEnemyCrit = Math.random() < enemyCritChance;
+        // Boss enrage multiplier kicks in once the enrage flag is set
+        const enrageMult = cb.bossEnrageActive ? BOSS_ENRAGE_MULTIPLIER : 1.0;
+
+        const dmg = Math.max(1, Math.floor(rawDmg * (isEnemyCrit ? CRIT_MULTIPLIER : 1.0) * enrageMult) - 2 - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus));
         GameState.damagePilot(dmg);
+
         if (!logOnly) {
-            cb.log.push(`${enemy.name} attacks for ${dmg} damage. Pilot HP: ${GameState.get().pilotHull}`);
+            const critLabel = isEnemyCrit ? '  [CRIT]' : '';
+            const enrageLabel = cb.bossEnrageActive ? '  [OVERCHARGE]' : '';
+            cb.log.push(`${enemy.name} attacks for ${dmg} damage.${critLabel}${enrageLabel} Pilot HP: ${GameState.get().pilotHull}`);
         }
         this.buildHeader();
         if (this.checkPlayerDeath()) return;
