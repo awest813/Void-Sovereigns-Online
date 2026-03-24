@@ -65,6 +65,13 @@ const HUB_NPC_IDS = [
 ];
 
 // ── HubScene ────────────────────────────────────────────────────────────────
+// Layout / animation constants used across multiple methods.
+const SCENE_TRANSITION_FADE_MS  = 300;
+const DIALOGUE_LINE_HEIGHT       = 80;   // px per NPC dialogue row
+const DIALOGUE_VIEWPORT_TOP      = 260;  // y where the masked dialogue area begins
+const DIALOGUE_VIEWPORT_HEIGHT   = 316;  // visible height of the dialogue clip region
+const DIALOGUE_SCROLL_SPEED      = 0.3;  // wheel-delta multiplier for NPC dialogue scroll
+
 export class HubScene extends Scene {
     private panels: Map<string, Phaser.GameObjects.Container> = new Map();
     private statusBarTexts: { credits: Phaser.GameObjects.Text; xp: Phaser.GameObjects.Text; level: Phaser.GameObjects.Text; pilotHp: Phaser.GameObjects.Text } | null = null;
@@ -72,6 +79,8 @@ export class HubScene extends Scene {
     private shipFuelBar: Phaser.GameObjects.Rectangle | null = null;
     private shipHullText: Phaser.GameObjects.Text | null = null;
     private shipFuelText: Phaser.GameObjects.Text | null = null;
+    // Wheel-scroll handler wired during NPC dialogue — removed when leaving that panel.
+    private _npcScrollHandler: ((...args: unknown[]) => void) | null = null;
 
     constructor() {
         super('Hub');
@@ -162,13 +171,9 @@ export class HubScene extends Scene {
         this.add.text(190, y + 3, 'HULL', {
             fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
         });
-        this.add.rectangle(240, y + 10, 100, 10, 0x223322);
         const hullPct = gs.shipHull / gs.shipMaxHull;
-        this.shipHullBar = this.add.rectangle(
-            240 - 50 + (hullPct * 100) / 2, y + 10,
-            hullPct * 100, 10,
-            hullPct > 0.5 ? C.barFull : C.barDamaged,
-        );
+        this.shipHullBar = this.drawBar(null, 240, y + 10, 100, 10, hullPct,
+            hullPct > 0.5 ? C.barFull : C.barDamaged, 0x223322);
         this.shipHullText = this.add.text(295, y + 3, `${gs.shipHull}/${gs.shipMaxHull}`, {
             fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
         });
@@ -177,13 +182,8 @@ export class HubScene extends Scene {
         this.add.text(380, y + 3, 'FUEL', {
             fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
         });
-        this.add.rectangle(415, y + 10, 80, 10, 0x112233);
         const fuelPct = gs.shipFuel / gs.shipMaxFuel;
-        this.shipFuelBar = this.add.rectangle(
-            415 - 40 + (fuelPct * 80) / 2, y + 10,
-            fuelPct * 80, 10,
-            C.barFuel,
-        );
+        this.shipFuelBar = this.drawBar(null, 415, y + 10, 80, 10, fuelPct, C.barFuel, 0x112233);
         this.shipFuelText = this.add.text(500, y + 3, `${gs.shipFuel}/${gs.shipMaxFuel}`, {
             fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
         });
@@ -217,6 +217,16 @@ export class HubScene extends Scene {
     private showPanel(name: string) {
         for (const [key, container] of this.panels) {
             container.setVisible(key === name);
+        }
+        // Tear down the NPC dialogue scroll handler whenever we leave that panel.
+        if (name !== 'npc-dialogue' && this._npcScrollHandler) {
+            this.input.off('wheel', this._npcScrollHandler);
+            this._npcScrollHandler = null;
+        }
+        // Re-populate the main panel so contract badges reflect the latest state.
+        if (name === 'main') {
+            const c = this.panels.get('main');
+            if (c) this.populateMainPanel(c);
         }
     }
 
@@ -268,10 +278,41 @@ export class HubScene extends Scene {
         }
     }
 
+    /**
+     * Draws a background track plus a filled progress bar and adds both to
+     * `container` (pass `null` to add directly to the scene).
+     * Returns the fill rectangle so the caller can update it later.
+     */
+    private drawBar(
+        container: Phaser.GameObjects.Container | null,
+        x: number, y: number,
+        width: number, height: number,
+        pct: number, fillColor: number,
+        bgColor = 0x1a1a2a,
+        withBgStroke = false,
+    ): Phaser.GameObjects.Rectangle {
+        const clampedPct = Math.max(0, Math.min(1, pct));
+        const bg = this.add.rectangle(x, y, width, height, bgColor);
+        if (withBgStroke) bg.setStrokeStyle(1, C.border);
+        if (container) container.add(bg);
+        const fillW = clampedPct > 0 ? clampedPct * width : 0;
+        const fill = this.add.rectangle(
+            fillW > 0 ? x - width / 2 + fillW / 2 : x,
+            y, Math.max(fillW, 0), height, fillColor,
+        );
+        if (container) container.add(fill);
+        return fill;
+    }
+
     // ── Main panel ────────────────────────────────────────────────────────
     private buildMainPanel() {
         const c = this.add.container(0, 0);
         this.panels.set('main', c);
+        this.populateMainPanel(c);
+    }
+
+    private populateMainPanel(c: Phaser.GameObjects.Container) {
+        c.removeAll(true);
 
         this.panelHeader(c, 'MERIDIAN STATION', 'Low-rent. Busy. Yours for now.');
 
@@ -304,7 +345,8 @@ export class HubScene extends Scene {
             btn.on('pointerout', () => btn.setColor(C.textPrimary));
             btn.on('pointerdown', () => {
                 if (item.target === 'sectormap') {
-                    this.scene.start('SectorMap');
+                    this.cameras.main.fadeOut(SCENE_TRANSITION_FADE_MS, 0, 0, 0);
+                    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('SectorMap'));
                 } else {
                     this.showPanel(item.target);
                 }
@@ -527,6 +569,12 @@ export class HubScene extends Scene {
         const npc = meridianNPCs.find(n => n.id === npcId);
         if (!npc) return;
 
+        // Tear down any previous wheel handler before rebuilding the panel.
+        if (this._npcScrollHandler) {
+            this.input.off('wheel', this._npcScrollHandler);
+            this._npcScrollHandler = null;
+        }
+
         const existing = this.panels.get('npc-dialogue');
         if (existing) existing.destroy();
 
@@ -545,20 +593,46 @@ export class HubScene extends Scene {
             fontFamily: 'Arial', fontSize: 13, color: C.textAccent, align: 'center',
         }).setOrigin(0.5));
 
-        // Show up to 3 dialogue lines
-        const lines = npc.dialogue.slice(0, 3);
-        lines.forEach((line, i) => {
-            const y = 280 + i * 100;
-            c.add(this.add.rectangle(512, y + 28, 720, 80, 0x0a0a1a).setStrokeStyle(1, C.border));
-            c.add(this.add.text(512, y + 28, `"${line.text}"`, {
-                fontFamily: 'Arial', fontSize: 14, color: C.textPrimary, align: 'center',
+        // ── Scrollable dialogue area ──────────────────────────────────────
+        // All dialogue lines are shown; mouse-wheel scrolls when content overflows.
+        const totalH    = npc.dialogue.length * DIALOGUE_LINE_HEIGHT;
+        const maxScroll = Math.max(0, totalH - DIALOGUE_VIEWPORT_HEIGHT);
+        let   scrollY   = 0;
+
+        // Mask that clips the scrollable container to the visible area.
+        const maskGfx = this.make.graphics({ x: 0, y: 0 });
+        maskGfx.fillRect(112, DIALOGUE_VIEWPORT_TOP, 800, DIALOGUE_VIEWPORT_HEIGHT);
+        const mask = maskGfx.createGeometryMask();
+
+        const scrollCt = this.add.container(0, 0);
+        scrollCt.setMask(mask);
+        c.add(scrollCt);
+
+        npc.dialogue.forEach((line, i) => {
+            const y = DIALOGUE_VIEWPORT_TOP + i * DIALOGUE_LINE_HEIGHT;
+            scrollCt.add(this.add.rectangle(512, y + 32, 720, DIALOGUE_LINE_HEIGHT - 8, 0x0a0a1a).setStrokeStyle(1, C.border));
+            scrollCt.add(this.add.text(512, y + 32, `"${line.text}"`, {
+                fontFamily: 'Arial', fontSize: 13, color: C.textPrimary, align: 'center',
                 fontStyle: 'italic', wordWrap: { width: 680 },
             }).setOrigin(0.5));
         });
 
+        // Scroll hint when there is overflow content.
+        if (maxScroll > 0) {
+            c.add(this.add.text(512, DIALOGUE_VIEWPORT_TOP + DIALOGUE_VIEWPORT_HEIGHT + 6, '▼ scroll for more', {
+                fontFamily: 'Arial', fontSize: 11, color: C.textMuted, align: 'center',
+            }).setOrigin(0.5));
+
+            this._npcScrollHandler = (_pointer: unknown, _gameObjects: unknown, _deltaX: unknown, deltaY: unknown) => {
+                scrollY = Math.max(0, Math.min(maxScroll, scrollY + (deltaY as number) * DIALOGUE_SCROLL_SPEED));
+                scrollCt.setY(-scrollY);
+            };
+            this.input.on('wheel', this._npcScrollHandler);
+        }
+
         if (npc.services && npc.services.length > 0) {
             const servicesStr = npc.services.join('  ·  ').toUpperCase();
-            c.add(this.add.text(512, 590, `SERVICES: ${servicesStr}`, {
+            c.add(this.add.text(512, 596, `SERVICES: ${servicesStr}`, {
                 fontFamily: 'Arial', fontSize: 13, color: C.textWarn, align: 'center',
             }).setOrigin(0.5));
         }
@@ -657,13 +731,31 @@ export class HubScene extends Scene {
             fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center', fontStyle: 'italic',
         }).setOrigin(0.5));
 
+        // ── Pilot HP status ─────────────────────────────────────────────
+        const pilotPct = gs.pilotHull / gs.pilotMaxHull;
+        const pilotBarColor  = pilotPct < 0.4 ? C.barCritical : pilotPct < 0.7 ? C.barDamaged : C.barHull;
+        const pilotTextColor = pilotPct < 0.4 ? C.textDanger  : pilotPct < 0.7 ? C.textWarn   : C.textSuccess;
+        c.add(this.add.rectangle(512, 342, 700, 30, 0x0a0a1a).setStrokeStyle(1, C.border));
+        c.add(this.add.text(180, 334, 'PILOT HP', {
+            fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
+        }));
+        this.drawBar(c, 340, 342, 180, 10, pilotPct, pilotBarColor);
+        c.add(this.add.text(440, 334, `${gs.pilotHull} / ${gs.pilotMaxHull}`, {
+            fontFamily: 'Arial', fontSize: 12, color: pilotTextColor,
+        }));
+        if (pilotPct < 0.5) {
+            c.add(this.add.text(600, 334, '⚠ Low HP', {
+                fontFamily: 'Arial', fontSize: 11, color: C.textWarn,
+            }));
+        }
+
         const shopItems: Array<{ id: string; name: string; cost: number }> = [
             { id: 'medical-kit', name: 'Medical Kit (heal 35 HP)', cost: 50 },
             { id: 'repair-kit',  name: 'Repair Kit (repair 30 hull)', cost: 65 },
         ];
 
         shopItems.forEach((item, i) => {
-            const y = 348 + i * 48;
+            const y = 380 + i * 48;
             c.add(this.add.rectangle(512, y + 12, 700, 38, 0x0a0a1a).setStrokeStyle(1, C.border));
             c.add(this.add.text(180, y + 2, `◆ ${item.name}`, {
                 fontFamily: 'Arial', fontSize: 13, color: C.textPrimary,
@@ -688,18 +780,18 @@ export class HubScene extends Scene {
         });
 
         // ── Nera Quill — sell salvage ───────────────────────────────────
-        c.add(this.add.text(512, 454, 'SELL SALVAGE', {
+        c.add(this.add.text(512, 488, 'SELL SALVAGE', {
             fontFamily: 'Arial Black', fontSize: 14, color: C.textWarn, align: 'center',
         }).setOrigin(0.5));
 
         const sellable = gs.inventory.filter(item => item.type === 'salvage' && item.qty > 0);
         if (sellable.length === 0) {
-            c.add(this.add.text(512, 478, 'No salvage in inventory.', {
+            c.add(this.add.text(512, 512, 'No salvage in inventory.', {
                 fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
             }).setOrigin(0.5));
         } else {
             sellable.forEach((item, i) => {
-                const y = 472 + i * 40;
+                const y = 506 + i * 40;
                 c.add(this.add.rectangle(512, y + 10, 700, 34, 0x0a0a1a).setStrokeStyle(1, C.border));
                 c.add(this.add.text(180, y + 2, `◆ ${item.name}  ×${item.qty}  (${item.value}c each)`, {
                     fontFamily: 'Arial', fontSize: 12, color: C.textPrimary,
@@ -725,6 +817,11 @@ export class HubScene extends Scene {
     private buildShipStatusPanel() {
         const c = this.add.container(0, 0);
         this.panels.set('shipstatus', c);
+        this.populateShipStatusPanel(c);
+    }
+
+    private populateShipStatusPanel(c: Phaser.GameObjects.Container) {
+        c.removeAll(true);
         const gs = GameState.get();
 
         this.panelHeader(c, 'SHIP STATUS', 'Current ship + relay goal');
@@ -808,16 +905,13 @@ export class HubScene extends Scene {
             c.add(this.add.text(512, 394, 'RELAY GOAL — VOID RELAY 7-9', {
                 fontFamily: 'Arial Black', fontSize: 15, color: C.textWarn, align: 'center',
             }).setOrigin(0.5));
-            // Path A: buy Hauler
+            // Path A: buy Hauler — progress bar via shared helper
             const creditsToHauler = Math.max(0, HAULER_PURCHASE_COST - gs.credits);
             const pathAProgress = Math.min(gs.credits / HAULER_PURCHASE_COST, 1);
             c.add(this.add.text(150, 418, `PATH A: Buy Meridian Hauler II from Oziel Kaur — ${HAULER_PURCHASE_COST}c`, {
                 fontFamily: 'Arial Black', fontSize: 12, color: C.textWarn,
             }));
-            c.add(this.add.rectangle(512, 446, 700, 14, 0x1a1a2a).setStrokeStyle(1, C.border));
-            if (pathAProgress > 0) {
-                c.add(this.add.rectangle(162 + (pathAProgress * 700) / 2, 446, pathAProgress * 700, 14, 0xcc8822));
-            }
+            this.drawBar(c, 512, 446, 700, 14, pathAProgress, 0xcc8822, 0x1a1a2a, true);
             c.add(this.add.text(512, 446, creditsToHauler === 0 ? 'READY' : `${gs.credits}c / ${HAULER_PURCHASE_COST}c`, {
                 fontFamily: 'Arial Black', fontSize: 10, color: '#ffffff', align: 'center',
             }).setOrigin(0.5));
@@ -913,6 +1007,9 @@ export class HubScene extends Scene {
                         this.refreshShipBar();
                         this.showInstallNote(upg.installNote, () => {
                             this.populateShipyardPanel(c);
+                            // Keep ship status panel current so upgrades are visible immediately.
+                            const shipStatusC = this.panels.get('shipstatus');
+                            if (shipStatusC) this.populateShipStatusPanel(shipStatusC);
                         });
                     }
                 });
