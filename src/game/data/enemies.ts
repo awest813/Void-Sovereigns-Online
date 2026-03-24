@@ -89,6 +89,60 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'salvage-crate-standard', chance: 0.7, qty: 1 },
         ],
     },
+
+    // ── Coldframe Station-B enemies ─────────────────────────────────────────
+
+    'atmo-hazard-unit': {
+        id: 'atmo-hazard-unit',
+        name: 'Atmosphere Hazard Unit',
+        description: 'A pressurized maintenance bot running a fault loop. Vents hazardous gas on proximity contact.',
+        hp: 38,
+        attackMin: 8,
+        attackMax: 16,
+        defense: 3,
+        xpReward: 28,
+        creditDropMin: 12,
+        creditDropMax: 28,
+        lootPool: [
+            { itemId: 'scrap-metal',    chance: 0.7, qty: 1 },
+            { itemId: 'pressure-valve', chance: 0.5, qty: 1 },
+        ],
+    },
+    'cryo-locked-unit': {
+        id: 'cryo-locked-unit',
+        name: 'Cryo-Locked Maintenance Unit',
+        description: 'A maintenance robot that was powered up inside a cryogenic environment. Partially frozen, partially functional — and extremely confused about what it is trying to protect.',
+        hp: 62,
+        attackMin: 12,
+        attackMax: 20,
+        defense: 6,
+        xpReward: 50,
+        creditDropMin: 25,
+        creditDropMax: 50,
+        lootPool: [
+            { itemId: 'cryo-component',       chance: 0.65, qty: 1 },
+            { itemId: 'drone-scrap-parts',    chance: 0.55, qty: 1 },
+            { itemId: 'power-cell',           chance: 0.35, qty: 1 },
+        ],
+    },
+    'facility-controller-alpha': {
+        id: 'facility-controller-alpha',
+        name: 'Facility Controller Alpha',
+        description: 'The central network hub for Coldframe Station-B. Six-limbed chassis, full sensor array, running a behavior pattern that no factory default should produce.',
+        hp: 160,
+        attackMin: 20,
+        attackMax: 34,
+        defense: 12,
+        xpReward: 140,
+        creditDropMin: 90,
+        creditDropMax: 170,
+        lootPool: [
+            { itemId: 'black-box-fragment',    chance: 1.0, qty: 1 },
+            { itemId: 'cryo-component',        chance: 0.85, qty: 2 },
+            { itemId: 'power-cell',            chance: 0.90, qty: 2 },
+            { itemId: 'salvage-crate-standard', chance: 0.65, qty: 1 },
+        ],
+    },
 };
 
 /** Roll loot from an enemy's loot pool. Returns InventoryItem-shaped objects. */
@@ -106,6 +160,10 @@ export function rollLoot(enemyId: string): Array<{ id: string; name: string; qty
         'control-module':        { name: 'Control Module',        type: 'key',        value: 80 },
         'salvage-crate-standard':{ name: 'Salvage Crate',         type: 'salvage',    value: 60 },
         'survey-kit-damaged':    { name: 'Survey Kit (Damaged)',  type: 'key',        value: 50 },
+        'pressure-valve':        { name: 'Pressure Valve',        type: 'salvage',    value: 20 },
+        'cryo-component':        { name: 'Cryo Component',        type: 'salvage',    value: 55 },
+        'black-box-fragment':    { name: 'Black Box Fragment',    type: 'key',        value: 120 },
+        'corrupted-maintenance-log': { name: 'Corrupted Maintenance Log', type: 'key', value: 40 },
     };
 
     for (const entry of enemy.lootPool) {

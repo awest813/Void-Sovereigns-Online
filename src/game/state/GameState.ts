@@ -15,6 +15,14 @@ export interface ContractEntry {
     turnedIn: boolean;
 }
 
+interface ShipStatOverrides {
+    hullBonus: number;
+    shieldingBonus: number;
+    cargoBonus: number;
+    fuelBonus: number;
+    jumpRangeBonus: number;
+}
+
 interface State {
     credits: number;
     xp: number;
@@ -25,6 +33,12 @@ interface State {
     shipMaxHull: number;
     shipFuel: number;
     shipMaxFuel: number;
+    /** Active ship ID (links to content/ships/ships.ts) */
+    activeShipId: string;
+    /** Installed upgrade IDs */
+    installedUpgrades: string[];
+    /** Cumulative stat bonuses from installed upgrades */
+    shipStatOverrides: ShipStatOverrides;
     inventory: InventoryItem[];
     contracts: ContractEntry[];
     reputation: Record<string, number>;
@@ -34,6 +48,7 @@ interface State {
     lastRunCredits: number;
     lastRunXp: number;
     lastRunSuccess: boolean;
+    lastDungeonId: string | null;
     pendingDungeon: string | null;
 }
 
@@ -47,6 +62,15 @@ const state: State = {
     shipMaxHull: 80,
     shipFuel: 14,
     shipMaxFuel: 20,
+    activeShipId: 'cutter-mk1',
+    installedUpgrades: [],
+    shipStatOverrides: {
+        hullBonus: 0,
+        shieldingBonus: 0,
+        cargoBonus: 0,
+        fuelBonus: 0,
+        jumpRangeBonus: 0,
+    },
     inventory: [
         { id: 'medical-kit',  name: 'Medical Kit',  qty: 2, type: 'consumable', value: 30 },
         { id: 'repair-kit',   name: 'Repair Kit',   qty: 1, type: 'consumable', value: 40 },
@@ -62,6 +86,7 @@ const state: State = {
     lastRunCredits: 0,
     lastRunXp: 0,
     lastRunSuccess: false,
+    lastDungeonId: null,
     pendingDungeon: null,
 };
 
@@ -111,6 +136,63 @@ export const GameState = {
     },
     refuelShip(amount: number) {
         state.shipFuel = Math.min(state.shipFuel + amount, state.shipMaxFuel);
+    },
+
+    // ── Ship upgrades ──────────────────────────────────────────────────────
+    isUpgradeInstalled(upgradeId: string): boolean {
+        return state.installedUpgrades.includes(upgradeId);
+    },
+    installUpgrade(upgradeId: string, statBonus: {
+        hull?: number;
+        shielding?: number;
+        cargoCapacity?: number;
+        fuelCapacity?: number;
+        jumpRange?: number;
+    }) {
+        if (state.installedUpgrades.includes(upgradeId)) return;
+        state.installedUpgrades.push(upgradeId);
+        if (statBonus.hull) {
+            state.shipStatOverrides.hullBonus += statBonus.hull;
+            state.shipMaxHull += statBonus.hull;
+            state.shipHull = Math.min(state.shipHull + statBonus.hull, state.shipMaxHull);
+        }
+        if (statBonus.shielding) {
+            state.shipStatOverrides.shieldingBonus += statBonus.shielding;
+        }
+        if (statBonus.cargoCapacity) {
+            state.shipStatOverrides.cargoBonus += statBonus.cargoCapacity;
+        }
+        if (statBonus.fuelCapacity) {
+            state.shipStatOverrides.fuelBonus += statBonus.fuelCapacity;
+            state.shipMaxFuel += statBonus.fuelCapacity;
+        }
+        if (statBonus.jumpRange) {
+            state.shipStatOverrides.jumpRangeBonus += statBonus.jumpRange;
+        }
+    },
+    /** Returns true when the Cutter is relay-capable via upgrades. */
+    isCutterRelayCapable(): boolean {
+        return state.installedUpgrades.includes('nav-computer') &&
+               state.installedUpgrades.includes('drift-drive-upgrade');
+    },
+    /** Returns true when the player owns a relay-capable ship. */
+    isRelayCapable(): boolean {
+        if (state.activeShipId === 'meridian-hauler-ii') return true;
+        return GameState.isCutterRelayCapable();
+    },
+
+    // ── Salvage selling ────────────────────────────────────────────────────
+    /** Remove one (or all) of an item from inventory, return credits earned. */
+    sellItem(id: string, qty: number = 1): number {
+        const item = state.inventory.find(i => i.id === id);
+        if (!item || item.qty < qty) return 0;
+        const earned = item.value * qty;
+        item.qty -= qty;
+        if (item.qty === 0) {
+            state.inventory = state.inventory.filter(i => i.id !== id);
+        }
+        state.credits += earned;
+        return earned;
     },
 
     // ── Inventory ──────────────────────────────────────────────────────────
@@ -181,12 +263,14 @@ export const GameState = {
         xp: number,
         success: boolean,
         affectedContractIds: string[],
+        dungeonId?: string,
     ) {
         state.returnFromDungeon = true;
         state.lastRunLoot = loot;
         state.lastRunCredits = credits;
         state.lastRunXp = xp;
         state.lastRunSuccess = success;
+        state.lastDungeonId = dungeonId ?? state.pendingDungeon;
         state.pendingDungeon = null;
         // Apply rewards immediately
         state.credits += credits;

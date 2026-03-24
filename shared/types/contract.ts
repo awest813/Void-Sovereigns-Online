@@ -4,7 +4,9 @@ export type ContractCategory =
     | 'delivery'
     | 'escort'
     | 'extraction'
-    | 'survey';
+    | 'survey'
+    | 'investigation'
+    | 'station';
 
 /** Tier 1 = rookie work near Meridian. Tier 5 = deep-space, highly dangerous. */
 export type ContractTier = 1 | 2 | 3 | 4 | 5;

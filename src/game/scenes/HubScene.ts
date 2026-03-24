@@ -2,7 +2,9 @@ import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
 import { GameState } from '../state/GameState';
 import { starterContracts } from '../../../content/contracts/starter-contracts';
+import { phase2Contracts } from '../../../content/contracts/phase2-contracts';
 import { meridianNPCs } from '../../../content/npcs/meridian-npcs';
+import { SHIP_UPGRADES, HAULER_PURCHASE_COST } from '../data/shipUpgrades';
 
 // ── Colour palette ──────────────────────────────────────────────────────────
 const C = {
@@ -23,22 +25,34 @@ const C = {
     barFuel:     0x4488cc,
 };
 
-// Board contracts shown in Phase 1
+// All contracts shown on the Phase 2 board (Phase 1 + Phase 2)
 const BOARD_CONTRACT_IDS = [
+    // Phase 1
     'scrap-recovery-shalehook',
     'robot-suppression-shalehook',
     'equipment-retrieval-shalehook',
     'bounty-rogue-drone-mk3',
     'delivery-fuel-cells-ashwake',
+    // Phase 2
+    'missing-crew-coldframe',
+    'scrap-recovery-coldframe',
+    'escort-ore-convoy',
+    'freight-medical-outer-hab',
+    'station-trouble-stolen-kit',
+    'deep-survey-relay-static',
+    'bounty-automated-sentinel-pack',
 ];
 
-// Phase 1 NPCs shown in hub
+// Phase 1 + Phase 2 NPCs shown in hub contacts
 const HUB_NPC_IDS = [
     'tamsin-vale',
     'rook-mendera',
     'ilya-sorn',
     'nera-quill',
     'brother-caldus',
+    'oziel-kaur',
+    'veera-mox',
+    'jasso',
 ];
 
 // ── HubScene ────────────────────────────────────────────────────────────────
@@ -65,6 +79,7 @@ export class HubScene extends Scene {
         this.buildNpcListPanel();
         this.buildServicesPanel();
         this.buildShipStatusPanel();
+        this.buildShipyardPanel();
 
         if (gs.returnFromDungeon) {
             this.buildDebriefPanel();
@@ -223,16 +238,17 @@ export class HubScene extends Scene {
         this.panelHeader(c, 'MERIDIAN STATION', 'Low-rent. Busy. Yours for now.');
 
         const items = [
-            { label: '[ CONTRACT BOARD ]', sub: 'Take on work in the Belt',         target: 'contracts' },
-            { label: '[ SERVICES ]',        sub: 'Repair, fuel, supplies',           target: 'services' },
-            { label: '[ SECTOR MAP ]',      sub: 'Launch to Ashwake Belt',           target: 'sectormap' },
-            { label: '[ STATION CONTACTS ]',sub: 'Talk to station NPCs',             target: 'npcs' },
-            { label: '[ SHIP STATUS ]',     sub: 'Current ship + upgrade path',      target: 'shipstatus' },
+            { label: '[ CONTRACT BOARD ]', sub: 'Take on work in the Belt',              target: 'contracts' },
+            { label: '[ SERVICES ]',        sub: 'Repair, fuel, sell salvage',            target: 'services' },
+            { label: '[ SECTOR MAP ]',      sub: 'Launch to Ashwake Belt',                target: 'sectormap' },
+            { label: '[ STATION CONTACTS ]',sub: 'Talk to the locals',                    target: 'npcs' },
+            { label: '[ SHIP STATUS ]',     sub: 'Current ship + relay goal',             target: 'shipstatus' },
+            { label: '[ SHIPYARD ]',        sub: 'Upgrades from Ilya, Oziel & Jasso',     target: 'shipyard' },
         ];
 
         items.forEach((item, i) => {
-            const y = 200 + i * 82;
-            c.add(this.add.rectangle(512, y + 18, 420, 64, C.panelBg).setStrokeStyle(1, C.border));
+            const y = 170 + i * 72;
+            c.add(this.add.rectangle(512, y + 18, 420, 60, C.panelBg).setStrokeStyle(1, C.border));
 
             const btn = this.add.text(512, y + 6, item.label, {
                 fontFamily: 'Arial Black', fontSize: 19, color: C.textPrimary, align: 'center',
@@ -248,14 +264,23 @@ export class HubScene extends Scene {
             });
             c.add(btn);
 
-            c.add(this.add.text(512, y + 32, item.sub, {
-                fontFamily: 'Arial', fontSize: 13, color: C.textSecond, align: 'center',
+            c.add(this.add.text(512, y + 30, item.sub, {
+                fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
             }).setOrigin(0.5));
         });
 
+        // Relay goal reminder
+        const relayCapable = GameState.isRelayCapable();
+        const goalText = relayCapable
+            ? '✓  Your ship is relay-capable. Void Relay 7-9 is within reach.'
+            : `▶ RELAY GOAL: Earn credits and upgrade your ship to reach Void Relay 7-9.`;
+        c.add(this.add.text(512, 616, goalText, {
+            fontFamily: 'Arial', fontSize: 12, color: relayCapable ? C.textSuccess : C.textWarn, align: 'center',
+        }).setOrigin(0.5));
+
         // Station flavor
-        c.add(this.add.text(512, 630, '"Thirty ships a day, once. Now eight. The Relays went out and everyone forgot we existed."', {
-            fontFamily: 'Arial', fontSize: 13, color: '#555566', align: 'center', fontStyle: 'italic',
+        c.add(this.add.text(512, 640, '"Thirty ships a day, once. Now eight. The Relays went out and everyone forgot we existed."', {
+            fontFamily: 'Arial', fontSize: 12, color: '#555566', align: 'center', fontStyle: 'italic',
         }).setOrigin(0.5));
     }
 
@@ -270,50 +295,68 @@ export class HubScene extends Scene {
         c.removeAll(true);
         this.panelHeader(c, 'CONTRACT BOARD', 'Meridian Station — Tamsin Vale, Dispatcher');
 
-        const contracts = starterContracts.filter(ct => BOARD_CONTRACT_IDS.includes(ct.id));
-        const rowH = 90;
+        const allContracts = [...starterContracts, ...phase2Contracts];
+        const contracts = allContracts.filter(ct => BOARD_CONTRACT_IDS.includes(ct.id));
+        const rowH = 86;
         const startY = 148;
+
+        // Category color map
+        const catColors: Record<string, string> = {
+            salvage: C.textSecond,
+            bounty: C.textDanger,
+            delivery: C.textAccent,
+            escort: C.textWarn,
+            investigation: '#bb88ff',
+            station: C.textSuccess,
+            survey: '#88ddff',
+            extraction: C.textSecond,
+        };
 
         contracts.forEach((ct, i) => {
             const y = startY + i * rowH;
             const isAccepted = GameState.isContractAccepted(ct.id);
             const isCompleted = GameState.isContractCompleted(ct.id);
 
-            c.add(this.add.rectangle(492, y + 36, 860, rowH - 8, C.panelBg).setStrokeStyle(1, C.border));
+            c.add(this.add.rectangle(492, y + 34, 860, rowH - 8, C.panelBg).setStrokeStyle(1, C.border));
 
             // Tier badge
             const tierColor = ct.tier === 1 ? C.textSuccess : C.textWarn;
-            c.add(this.add.text(80, y + 10, `T${ct.tier}`, {
+            c.add(this.add.text(78, y + 8, `T${ct.tier}`, {
                 fontFamily: 'Arial Black', fontSize: 13, color: tierColor,
             }).setOrigin(0.5));
 
             // Category
             const catLabel = ct.category.toUpperCase();
-            c.add(this.add.text(80, y + 30, catLabel, {
-                fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
+            const catColor = catColors[ct.category] ?? C.textSecond;
+            c.add(this.add.text(78, y + 28, catLabel, {
+                fontFamily: 'Arial', fontSize: 10, color: catColor,
             }).setOrigin(0.5));
 
             // Title
-            c.add(this.add.text(140, y + 8, ct.title, {
-                fontFamily: 'Arial Black', fontSize: 14, color: C.textPrimary,
+            c.add(this.add.text(140, y + 6, ct.title, {
+                fontFamily: 'Arial Black', fontSize: 13, color: C.textPrimary,
             }));
 
             // Description (truncated)
             const desc = ct.description.length > 110 ? ct.description.slice(0, 107) + '…' : ct.description;
-            c.add(this.add.text(140, y + 28, desc, {
-                fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
+            c.add(this.add.text(140, y + 26, desc, {
+                fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
                 wordWrap: { width: 560 },
             }));
 
             // Reward
-            c.add(this.add.text(140, y + 62, `REWARD: ${ct.reward.credits}c + ${ct.reward.xp} XP`, {
-                fontFamily: 'Arial', fontSize: 12, color: C.textWarn,
+            const rewardParts = [`${ct.reward.credits}c`, `${ct.reward.xp} XP`];
+            if (ct.reward.itemRewards && ct.reward.itemRewards.length > 0) {
+                rewardParts.push(`+item`);
+            }
+            c.add(this.add.text(140, y + 60, `REWARD: ${rewardParts.join('  ·  ')}`, {
+                fontFamily: 'Arial', fontSize: 11, color: C.textWarn,
             }));
 
             // State button
             if (isCompleted) {
-                const turnInBtn = this.add.text(870, y + 36, '[ TURN IN ]', {
-                    fontFamily: 'Arial Black', fontSize: 14, color: C.textSuccess,
+                const turnInBtn = this.add.text(870, y + 34, '[ TURN IN ]', {
+                    fontFamily: 'Arial Black', fontSize: 13, color: C.textSuccess,
                 }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
                 turnInBtn.on('pointerover', () => turnInBtn.setColor('#ffffff'));
                 turnInBtn.on('pointerout', () => turnInBtn.setColor(C.textSuccess));
@@ -332,12 +375,12 @@ export class HubScene extends Scene {
                 });
                 c.add(turnInBtn);
             } else if (isAccepted) {
-                c.add(this.add.text(870, y + 36, '[ ACCEPTED ✓ ]', {
-                    fontFamily: 'Arial', fontSize: 13, color: C.textAccent,
+                c.add(this.add.text(870, y + 34, '[ ACCEPTED ✓ ]', {
+                    fontFamily: 'Arial', fontSize: 12, color: C.textAccent,
                 }).setOrigin(1, 0.5));
             } else {
-                const acceptBtn = this.add.text(870, y + 36, '[ ACCEPT ]', {
-                    fontFamily: 'Arial Black', fontSize: 14, color: C.btnNormal,
+                const acceptBtn = this.add.text(870, y + 34, '[ ACCEPT ]', {
+                    fontFamily: 'Arial Black', fontSize: 13, color: C.btnNormal,
                 }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
                 acceptBtn.on('pointerover', () => acceptBtn.setColor(C.btnHover));
                 acceptBtn.on('pointerout', () => acceptBtn.setColor(C.btnNormal));
@@ -462,11 +505,11 @@ export class HubScene extends Scene {
         this.panelHeader(c, 'SERVICES', 'Meridian Station — Ilya Sorn & Nera Quill');
 
         // ── Ilya Sorn — repair ──────────────────────────────────────────
-        c.add(this.add.text(512, 158, 'ILYA SORN — Ship Mechanic', {
-            fontFamily: 'Arial Black', fontSize: 16, color: C.textAccent, align: 'center',
+        c.add(this.add.text(512, 148, 'ILYA SORN — Ship Mechanic', {
+            fontFamily: 'Arial Black', fontSize: 15, color: C.textAccent, align: 'center',
         }).setOrigin(0.5));
-        c.add(this.add.text(512, 180, '"That hull won\'t hold forever."', {
-            fontFamily: 'Arial', fontSize: 13, color: C.textSecond, align: 'center', fontStyle: 'italic',
+        c.add(this.add.text(512, 167, '"That hull won\'t hold forever."', {
+            fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center', fontStyle: 'italic',
         }).setOrigin(0.5));
 
         const hullDmg = gs.shipMaxHull - gs.shipHull;
@@ -476,15 +519,15 @@ export class HubScene extends Scene {
             : `◆ REPAIR SHIP HULL — ${hullDmg} HP damaged — Cost: ${repairCost}c`;
 
         const repairColor = hullDmg === 0 ? C.textSuccess : C.textPrimary;
-        c.add(this.add.rectangle(512, 230, 700, 44, 0x0a0a1a).setStrokeStyle(1, C.border));
-        const repairLine = this.add.text(180, 218, repairLabel, {
-            fontFamily: 'Arial', fontSize: 14, color: repairColor,
+        c.add(this.add.rectangle(512, 212, 700, 40, 0x0a0a1a).setStrokeStyle(1, C.border));
+        const repairLine = this.add.text(180, 202, repairLabel, {
+            fontFamily: 'Arial', fontSize: 13, color: repairColor,
         });
         c.add(repairLine);
 
         if (hullDmg > 0) {
-            const repairBtn = this.add.text(870, 230, `[ REPAIR (${repairCost}c) ]`, {
-                fontFamily: 'Arial Black', fontSize: 14, color: gs.credits >= repairCost ? C.btnNormal : C.textDanger,
+            const repairBtn = this.add.text(870, 212, `[ REPAIR (${repairCost}c) ]`, {
+                fontFamily: 'Arial Black', fontSize: 13, color: gs.credits >= repairCost ? C.btnNormal : C.textDanger,
             }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
             repairBtn.on('pointerover', () => repairBtn.setColor(C.btnHover));
             repairBtn.on('pointerout',  () => repairBtn.setColor(gs.credits >= repairCost ? C.btnNormal : C.textDanger));
@@ -506,14 +549,14 @@ export class HubScene extends Scene {
             : `◆ REFUEL SHIP — ${fuelNeeded} units needed — Cost: ${fuelCost}c`;
         const fuelColor = fuelNeeded === 0 ? C.textSuccess : C.textPrimary;
 
-        c.add(this.add.rectangle(512, 290, 700, 44, 0x0a0a1a).setStrokeStyle(1, C.border));
-        c.add(this.add.text(180, 278, fuelLabel, {
-            fontFamily: 'Arial', fontSize: 14, color: fuelColor,
+        c.add(this.add.rectangle(512, 262, 700, 40, 0x0a0a1a).setStrokeStyle(1, C.border));
+        c.add(this.add.text(180, 251, fuelLabel, {
+            fontFamily: 'Arial', fontSize: 13, color: fuelColor,
         }));
 
         if (fuelNeeded > 0) {
-            const fuelBtn = this.add.text(870, 290, `[ REFUEL (${fuelCost}c) ]`, {
-                fontFamily: 'Arial Black', fontSize: 14, color: gs.credits >= fuelCost ? C.btnNormal : C.textDanger,
+            const fuelBtn = this.add.text(870, 262, `[ REFUEL (${fuelCost}c) ]`, {
+                fontFamily: 'Arial Black', fontSize: 13, color: gs.credits >= fuelCost ? C.btnNormal : C.textDanger,
             }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
             fuelBtn.on('pointerover', () => fuelBtn.setColor(C.btnHover));
             fuelBtn.on('pointerout',  () => fuelBtn.setColor(gs.credits >= fuelCost ? C.btnNormal : C.textDanger));
@@ -528,12 +571,12 @@ export class HubScene extends Scene {
             c.add(fuelBtn);
         }
 
-        // ── Nera Quill — shop ───────────────────────────────────────────
-        c.add(this.add.text(512, 350, 'NERA QUILL — Parts Broker', {
-            fontFamily: 'Arial Black', fontSize: 16, color: C.textAccent, align: 'center',
+        // ── Nera Quill — buy ────────────────────────────────────────────
+        c.add(this.add.text(512, 304, 'NERA QUILL — Parts Broker', {
+            fontFamily: 'Arial Black', fontSize: 15, color: C.textAccent, align: 'center',
         }).setOrigin(0.5));
-        c.add(this.add.text(512, 372, '"I\'ve got what you need. Probably."', {
-            fontFamily: 'Arial', fontSize: 13, color: C.textSecond, align: 'center', fontStyle: 'italic',
+        c.add(this.add.text(512, 320, '"I\'ve got what you need. Probably."', {
+            fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center', fontStyle: 'italic',
         }).setOrigin(0.5));
 
         const shopItems: Array<{ id: string; name: string; cost: number }> = [
@@ -542,14 +585,14 @@ export class HubScene extends Scene {
         ];
 
         shopItems.forEach((item, i) => {
-            const y = 410 + i * 56;
-            c.add(this.add.rectangle(512, y + 14, 700, 44, 0x0a0a1a).setStrokeStyle(1, C.border));
+            const y = 348 + i * 48;
+            c.add(this.add.rectangle(512, y + 12, 700, 38, 0x0a0a1a).setStrokeStyle(1, C.border));
             c.add(this.add.text(180, y + 2, `◆ ${item.name}`, {
-                fontFamily: 'Arial', fontSize: 14, color: C.textPrimary,
+                fontFamily: 'Arial', fontSize: 13, color: C.textPrimary,
             }));
 
-            const buyBtn = this.add.text(870, y + 14, `[ BUY (${item.cost}c) ]`, {
-                fontFamily: 'Arial Black', fontSize: 14, color: gs.credits >= item.cost ? C.btnNormal : C.textDanger,
+            const buyBtn = this.add.text(870, y + 12, `[ BUY (${item.cost}c) ]`, {
+                fontFamily: 'Arial Black', fontSize: 13, color: gs.credits >= item.cost ? C.btnNormal : C.textDanger,
             }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
             buyBtn.on('pointerover', () => buyBtn.setColor(C.btnHover));
             buyBtn.on('pointerout',  () => buyBtn.setColor(gs.credits >= item.cost ? C.btnNormal : C.textDanger));
@@ -566,6 +609,37 @@ export class HubScene extends Scene {
             c.add(buyBtn);
         });
 
+        // ── Nera Quill — sell salvage ───────────────────────────────────
+        c.add(this.add.text(512, 454, 'SELL SALVAGE', {
+            fontFamily: 'Arial Black', fontSize: 14, color: C.textWarn, align: 'center',
+        }).setOrigin(0.5));
+
+        const sellable = gs.inventory.filter(item => item.type === 'salvage' && item.qty > 0);
+        if (sellable.length === 0) {
+            c.add(this.add.text(512, 478, 'No salvage in inventory.', {
+                fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+            }).setOrigin(0.5));
+        } else {
+            sellable.forEach((item, i) => {
+                const y = 472 + i * 40;
+                c.add(this.add.rectangle(512, y + 10, 700, 34, 0x0a0a1a).setStrokeStyle(1, C.border));
+                c.add(this.add.text(180, y + 2, `◆ ${item.name}  ×${item.qty}  (${item.value}c each)`, {
+                    fontFamily: 'Arial', fontSize: 12, color: C.textPrimary,
+                }));
+                const sellBtn = this.add.text(870, y + 10, `[ SELL ALL (${item.value * item.qty}c) ]`, {
+                    fontFamily: 'Arial Black', fontSize: 12, color: C.textSuccess,
+                }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
+                sellBtn.on('pointerover', () => sellBtn.setColor(C.btnHover));
+                sellBtn.on('pointerout',  () => sellBtn.setColor(C.textSuccess));
+                sellBtn.on('pointerdown', () => {
+                    GameState.sellItem(item.id, item.qty);
+                    this.refreshStatusBar();
+                    this.populateServicesPanel(c);
+                });
+                c.add(sellBtn);
+            });
+        }
+
         this.makeButton(c, 512, 700, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
     }
 
@@ -575,75 +649,207 @@ export class HubScene extends Scene {
         this.panels.set('shipstatus', c);
         const gs = GameState.get();
 
-        this.panelHeader(c, 'SHIP STATUS', 'Current ship — upgrade path');
+        this.panelHeader(c, 'SHIP STATUS', 'Current ship + relay goal');
 
-        c.add(this.add.rectangle(512, 280, 800, 280, C.panelBg).setStrokeStyle(1, C.border));
+        const isRelayCapable = GameState.isRelayCapable();
+        const navInstalled = GameState.isUpgradeInstalled('nav-computer');
+        const driveInstalled = GameState.isUpgradeInstalled('drift-drive-upgrade');
+        const shieldBonus = gs.shipStatOverrides.shieldingBonus;
+        const cargoBonus = gs.shipStatOverrides.cargoBonus;
+        const jumpBonus = gs.shipStatOverrides.jumpRangeBonus;
 
-        // Current ship stats
-        c.add(this.add.text(150, 170, 'CURRENT SHIP', {
-            fontFamily: 'Arial Black', fontSize: 15, color: C.textAccent,
+        c.add(this.add.rectangle(512, 270, 800, 240, C.panelBg).setStrokeStyle(1, C.border));
+
+        // Current ship
+        const shipName = gs.activeShipId === 'meridian-hauler-ii' ? 'Meridian Hauler II' : 'Cutter Mk.I';
+        const shipClass = gs.activeShipId === 'meridian-hauler-ii' ? 'Hauler' : 'Shuttle';
+        c.add(this.add.text(150, 168, 'CURRENT SHIP', {
+            fontFamily: 'Arial Black', fontSize: 14, color: C.textAccent,
         }));
         const shipLines = [
-            'Cutter Mk.I  ·  Class: Shuttle',
+            `${shipName}  ·  Class: ${shipClass}`,
             `Hull:       ${gs.shipHull} / ${gs.shipMaxHull}`,
-            'Shielding:  None',
-            `Cargo:      4 units`,
+            `Shielding:  ${shieldBonus > 0 ? shieldBonus : 'None'}`,
+            `Cargo:      ${4 + cargoBonus} units`,
             `Fuel:       ${gs.shipFuel} / ${gs.shipMaxFuel}`,
-            'Jump Range: 1 sector',
-            'Relay:      ✗  NOT RELAY-CAPABLE',
+            `Jump Range: ${1 + jumpBonus} sector${1 + jumpBonus !== 1 ? 's' : ''}`,
+            isRelayCapable ? 'Relay:      ✓  RELAY-CAPABLE' : 'Relay:      ✗  NOT RELAY-CAPABLE',
         ];
         shipLines.forEach((line, i) => {
-            const isRelay = line.includes('Relay:');
-            c.add(this.add.text(150, 194 + i * 22, line, {
-                fontFamily: 'Arial', fontSize: 14, color: isRelay ? C.textDanger : C.textPrimary,
+            const isRelay = line.startsWith('Relay:');
+            c.add(this.add.text(150, 192 + i * 22, line, {
+                fontFamily: 'Arial', fontSize: 13, color: isRelay
+                    ? (isRelayCapable ? C.textSuccess : C.textDanger)
+                    : C.textPrimary,
             }));
         });
 
-        // Target ship
-        c.add(this.add.text(560, 170, 'UPGRADE TARGET', {
-            fontFamily: 'Arial Black', fontSize: 15, color: C.textWarn,
-        }));
-        const targetLines = [
-            'Meridian Hauler II  ·  Class: Hauler',
-            'Hull:       150 / 150',
-            'Shielding:  20',
-            'Cargo:      16 units',
-            'Fuel:       60 / 60',
-            'Jump Range: 3 sectors',
-            'Relay:      ✓  RELAY-CAPABLE',
-        ];
-        targetLines.forEach((line, i) => {
-            const isRelay = line.includes('Relay:');
-            c.add(this.add.text(560, 194 + i * 22, line, {
-                fontFamily: 'Arial', fontSize: 14, color: isRelay ? C.textSuccess : C.textSecond,
+        // Installed upgrades
+        if (gs.installedUpgrades.length > 0) {
+            c.add(this.add.text(150, 354, `Installed: ${gs.installedUpgrades.join(', ')}`, {
+                fontFamily: 'Arial', fontSize: 11, color: C.textAccent,
             }));
-        });
-
-        // Credit progress bar toward upgrade
-        const UPGRADE_COST = 3800;
-        const progress = Math.min(gs.credits / UPGRADE_COST, 1);
-        c.add(this.add.text(150, 396, `CREDITS TOWARD UPGRADE: ${gs.credits}c / ${UPGRADE_COST}c`, {
-            fontFamily: 'Arial', fontSize: 14, color: C.textWarn,
-        }));
-        c.add(this.add.rectangle(512, 432, 700, 18, 0x1a1a2a).setStrokeStyle(1, C.border));
-        if (progress > 0) {
-            c.add(this.add.rectangle(
-                162 + (progress * 700) / 2, 432,
-                progress * 700, 18,
-                0xcc8822,
-            ));
         }
 
-        const pct = Math.floor(progress * 100);
-        c.add(this.add.text(512, 432, `${pct}%`, {
-            fontFamily: 'Arial Black', fontSize: 12, color: '#ffffff', align: 'center',
+        // ── Relay Goal section ─────────────────────────────────────────
+        c.add(this.add.text(512, 394, 'RELAY GOAL — VOID RELAY 7-9', {
+            fontFamily: 'Arial Black', fontSize: 15, color: C.textWarn, align: 'center',
         }).setOrigin(0.5));
 
-        c.add(this.add.text(512, 466, 'Complete Belt contracts and sell salvage to earn upgrade credits.', {
-            fontFamily: 'Arial', fontSize: 13, color: C.textSecond, align: 'center',
+        if (isRelayCapable) {
+            c.add(this.add.text(512, 422, '✓  Your ship is relay-capable. Void Relay 7-9 is within reach.', {
+                fontFamily: 'Arial Black', fontSize: 13, color: C.textSuccess, align: 'center',
+            }).setOrigin(0.5));
+            c.add(this.add.text(512, 446, 'Speak to Brother Caldus before you go through.', {
+                fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+            }).setOrigin(0.5));
+        } else {
+            // Path A: buy Hauler
+            const creditsToHauler = Math.max(0, HAULER_PURCHASE_COST - gs.credits);
+            const pathAProgress = Math.min(gs.credits / HAULER_PURCHASE_COST, 1);
+            c.add(this.add.text(150, 418, `PATH A: Buy Meridian Hauler II from Oziel Kaur — ${HAULER_PURCHASE_COST}c`, {
+                fontFamily: 'Arial Black', fontSize: 12, color: C.textWarn,
+            }));
+            c.add(this.add.rectangle(512, 446, 700, 14, 0x1a1a2a).setStrokeStyle(1, C.border));
+            if (pathAProgress > 0) {
+                c.add(this.add.rectangle(162 + (pathAProgress * 700) / 2, 446, pathAProgress * 700, 14, 0xcc8822));
+            }
+            c.add(this.add.text(512, 446, creditsToHauler === 0 ? 'READY' : `${gs.credits}c / ${HAULER_PURCHASE_COST}c`, {
+                fontFamily: 'Arial Black', fontSize: 10, color: '#ffffff', align: 'center',
+            }).setOrigin(0.5));
+
+            // Path B: upgrade Cutter
+            const navText = navInstalled ? '✓ Nav Computer' : '✗ Nav Computer (1,200c)';
+            const driveText = driveInstalled ? '✓ Drift Drive' : '✗ Drift Drive (1,800c)';
+            c.add(this.add.text(150, 470, `PATH B: Upgrade Cutter at Oziel\'s Shipyard`, {
+                fontFamily: 'Arial Black', fontSize: 12, color: C.textAccent,
+            }));
+            c.add(this.add.text(150, 488, `  ${navText}   ${driveText}   → both required`, {
+                fontFamily: 'Arial', fontSize: 12, color: navInstalled && driveInstalled ? C.textSuccess : C.textSecond,
+            }));
+
+            c.add(this.add.text(512, 520, 'Complete Belt contracts and sell salvage to earn credits.', {
+                fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+            }).setOrigin(0.5));
+        }
+
+        this.makeButton(c, 512, 700, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
+    }
+
+    // ── Shipyard panel ────────────────────────────────────────────────────
+    private buildShipyardPanel() {
+        const c = this.add.container(0, 0);
+        this.panels.set('shipyard', c);
+        this.populateShipyardPanel(c);
+    }
+
+    private populateShipyardPanel(c: Phaser.GameObjects.Container) {
+        c.removeAll(true);
+        const gs = GameState.get();
+        this.panelHeader(c, 'SHIPYARD', 'Upgrades — Ilya Sorn · Oziel Kaur · Jasso');
+
+        const upgrades = Object.values(SHIP_UPGRADES);
+        const rowH = 74;
+        const startY = 148;
+
+        // Seller name map
+        const sellerNames: Record<string, string> = {
+            'ilya-sorn':  'Ilya Sorn',
+            'oziel-kaur': 'Oziel Kaur',
+            'nera-quill':  'Nera Quill',
+            'jasso':       'Jasso',
+        };
+
+        upgrades.forEach((upg, i) => {
+            const y = startY + i * rowH;
+            const installed = GameState.isUpgradeInstalled(upg.id);
+            const canAfford = gs.credits >= upg.cost;
+            const rowColor = installed ? 0x0a1a0a : 0x0a0a1a;
+            c.add(this.add.rectangle(492, y + 28, 860, rowH - 8, rowColor).setStrokeStyle(1, C.border));
+
+            // Relay tag
+            if (upg.relayContribution) {
+                c.add(this.add.text(80, y + 10, '⭐', {
+                    fontFamily: 'Arial', fontSize: 13, color: C.textWarn,
+                }).setOrigin(0.5));
+            }
+            c.add(this.add.text(80, y + 28, sellerNames[upg.seller] ?? upg.seller, {
+                fontFamily: 'Arial', fontSize: 10, color: C.textSecond,
+            }).setOrigin(0.5));
+
+            c.add(this.add.text(140, y + 6, upg.name, {
+                fontFamily: 'Arial Black', fontSize: 13, color: installed ? C.textSuccess : C.textPrimary,
+            }));
+            const desc = upg.description.length > 120 ? upg.description.slice(0, 117) + '…' : upg.description;
+            c.add(this.add.text(140, y + 26, desc, {
+                fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
+                wordWrap: { width: 580 },
+            }));
+            c.add(this.add.text(140, y + 54, `Cost: ${upg.cost}c`, {
+                fontFamily: 'Arial', fontSize: 11, color: installed ? C.textSuccess : (canAfford ? C.textWarn : C.textDanger),
+            }));
+
+            if (installed) {
+                c.add(this.add.text(870, y + 28, '[ INSTALLED ✓ ]', {
+                    fontFamily: 'Arial', fontSize: 12, color: C.textSuccess,
+                }).setOrigin(1, 0.5));
+            } else {
+                const buyBtn = this.add.text(870, y + 28, `[ INSTALL (${upg.cost}c) ]`, {
+                    fontFamily: 'Arial Black', fontSize: 12,
+                    color: canAfford ? C.btnNormal : C.textDanger,
+                }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
+                buyBtn.on('pointerover', () => buyBtn.setColor(C.btnHover));
+                buyBtn.on('pointerout',  () => buyBtn.setColor(canAfford ? C.btnNormal : C.textDanger));
+                buyBtn.on('pointerdown', () => {
+                    if (GameState.spendCredits(upg.cost)) {
+                        GameState.installUpgrade(upg.id, upg.statBonus);
+                        if (upg.id === 'drift-drive-upgrade' && GameState.isCutterRelayCapable()) {
+                            GameState.setFlag('cutter-relay-capable', true);
+                        }
+                        this.refreshStatusBar();
+                        this.refreshShipBar();
+                        this.showInstallNote(upg.installNote, () => {
+                            this.populateShipyardPanel(c);
+                        });
+                    }
+                });
+                c.add(buyBtn);
+            }
+        });
+
+        c.add(this.add.text(512, 630, '⭐ = required for relay-capable upgrade path', {
+            fontFamily: 'Arial', fontSize: 11, color: C.textSecond, align: 'center',
         }).setOrigin(0.5));
 
         this.makeButton(c, 512, 700, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
+    }
+
+    private showInstallNote(note: string, onClose: () => void) {
+        const existing = this.panels.get('install-note');
+        if (existing) existing.destroy();
+
+        const c = this.add.container(0, 0);
+        this.panels.set('install-note', c);
+
+        c.add(this.add.rectangle(512, 384, 780, 200, C.panelBg).setStrokeStyle(2, C.border));
+        c.add(this.add.text(512, 310, 'UPGRADE INSTALLED', {
+            fontFamily: 'Arial Black', fontSize: 18, color: C.textSuccess, align: 'center',
+        }).setOrigin(0.5));
+        c.add(this.add.text(512, 376, `"${note}"`, {
+            fontFamily: 'Arial', fontSize: 13, color: C.textPrimary, align: 'center',
+            fontStyle: 'italic', wordWrap: { width: 700 },
+        }).setOrigin(0.5));
+
+        const closeBtn = this.add.text(512, 440, '[ OK ]', {
+            fontFamily: 'Arial Black', fontSize: 15, color: C.btnNormal, align: 'center',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        closeBtn.on('pointerdown', () => {
+            c.destroy();
+            this.panels.delete('install-note');
+            onClose();
+        });
+        c.add(closeBtn);
+        this.showPanel('install-note');
     }
 
     // ── Debrief panel (post-dungeon) ──────────────────────────────────────
@@ -660,7 +866,13 @@ export class HubScene extends Scene {
             stroke: '#000000', strokeThickness: 4, align: 'center',
         }).setOrigin(0.5));
 
-        c.add(this.add.text(512, 132, 'Shalehook Dig Site — Run Complete', {
+        // Use lastDungeonId to show dungeon name
+        const dungeonNames: Record<string, string> = {
+            'shalehook-dig-site':  'Shalehook Dig Site',
+            'coldframe-station-b': 'Coldframe Station-B',
+        };
+        const siteName = dungeonNames[gs.lastDungeonId ?? ''] ?? 'Ashwake Belt';
+        c.add(this.add.text(512, 132, `${siteName} — Run Complete`, {
             fontFamily: 'Arial', fontSize: 16, color: C.textSecond, align: 'center',
         }).setOrigin(0.5));
 
@@ -691,7 +903,8 @@ export class HubScene extends Scene {
             });
         }
 
-        // Contracts updated
+        // Contracts updated — look in both phase 1 and phase 2
+        const allContracts = [...starterContracts, ...phase2Contracts];
         const completedContracts = gs.contracts.filter(ct => ct.completed && !ct.turnedIn);
         if (completedContracts.length > 0) {
             const lootBottom = 258 + gs.lastRunLoot.length * 24 + 16;
@@ -699,7 +912,7 @@ export class HubScene extends Scene {
                 fontFamily: 'Arial Black', fontSize: 14, color: C.textSuccess,
             }));
             completedContracts.forEach((ct, i) => {
-                const contract = starterContracts.find(s => s.id === ct.id);
+                const contract = allContracts.find(s => s.id === ct.id);
                 c.add(this.add.text(175, lootBottom + 26 + i * 22, `  ◆ ${contract?.title ?? ct.id}`, {
                     fontFamily: 'Arial', fontSize: 13, color: C.textSuccess,
                 }));

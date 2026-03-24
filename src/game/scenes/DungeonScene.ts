@@ -3,6 +3,7 @@ import { Scene } from 'phaser';
 import { GameState, InventoryItem } from '../state/GameState';
 import { ENEMIES, EnemyDef, rollLoot, rollCredits } from '../data/enemies';
 import { ITEMS } from '../data/items';
+import { DUNGEON_REGISTRY as _DUNGEON_REGISTRY, DungeonDef, Room, loadDungeon } from '../data/dungeons';
 
 // ── Colour palette ──────────────────────────────────────────────────────────
 const C = {
@@ -23,76 +24,6 @@ const C = {
     barFuel:     0x336699,
 };
 
-// ── Dungeon layout for Shalehook Dig Site ───────────────────────────────────
-interface Room {
-    id: string;
-    name: string;
-    type: 'entrance' | 'combat' | 'loot' | 'boss';
-    description: string;
-    enemies: string[];   // enemy IDs to spawn
-    lootItems?: string[]; // item IDs always found here
-    cleared: boolean;
-}
-
-const DUNGEON_ROOMS: Room[] = [
-    {
-        id: 'entry-shaft',
-        name: 'Entry Shaft',
-        type: 'entrance',
-        description:
-            'The access shaft is still intact. Emergency lighting casts everything in dull orange. ' +
-            'Boot prints in the grime — old ones, weeks at least. ' +
-            'Deeper in, you can hear the grind of machinery that should have been silent for years.',
-        enemies: [],
-        cleared: false,
-    },
-    {
-        id: 'upper-gallery',
-        name: 'Upper Gallery',
-        type: 'combat',
-        description:
-            'A wide excavation gallery. Two Mk.I mining drones move in lazy patrol loops. ' +
-            'They register your presence and reorient. ' +
-            'Someone has scratched a tally into the rock face — fourteen marks, crossed in groups of five.',
-        enemies: ['mining-drone-mk1', 'mining-drone-mk1'],
-        cleared: false,
-    },
-    {
-        id: 'equipment-depot',
-        name: 'Equipment Depot',
-        type: 'loot',
-        description:
-            'A storage alcove cut into the side wall. Racks of survey equipment, most corroded. ' +
-            'A Guild survey kit in a sealed case is still intact — the data core light is green. ' +
-            'A crate of salvageable components sits open nearby.',
-        enemies: [],
-        lootItems: ['survey-kit-damaged', 'scrap-metal', 'power-cell'],
-        cleared: false,
-    },
-    {
-        id: 'lower-drill-chamber',
-        name: 'Lower Drill Chamber',
-        type: 'combat',
-        description:
-            'The main drilling floor. Massive bore machinery fills the center of the room. ' +
-            'A Mk.II drone and a Drill Sentinel run coordinated patterns. ' +
-            'The Sentinel turns its bore-head toward you.',
-        enemies: ['mining-drone-mk2', 'drill-sentinel'],
-        cleared: false,
-    },
-    {
-        id: 'core-access',
-        name: 'Core Access — Excavator Prime',
-        type: 'boss',
-        description:
-            'The deepest chamber. The original excavator unit stands motionless until you step past the threshold. ' +
-            'Then it moves. Its control module glows through a cracked chassis panel. ' +
-            'It seems to be running a task loop that has been cycling since the site went dark.',
-        enemies: ['excavator-prime'],
-        cleared: false,
-    },
-];
-
 // ── DungeonScene ────────────────────────────────────────────────────────────
 type DungeonPhase =
     | 'intro'
@@ -112,6 +43,7 @@ interface CombatState {
 
 export class DungeonScene extends Scene {
     private phase: DungeonPhase = 'intro';
+    private dungeonDef: DungeonDef | null = null;
     private rooms: Room[] = [];
     private currentRoomIdx = 0;
     private combat: CombatState | null = null;
@@ -131,8 +63,16 @@ export class DungeonScene extends Scene {
     create() {
         this.cameras.main.setBackgroundColor(C.bg);
 
-        // Reset dungeon state
-        this.rooms = DUNGEON_ROOMS.map(r => ({ ...r, enemies: [...r.enemies], cleared: false }));
+        // Load dungeon from registry
+        const dungeonId = GameState.get().pendingDungeon ?? 'shalehook-dig-site';
+        this.dungeonDef = loadDungeon(dungeonId);
+        if (!this.dungeonDef) {
+            // Fallback if invalid ID: use shalehook
+            this.dungeonDef = loadDungeon('shalehook-dig-site')!;
+        }
+        this.rooms = this.dungeonDef.rooms;
+
+        // Reset run state
         this.currentRoomIdx = 0;
         this.combat = null;
         this.runLoot = [];
@@ -168,7 +108,8 @@ export class DungeonScene extends Scene {
         c.add(this.add.rectangle(512, 26, 1024, 52, C.panelBg));
         c.add(this.add.rectangle(512, 52, 1024, 1, C.border));
 
-        c.add(this.add.text(16, 10, 'SHALEHOOK DIG SITE', {
+        const dungeonName = this.dungeonDef?.name.toUpperCase() ?? 'DUNGEON';
+        c.add(this.add.text(16, 10, dungeonName, {
             fontFamily: 'Arial Black', fontSize: 15, color: C.textWarn,
         }));
 
@@ -257,28 +198,23 @@ export class DungeonScene extends Scene {
     private showIntro() {
         this.phase = 'intro';
         this.clearContent();
+        const def = this.dungeonDef!;
 
         // Panel
         this.contentContainer.add(
             this.add.rectangle(512, 330, 900, 380, C.panelBg).setStrokeStyle(1, C.border),
         );
 
-        this.addContentText(512, 150, 'SHALEHOOK DIG SITE', {
+        this.addContentText(512, 150, def.name.toUpperCase(), {
             fontFamily: 'Arial Black', fontSize: 28, color: C.textWarn,
             stroke: '#000000', strokeThickness: 4, align: 'center',
         }).setOrigin(0.5);
 
-        this.addContentText(512, 192, 'Asteroid 44-Kheras  ·  Ashwake Belt  ·  Tier 1', {
+        this.addContentText(512, 192, def.location + '  ·  ' + def.tagline, {
             fontFamily: 'Arial', fontSize: 14, color: C.textSecond, align: 'center',
         }).setOrigin(0.5);
 
-        const introText =
-            'An old Guild prospecting operation — abandoned twelve years ago. ' +
-            'The automated systems were supposed to be shut down.\n\n' +
-            'They were not.\n\n' +
-            'Your objectives: clear the site, recover salvage, and eliminate Excavator Prime. ' +
-            'Complete your accepted contracts to earn the full payout on return.';
-        this.addContentText(80, 240, introText, {
+        this.addContentText(80, 240, def.introText, {
             fontFamily: 'Arial', fontSize: 14, color: C.textPrimary,
             lineSpacing: 6,
         });
@@ -316,7 +252,7 @@ export class DungeonScene extends Scene {
 
         if (room.type === 'entrance') {
             this.addActionButton(512, 500, '[ ADVANCE ]', () => this.enterRoom(idx + 1));
-        } else if (room.type === 'loot') {
+        } else if (room.type === 'loot' || room.type === 'hazard') {
             this.addActionButton(512, 500, '[ SEARCH ROOM ]', () => this.showLootRoom(room));
         } else if (room.type === 'combat' || room.type === 'boss') {
             const enemyNames = room.enemies.map(e => ENEMIES[e]?.name ?? e).join(', ');
@@ -606,7 +542,8 @@ export class DungeonScene extends Scene {
         );
 
         const isBoss = room.type === 'boss';
-        const titleText = isBoss ? 'EXCAVATOR PRIME DESTROYED' : 'ROOM CLEARED';
+        const bossName = this.combat?.enemies[0]?.name ?? 'BOSS';
+        const titleText = isBoss ? `${bossName.toUpperCase()} DESTROYED` : 'ROOM CLEARED';
         this.addContentText(512, 130, titleText, {
             fontFamily: 'Arial Black', fontSize: 22, color: C.textSuccess, align: 'center',
         }).setOrigin(0.5);
@@ -642,30 +579,32 @@ export class DungeonScene extends Scene {
         this.phase = 'complete';
         this.clearContent();
 
-        // Determine which contracts this run completes
+        // Determine which contracts this run completes using the dungeon's completion rules
         const completedContractIds: string[] = [];
         const gs = GameState.get();
+        const def = this.dungeonDef!;
         const bossCleared = this.rooms.find(r => r.type === 'boss')?.cleared ?? false;
-        const lootRoomCleared = this.rooms.find(r => r.type === 'loot')?.cleared ?? false;
+        const lootCleared = this.rooms.some(r => (r.type === 'loot' || r.type === 'hazard') && r.cleared);
 
-        if (gs.contracts.find(c => c.id === 'robot-suppression-shalehook' && c.accepted && !c.completed)) {
-            if (bossCleared) completedContractIds.push('robot-suppression-shalehook');
-        }
-        if (gs.contracts.find(c => c.id === 'scrap-recovery-shalehook' && c.accepted && !c.completed)) {
-            if (lootRoomCleared) completedContractIds.push('scrap-recovery-shalehook');
-        }
-        if (gs.contracts.find(c => c.id === 'equipment-retrieval-shalehook' && c.accepted && !c.completed)) {
-            if (lootRoomCleared) completedContractIds.push('equipment-retrieval-shalehook');
+        for (const rule of def.contractCompletions) {
+            if (gs.contracts.find(c => c.id === rule.contractId && c.accepted && !c.completed)) {
+                const meetsBoss = !rule.requireBossCleared || bossCleared;
+                const meetsLoot = !rule.requireLootCleared || lootCleared;
+                const meetsAny  = !rule.requireAnyProgress || (bossCleared || lootCleared || this.currentRoomIdx > 0);
+                if (meetsBoss && meetsLoot && meetsAny) {
+                    completedContractIds.push(rule.contractId);
+                }
+            }
         }
 
-        GameState.setReturnFromDungeon(this.runLoot, this.runCredits, this.runXp, fullClear, completedContractIds);
-        if (bossCleared) GameState.setFlag('completed-first-run', true);
+        GameState.setReturnFromDungeon(this.runLoot, this.runCredits, this.runXp, fullClear, completedContractIds, def.id);
+        if (bossCleared && def.clearFlag) GameState.setFlag(def.clearFlag, true);
 
         this.contentContainer.add(
             this.add.rectangle(512, 330, 900, 420, C.panelBg).setStrokeStyle(1, C.border),
         );
 
-        const title = fullClear ? 'SHALEHOOK DIG SITE — CLEARED' : 'EXTRACTION SUCCESSFUL';
+        const title = fullClear ? `${def.name.toUpperCase()} — CLEARED` : 'EXTRACTION SUCCESSFUL';
         this.addContentText(512, 110, title, {
             fontFamily: 'Arial Black', fontSize: 24, color: C.textSuccess, align: 'center',
             stroke: '#000000', strokeThickness: 3,
@@ -732,7 +671,7 @@ export class DungeonScene extends Scene {
 
         // Set pilot to minimal HP so they can continue
         GameState.healPilot(10);
-        GameState.setReturnFromDungeon([], 0, Math.floor(this.runXp * 0.3), false, []);
+        GameState.setReturnFromDungeon([], 0, Math.floor(this.runXp * 0.3), false, [], this.dungeonDef?.id);
 
         this.addActionButton(512, 500, '[ RETURN TO MERIDIAN STATION ]', () => {
             this.scene.start('Hub');
@@ -742,7 +681,7 @@ export class DungeonScene extends Scene {
     private doRetreat() {
         if (this.phase === 'complete' || this.phase === 'dead') return;
         this.phase = 'complete';
-        GameState.setReturnFromDungeon(this.runLoot, this.runCredits, Math.floor(this.runXp * 0.5), false, []);
+        GameState.setReturnFromDungeon(this.runLoot, this.runCredits, Math.floor(this.runXp * 0.5), false, [], this.dungeonDef?.id);
         this.scene.start('Hub');
     }
 }
