@@ -803,6 +803,8 @@ export class DungeonScene extends Scene {
         GameState.healPilot(10);
 
         if (isRedline) {
+            // Capture insurance state BEFORE resolveRedlineDeath() clears it
+            const insuranceWasActive = gs.redlineInsuranceActive;
             // Apply Redline gear loss
             const lossItems = GameState.resolveRedlineDeath();
             const securedId = gs.redlineSecuredItemId;
@@ -837,7 +839,7 @@ export class DungeonScene extends Scene {
                 }
             }
 
-            const insuranceWasUsed = lossItems.length <= 1 && !gs.redlineInsuranceActive && lossItems.length > 0;
+            const insuranceWasUsed = insuranceWasActive && lossItems.length <= 1;
             if (insuranceWasUsed) {
                 this.addContentText(200, 320 + lossItems.length * 20 + 20, '✓ INSURANCE APPLIED — Loss reduced.', {
                     fontFamily: 'Arial Black', fontSize: 12, color: '#44ffaa',

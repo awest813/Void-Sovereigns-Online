@@ -348,23 +348,22 @@ export const GameState = {
      */
     resolveRedlineDeath() {
         const lossItems: InventoryItem[] = [];
-        const consumableIds = ['medical-kit', 'repair-kit'];
         let lossQuota = 2;
 
-        // Insurance halves the quota
+        // Insurance halves the quota (one-time use)
         if (state.redlineInsuranceActive) {
             lossQuota = 1;
-            state.redlineInsuranceActive = false; // one-time use
+            state.redlineInsuranceActive = false;
         }
 
-        for (const itemId of consumableIds) {
+        // Iterate all consumables; prefer ones that are NOT secured
+        const consumables = state.inventory.filter(i => i.type === 'consumable');
+        for (const item of consumables) {
             if (lossQuota <= 0) break;
-            if (state.redlineSecuredItemId === itemId) continue; // secured — skip
-            const item = state.inventory.find(i => i.id === itemId);
-            if (!item || item.qty <= 0) continue;
+            if (state.redlineSecuredItemId === item.id) continue; // secured — skip
             const lostQty = Math.min(item.qty, 1);
             item.qty -= lostQty;
-            if (item.qty === 0) state.inventory = state.inventory.filter(i => i.id !== itemId);
+            if (item.qty === 0) state.inventory = state.inventory.filter(i => i.id !== item.id);
             lossItems.push({ id: item.id, name: item.name, qty: lostQty, type: item.type, value: item.value });
             lossQuota--;
         }
