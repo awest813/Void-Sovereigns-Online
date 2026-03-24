@@ -1,14 +1,9 @@
-import { GameObjects, Scene } from 'phaser';
-
+import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
 
+// MainMenu: title screen with game logo and start prompt.
 export class MainMenu extends Scene
 {
-    background: GameObjects.Image;
-    logo: GameObjects.Image;
-    title: GameObjects.Text;
-    logoTween: Phaser.Tweens.Tween | null;
-
     constructor ()
     {
         super('MainMenu');
@@ -16,61 +11,33 @@ export class MainMenu extends Scene
 
     create ()
     {
-        this.background = this.add.image(512, 384, 'background');
+        this.add.image(512, 384, 'background').setAlpha(0.6);
+        this.add.image(512, 260, 'logo').setDepth(100);
 
-        this.logo = this.add.image(512, 300, 'logo').setDepth(100);
-
-        this.title = this.add.text(512, 460, 'Main Menu', {
-            fontFamily: 'Arial Black', fontSize: 38, color: '#ffffff',
-            stroke: '#000000', strokeThickness: 8,
-            align: 'center'
+        this.add.text(512, 420, 'VOID SOVEREIGNS ONLINE', {
+            fontFamily: 'Arial Black',
+            fontSize: 32,
+            color: '#e8e0cc',
+            stroke: '#000000',
+            strokeThickness: 6,
+            align: 'center',
         }).setOrigin(0.5).setDepth(100);
+
+        this.add.text(512, 470, 'Press any key to dock at Meridian Station', {
+            fontFamily: 'Arial',
+            fontSize: 16,
+            color: '#aaaaaa',
+            align: 'center',
+        }).setOrigin(0.5).setDepth(100);
+
+        this.input.keyboard?.once('keydown', () => this.changeScene());
+        this.input.once('pointerdown', () => this.changeScene());
 
         EventBus.emit('current-scene-ready', this);
     }
-    
+
     changeScene ()
     {
-        if (this.logoTween)
-        {
-            this.logoTween.stop();
-            this.logoTween = null;
-        }
-
-        this.scene.start('Game');
-    }
-
-    moveLogo (vueCallback: ({ x, y }: { x: number, y: number }) => void)
-    {
-        if (this.logoTween)
-        {
-            if (this.logoTween.isPlaying())
-            {
-                this.logoTween.pause();
-            }
-            else
-            {
-                this.logoTween.play();
-            }
-        } 
-        else
-        {
-            this.logoTween = this.tweens.add({
-                targets: this.logo,
-                x: { value: 750, duration: 3000, ease: 'Back.easeInOut' },
-                y: { value: 80, duration: 1500, ease: 'Sine.easeOut' },
-                yoyo: true,
-                repeat: -1,
-                onUpdate: () => {
-                    if (vueCallback)
-                    {
-                        vueCallback({
-                            x: Math.floor(this.logo.x),
-                            y: Math.floor(this.logo.y)
-                        });
-                    }
-                }
-            });
-        }
+        this.scene.start('Hub');
     }
 }
