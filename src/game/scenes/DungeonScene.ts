@@ -506,7 +506,8 @@ export class DungeonScene extends Scene {
         // Inventory
         const medKits = GameState.countItem('medical-kit');
         const repairKits = GameState.countItem('repair-kit');
-        this.addContentText(610, 348, `Med: ${medKits}  Repair: ${repairKits}`, {
+        const anomalyKits = GameState.countItem('anomaly-field-kit');
+        this.addContentText(610, 348, `Med: ${medKits}  Repair: ${repairKits}  Anomaly: ${anomalyKits}`, {
             fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
         });
 
@@ -518,8 +519,10 @@ export class DungeonScene extends Scene {
             medKits > 0 ? C.textSuccess : C.textSecond, medKits === 0);
         this.addActionButton(780, actionY, '[ USE REPAIR KIT ]', () => this.combatUseItem('repair-kit'),
             repairKits > 0 ? C.textAccent : C.textSecond, repairKits === 0);
+        this.addActionButton(512, actionY + 52, '[ USE ANOMALY KIT ]', () => this.combatUseItem('anomaly-field-kit'),
+            anomalyKits > 0 ? '#88ddff' : C.textSecond, anomalyKits === 0);
 
-        this.addActionButton(512, 480, '[ EMERGENCY RETREAT ]', () => this.doRetreat(), '#445566');
+        this.addActionButton(512, actionY + 104, '[ EMERGENCY RETREAT ]', () => this.doRetreat(), '#445566');
     }
 
     private combatAttack() {
