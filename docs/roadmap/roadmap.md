@@ -105,16 +105,23 @@ The risk layer escalates. High-stakes runs, corporate theology, and insurance br
 ## Upcoming Phases
 
 ### Phase 6 — The Farpoint Hub
-**Status: 🔲 Planned**
+**Status: 🔄 In Progress**
 
-Farpoint Waystation becomes a second fully-operational hub, competing with Meridian.
+Farpoint Waystation becomes a second fully operational hub, competing with Meridian.
 
-- **Farpoint as a second hub** — Kael Mourne's core sections: contract board, services, NPC interactions
-- **Kael Mourne expanded dialogue** — his distress ping timestamp mystery becomes a questline
-- **Farpoint-exclusive contracts** — outer ring salvage, signal investigation, Synod vs. ICA contract tension
-- **Faction divergence** — ICA and Void Covenant agendas around the relay anomaly diverge; choosing sides has consequences
-- **Relay ghost-site expedition** — the zero-second transit record points somewhere; a named location, not a dungeon
-- **Lore unlock UI** — codex panel in hub; entries unlock from contract completions and dungeon clears
+- **Farpoint as a second hub** — clicking Farpoint on the sector map enters the hub directly; contract board, NPC contacts, and services panel all reflect the Farpoint context
+- **Hub title and context** — hub header, contract board header, and NPC panel dynamically reflect the current hub (`currentHubId` state field)
+- **Kael Mourne expanded questline** — three-stage questline: ping investigation → zero-second coordinates → Transit Node Zero; each stage unlocks the next via flags
+- **3 new NPCs:** Kael Mourne (Farpoint expanded), Tovan Vex (Void Covenant observer), Aryn Voss (Farpoint merchant)
+- **10 new contracts** — 7 standard Farpoint contracts + 2 Redline ghost-site contracts (visible only after questline stage 2) + 1 archive contract
+- **Faction divergence** — `void-covenant-signal-trace` and `ica-relay-lockdown` are mutually conflicting; accepting one locks out the other
+- **1 new dungeon:** Transit Node Zero (Tier 4, REDLINE) — ghost site accessible via sector map after questline stage 2 flag
+- **5 new enemies:** Static-Form Alpha, Static-Form Prime, Phase-Drifter, Null-Relay Guardian, Null Architect (boss)
+- **1 new sector:** Transit Node Zero — ghost-site type, extreme danger
+- **Codex panel** — new main menu panel showing unlocked lore entries with category, source, and content; scroll-capable
+- **Lore unlocks via contract turn-in** — 8 lore entries unlock on completing specific contracts
+- **8 new lore entries** — Kael personal record, approach notes, ICA archive fragment, Covenant field report, ops log, Vorren analysis, interior recording, Null Architect encounter
+- **GameState additions:** `currentHubId`, `unlockedLoreIds`; `setCurrentHub()`, `unlockLore()`, `isLoreUnlocked()` helpers; questline flags `kael-questline-stage-1`, `kael-questline-stage-2`
 
 ---
 

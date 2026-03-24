@@ -484,6 +484,99 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'restricted-nav-module',     chance: 0.40, qty: 1 },
         ],
     },
+
+    // ── Phase 6 — Transit Node Zero enemies ──────────────────────────────
+
+    'static-form-alpha': {
+        id: 'static-form-alpha',
+        name: 'Static-Form Alpha',
+        description: 'A maintenance unit of unknown manufacture. Its movements are methodical. ' +
+            'It does not appear to be designed for combat — but it will not let you past.',
+        hp: 95,
+        attackMin: 20,
+        attackMax: 33,
+        defense: 9,
+        xpReward: 75,
+        creditDropMin: 35,
+        creditDropMax: 70,
+        lootPool: [
+            { itemId: 'scrap-metal',  chance: 0.70, qty: 1 },
+            { itemId: 'power-cell',   chance: 0.40, qty: 1 },
+        ],
+    },
+
+    'static-form-prime': {
+        id: 'static-form-prime',
+        name: 'Static-Form Prime',
+        description: 'A heavier variant. The marking on its chassis is not in any known faction registry.',
+        hp: 130,
+        attackMin: 25,
+        attackMax: 40,
+        defense: 12,
+        xpReward: 100,
+        creditDropMin: 50,
+        creditDropMax: 95,
+        lootPool: [
+            { itemId: 'power-cell',       chance: 0.50, qty: 1 },
+            { itemId: 'signal-fragment',  chance: 0.30, qty: 1 },
+        ],
+    },
+
+    'phase-drifter': {
+        id: 'phase-drifter',
+        name: 'Phase-Drifter',
+        description: 'It moves in bursts, partially phased out of normal space. Hard to hit. Harder to ignore.',
+        hp: 80,
+        attackMin: 22,
+        attackMax: 38,
+        defense: 6,
+        xpReward: 90,
+        creditDropMin: 40,
+        creditDropMax: 80,
+        lootPool: [
+            { itemId: 'void-pattern-record', chance: 0.25, qty: 1 },
+            { itemId: 'scrap-metal',         chance: 0.60, qty: 1 },
+        ],
+    },
+
+    'null-relay-guardian': {
+        id: 'null-relay-guardian',
+        name: 'Null-Relay Guardian',
+        description: 'A guardian unit integrated with the relay infrastructure. ' +
+            'Its attack patterns are calculated — it is not angry, just precise.',
+        hp: 155,
+        attackMin: 28,
+        attackMax: 44,
+        defense: 14,
+        xpReward: 120,
+        creditDropMin: 70,
+        creditDropMax: 130,
+        lootPool: [
+            { itemId: 'signal-fragment',      chance: 0.50, qty: 1 },
+            { itemId: 'control-module',       chance: 0.35, qty: 1 },
+            { itemId: 'transit-key-fragment', chance: 0.20, qty: 1 },
+        ],
+    },
+
+    'null-architect': {
+        id: 'null-architect',
+        name: 'Null Architect',
+        description: 'The caretaker of Transit Node Zero. It escalates. It does not destroy. ' +
+            'When the intrusion is complete, it returns to its post.',
+        hp: 380,
+        attackMin: 32,
+        attackMax: 52,
+        defense: 16,
+        xpReward: 300,
+        creditDropMin: 200,
+        creditDropMax: 360,
+        lootPool: [
+            { itemId: 'null-archive-data',    chance: 1.0,  qty: 1 },
+            { itemId: 'transit-key-fragment', chance: 0.40, qty: 1 },
+            { itemId: 'relay-data-core',      chance: 0.60, qty: 1 },
+            { itemId: 'power-cell',           chance: 0.80, qty: 2 },
+        ],
+    },
 };
 
 /** Roll loot from an enemy's loot pool. Returns InventoryItem-shaped objects. */
@@ -525,6 +618,9 @@ export function rollLoot(enemyId: string): Array<{ id: string; name: string; qty
         'vault-encoded-manifest':   { name: 'Vault Encoded Manifest',   type: 'key',     value: 190 },
         'restricted-nav-module':    { name: 'Restricted Nav Module',    type: 'key',     value: 350 },
         'contraband-relay-module':  { name: 'Contraband Relay Module',  type: 'salvage', value: 180 },
+        // Phase 6 items
+        'transit-key-fragment':     { name: 'Transit Key Fragment',     type: 'key',     value: 175 },
+        'null-archive-data':        { name: 'Null Archive Data',        type: 'key',     value: 420 },
     };
 
     for (const entry of enemy.lootPool) {

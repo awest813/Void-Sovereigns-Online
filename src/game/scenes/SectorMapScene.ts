@@ -16,6 +16,8 @@ export class SectorMapScene extends Scene {
 
     create() {
         const gs = GameState.get();
+        // Reset to Meridian hub when entering the sector map (Farpoint is accessed via a separate flow)
+        GameState.setCurrentHub('meridian');
         this.cameras.main.setBackgroundColor(C.bg);
 
         // Star field
@@ -85,9 +87,9 @@ export class SectorMapScene extends Scene {
             }
             this.drawSectorNode(880, 500, 'FARPOINT WAYSTATION',
                 'Post-Relay Frontier Hub', C.textWarn, true, () => {
-                    this.showFarpointMessage();
+                    this.enterFarpointHub();
                 });
-            this.add.text(880, 560, '▶ RELAY ROUTE OPEN', {
+            this.add.text(880, 560, '▶ ENTER HUB', {
                 fontFamily: 'Arial', fontSize: 11, color: C.textWarn, align: 'center',
             }).setOrigin(0.5);
         }
@@ -226,6 +228,25 @@ export class SectorMapScene extends Scene {
             ashveilBtn.on('pointerover', () => ashveilBtn.setColor(C.btnHover));
             ashveilBtn.on('pointerout',  () => ashveilBtn.setColor(ashveilClear ? C.textSecond : '#ff22aa'));
             ashveilBtn.on('pointerdown', () => this.confirmRedlineLaunch('ashveil-observation-post', 'Ashveil Observation Post'));
+
+            // ── Phase 6: Transit Node Zero ghost site ─────────────────────
+            if (GameState.getFlag('kael-questline-stage-2')) {
+                const ghostSiteCleared = GameState.getFlag('transit-node-zero-cleared');
+                this.add.rectangle(490, 170, 680, 26, 0x02000a).setStrokeStyle(1, 0x8800cc);
+                const ghostLabel = ghostSiteCleared
+                    ? '◆ Transit Node Zero  ·  Tier 4  ·  REDLINE  ·  Ghost Site  [CLEARED]'
+                    : '◆ Transit Node Zero  ·  Tier 4  ·  ⚠ REDLINE  ·  Ghost Site  ★ NEW';
+                this.add.text(350, 162, ghostLabel, {
+                    fontFamily: 'Arial', fontSize: 12, color: ghostSiteCleared ? C.textSecond : '#cc44ff',
+                });
+                const ghostBtn = this.add.text(500, 176, '[ LAUNCH TO TRANSIT NODE ZERO — REDLINE ]', {
+                    fontFamily: 'Arial Black', fontSize: 13,
+                    color: ghostSiteCleared ? C.textSecond : '#aa22ff',
+                }).setInteractive({ useHandCursor: true });
+                ghostBtn.on('pointerover', () => ghostBtn.setColor(C.btnHover));
+                ghostBtn.on('pointerout',  () => ghostBtn.setColor(ghostSiteCleared ? C.textSecond : '#aa22ff'));
+                ghostBtn.on('pointerdown', () => this.confirmRedlineLaunch('transit-node-zero', 'Transit Node Zero'));
+            }
         }
 
         // ── Relay goal strip
@@ -536,38 +557,12 @@ export class SectorMapScene extends Scene {
         panel.add(cancelBtn);
     }
 
-    private showFarpointMessage() {
-        const existing = this.children.getByName('farpoint-msg');
-        if (existing) return;
-
-        const farpointCleared = GameState.getFlag('farpoint-cleared');
-        const panel = this.add.container(512, 300);
-        panel.setName('farpoint-msg');
-        panel.add(this.add.rectangle(0, 0, 680, 200, C.panelBg).setStrokeStyle(2, 0x335533));
-        panel.add(this.add.text(0, -80, 'FARPOINT WAYSTATION', {
-            fontFamily: 'Arial Black', fontSize: 20, color: C.textWarn, align: 'center',
-        }).setOrigin(0.5));
-        panel.add(this.add.text(0, -52, 'Post-Relay Frontier Hub  ·  Tier 3', {
-            fontFamily: 'Arial', fontSize: 13, color: C.textSecond, align: 'center',
-        }).setOrigin(0.5));
-        panel.add(this.add.text(0, -26, farpointCleared
-            ? '✓  Outer ring cleared. Farpoint contacts are available on Meridian Station.'
-            : 'The outer ring is uncontrolled. Abandoned cargo. Overloaded security automation.', {
-            fontFamily: 'Arial', fontSize: 13, color: farpointCleared ? C.textSuccess : C.textPrimary, align: 'center',
-            wordWrap: { width: 620 },
-        }).setOrigin(0.5));
-
-        if (!farpointCleared) {
-            panel.add(this.add.text(0, 6, 'Kael Mourne is at Meridian Station. Check the contract board for Farpoint jobs.', {
-                fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
-            }).setOrigin(0.5));
-        }
-
-        const close = this.add.text(0, 70, '[ DISMISS ]', {
-            fontFamily: 'Arial', fontSize: 14, color: C.btnNormal, align: 'center',
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        close.on('pointerdown', () => panel.destroy());
-        panel.add(close);
+    private enterFarpointHub() {
+        GameState.setCurrentHub('farpoint');
+        this.cameras.main.fadeOut(300, 0, 0, 0);
+        this.time.delayedCall(300, () => {
+            this.scene.start('Hub');
+        });
     }
 
     private showWarning(msg: string) {

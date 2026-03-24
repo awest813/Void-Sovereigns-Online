@@ -786,6 +786,90 @@ export const DUNGEON_REGISTRY: Record<string, DungeonDef> = {
         ],
         clearFlag: 'ashveil-post-cleared',
     },
+
+    // ── Phase 6 — Transit Node Zero ───────────────────────────────────────
+    'transit-node-zero': {
+        id: 'transit-node-zero',
+        name: 'Transit Node Zero',
+        location: 'Unknown — Pre-Relay Waypoint',
+        tier: 4,
+        tagline: 'It is not abandoned. It is waiting.',
+        introText:
+            'Transit Node Zero is not on any chart. The coordinates come from a zero-second transit record ' +
+            'logged at Void Relay 7-9 — an entry the relay shouldn\'t have been able to make.\n\n' +
+            'The navigation system acknowledged the destination without hesitation. It had been here before. ' +
+            'Something has.\n\n' +
+            'Your sensors read active power signatures in every section. The facility is running. ' +
+            'You are not expected, but you are not unknown.',
+        rooms: [
+            {
+                id: 'approach-lock',
+                name: 'Outer Approach Lock',
+                type: 'entrance',
+                description:
+                    'The outer lock responds to your approach with automated sequencing. ' +
+                    'Not hostile — operational. The airlock cycles as if it has done this ten thousand times. ' +
+                    'The registration code it expects is four hundred years old and your system accepts it without complaint.',
+                enemies: [],
+                cleared: false,
+            },
+            {
+                id: 'signal-corridor',
+                name: 'Signal Corridor',
+                type: 'combat',
+                description:
+                    'The corridor is lined with emitter arrays, all active. ' +
+                    'Whatever they are broadcasting, your equipment can\'t decode it. ' +
+                    'Two patrol units — Static-Form Alpha — respond to your entry. ' +
+                    'They do not vocalize. They simply move toward you.',
+                enemies: ['static-form-alpha', 'static-form-alpha'],
+                cleared: false,
+            },
+            {
+                id: 'node-core',
+                name: 'Node Core',
+                type: 'combat',
+                description:
+                    'The core chamber is massive. Relay infrastructure older than anything in current use ' +
+                    'fills the walls — but it\'s running. A Phase-Drifter patrols the central platform. ' +
+                    'The signal here is stronger; your instruments are reading waveform signatures matching ' +
+                    'every anomaly site you\'ve encountered.',
+                enemies: ['phase-drifter', 'null-relay-guardian'],
+                lootItems: ['void-pattern-record', 'transit-key-fragment'],
+                cleared: false,
+            },
+            {
+                id: 'archive-chamber',
+                name: 'Archive Chamber',
+                type: 'loot',
+                description:
+                    'The archive chamber is sealed but your transit-key-fragment opens it without resistance. ' +
+                    'Banks of storage units, all active. What they contain is structured, organized, indexed. ' +
+                    'You copy what you can. This is someone\'s records, and you are in them.',
+                enemies: [],
+                lootItems: ['null-archive-data', 'relay-data-core', 'signal-fragment'],
+                cleared: false,
+            },
+            {
+                id: 'origin-point',
+                name: 'Origin Point — Null Architect',
+                type: 'boss',
+                description:
+                    'The deepest chamber. The Null Architect is here. It is not what you expected — ' +
+                    'no weapon systems, no aggression posture. It responds to your intrusion with ' +
+                    'escalating deterrence, layer by layer, like a system checking credentials you don\'t have. ' +
+                    'At the end, it simply accepts that you are here.',
+                enemies: ['null-architect'],
+                cleared: false,
+            },
+        ],
+        contractCompletions: [
+            { contractId: 'ghost-site-ica-recovery',     requireBossCleared: true },
+            { contractId: 'ghost-site-covenant-witness', requireBossCleared: true },
+            { contractId: 'kael-zero-second-expedition', requireAnyProgress: true },
+        ],
+        clearFlag: 'transit-node-zero-cleared',
+    },
 };
 
 /** Returns a fresh copy of a dungeon (rooms reset to uncleared). */
