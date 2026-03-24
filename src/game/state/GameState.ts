@@ -64,6 +64,10 @@ interface State {
      * Not used yet but reserved so multiplayer can be layered on without state migration.
      */
     sessionId: string | null;
+    /** Which hub the player is currently visiting ('meridian' or 'farpoint'). */
+    currentHubId: 'meridian' | 'farpoint';
+    /** IDs of lore entries the player has unlocked (shown in Codex panel). */
+    unlockedLoreIds: string[];
 }
 
 const state: State = {
@@ -117,6 +121,8 @@ const state: State = {
     redlineInsuranceActive: false,
     lastRunRedlineLoss: [],
     sessionId: null,
+    currentHubId: 'meridian',
+    unlockedLoreIds: [],
 };
 
 function clampMin(n: number, min = 0): number {
@@ -395,5 +401,20 @@ export const GameState = {
         if (!GameState.spendCredits(250)) return false;
         state.redlineInsuranceActive = true;
         return true;
+    },
+
+    // ── Hub navigation ─────────────────────────────────────────────────────
+    setCurrentHub(hub: 'meridian' | 'farpoint') {
+        state.currentHubId = hub;
+    },
+
+    // ── Lore codex ─────────────────────────────────────────────────────────
+    unlockLore(id: string) {
+        if (!state.unlockedLoreIds.includes(id)) {
+            state.unlockedLoreIds.push(id);
+        }
+    },
+    isLoreUnlocked(id: string): boolean {
+        return state.unlockedLoreIds.includes(id);
     },
 };

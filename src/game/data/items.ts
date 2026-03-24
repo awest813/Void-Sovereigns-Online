@@ -322,4 +322,26 @@ export const ITEMS: Record<string, ItemDef> = {
             'The integrated signal disruptor suppresses enemy targeting for one turn — no counter-attack.',
         effect: { healPilot: 50 },
     },
+
+    // ── Phase 6 items ─────────────────────────────────────────────────────
+
+    'transit-key-fragment': {
+        id: 'transit-key-fragment',
+        name: 'Transit Key Fragment',
+        type: 'key',
+        value: 175,
+        description: 'A credential fragment recovered from a Transit Node Zero patrol unit. ' +
+            'The format is four hundred years obsolete — but the facility still reads it. ' +
+            'Grants access to sealed internal chambers.',
+    },
+    'null-archive-data': {
+        id: 'null-archive-data',
+        name: 'Null Archive Data',
+        type: 'key',
+        value: 420,
+        description: 'A data extract from Transit Node Zero\'s archive chamber. ' +
+            'The compression format is not in any known standard. ' +
+            'The Void Covenant and ICA both want this. ' +
+            'They have different reasons.',
+    },
 };

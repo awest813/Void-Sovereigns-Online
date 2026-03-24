@@ -6,9 +6,12 @@ import { phase2Contracts } from '../../../content/contracts/phase2-contracts';
 import { phase3Contracts } from '../../../content/contracts/phase3-contracts';
 import { phase4Contracts } from '../../../content/contracts/phase4-contracts';
 import { phase5Contracts } from '../../../content/contracts/phase5-contracts';
+import { phase6Contracts } from '../../../content/contracts/phase6-contracts';
 import { meridianNPCs } from '../../../content/npcs/meridian-npcs';
 import { phase4NPCs } from '../../../content/npcs/phase4-npcs';
 import { phase5NPCs } from '../../../content/npcs/phase5-npcs';
+import { phase6NPCs } from '../../../content/npcs/phase6-npcs';
+import { phase6Lore } from '../../../content/lore/phase6-lore';
 import { factions } from '../../../content/factions/factions';
 import { SHIP_UPGRADES, HAULER_PURCHASE_COST } from '../data/shipUpgrades';
 import { ITEMS } from '../data/items';
@@ -62,6 +65,17 @@ const BOARD_CONTRACT_IDS = [
     'redline-ashveil-data-extraction',
     'redline-helion-anomaly-sample',
     'aegis-black-site-breach',
+    // Phase 6 — Farpoint Hub and Ghost Site contracts
+    'farpoint-outer-ring-survey',
+    'kael-ping-investigation',
+    'void-covenant-signal-trace',
+    'ica-relay-lockdown',
+    'farpoint-ghost-route-patrol',
+    'aegis-farpoint-audit',
+    'kael-zero-second-expedition',
+    'ghost-site-ica-recovery',
+    'ghost-site-covenant-witness',
+    'farpoint-archive-lore-pull',
 ];
 
 // Contract IDs that require relay jump to be visible on the board
@@ -89,9 +103,20 @@ const POST_RELAY_CONTRACT_IDS = new Set([
     'redline-ashveil-data-extraction',
     'redline-helion-anomaly-sample',
     'aegis-black-site-breach',
+    // Phase 6
+    'farpoint-outer-ring-survey',
+    'kael-ping-investigation',
+    'void-covenant-signal-trace',
+    'ica-relay-lockdown',
+    'farpoint-ghost-route-patrol',
+    'aegis-farpoint-audit',
+    'kael-zero-second-expedition',
+    'ghost-site-ica-recovery',
+    'ghost-site-covenant-witness',
+    'farpoint-archive-lore-pull',
 ]);
 
-// NPCs shown in the main Station Contacts panel (Meridian locals)
+// NPCs shown in the main Station Contacts panel (Meridian hub)
 const HUB_NPC_IDS = [
     'tamsin-vale',
     'rook-mendera',
@@ -105,6 +130,19 @@ const HUB_NPC_IDS = [
     'ica-agent-vorren',
     'void-covenant-kestrel',
     'farpoint-kael',
+];
+
+// NPCs shown in the Station Contacts panel when at Farpoint hub
+const FARPOINT_HUB_NPC_IDS = [
+    'farpoint-kael-expanded',
+    'tovan-vex',
+    'aryn-voss',
+    // Phase 3/4 faction contacts accessible at Farpoint
+    'ica-agent-vorren',
+    'void-covenant-kestrel',
+    'crow-veslin',
+    'operative-sable',
+    'frontier-agent-leva',
 ];
 
 // Phase 4+5 faction contact NPC IDs shown in the Faction Standings panel
@@ -125,6 +163,23 @@ const DIALOGUE_LINE_HEIGHT       = 80;   // px per NPC dialogue row
 const DIALOGUE_VIEWPORT_TOP      = 260;  // y where the masked dialogue area begins
 const DIALOGUE_VIEWPORT_HEIGHT   = 316;  // visible height of the dialogue clip region
 const DIALOGUE_SCROLL_SPEED      = 0.3;  // wheel-delta multiplier for NPC dialogue scroll
+const CODEX_SCROLL_SPEED         = 0.3;  // wheel-delta multiplier for codex scroll
+const CODEX_CONTENT_MAX_LENGTH   = 360;  // max characters shown per lore entry in codex
+
+// Ghost-site contract IDs — only visible when kael-questline-stage-2 flag is set
+const GHOST_SITE_CONTRACT_IDS = new Set(['ghost-site-ica-recovery', 'ghost-site-covenant-witness']);
+
+// Lore entries unlocked when specific contracts are turned in
+const CONTRACT_LORE_UNLOCKS: Record<string, string[]> = {
+    'kael-ping-investigation':      ['kael-personal-record'],
+    'kael-zero-second-expedition':  ['transit-node-zero-approach', 'transit-zero-interior-partial'],
+    'ghost-site-ica-recovery':      ['ica-relay-archive-fragment', 'null-architect-encounter-report'],
+    'ghost-site-covenant-witness':  ['covenant-field-report-tovan', 'null-architect-encounter-report'],
+    'farpoint-archive-lore-pull':   ['farpoint-ops-log-month-14'],
+    'aegis-farpoint-audit':         ['vorren-zero-second-analysis'],
+    'void-covenant-signal-trace':   ['covenant-field-report-tovan'],
+    'ica-relay-lockdown':           ['ica-relay-archive-fragment'],
+};
 
 export class HubScene extends Scene {
     private panels: Map<string, Phaser.GameObjects.Container> = new Map();
@@ -137,6 +192,8 @@ export class HubScene extends Scene {
     private _npcScrollHandler: ((...args: unknown[]) => void) | null = null;
     // Wheel-scroll handler wired during contract board — removed when leaving that panel.
     private _contractScrollHandler: ((...args: unknown[]) => void) | null = null;
+    // Wheel-scroll handler wired during codex panel — removed when leaving that panel.
+    private _codexScrollHandler: ((...args: unknown[]) => void) | null = null;
 
     constructor() {
         super('Hub');
@@ -155,6 +212,7 @@ export class HubScene extends Scene {
         this.buildShipStatusPanel();
         this.buildShipyardPanel();
         this.buildFactionsPanel();
+        this.buildCodexPanel();
 
         if (gs.returnFromDungeon) {
             this.buildDebriefPanel();
@@ -175,7 +233,8 @@ export class HubScene extends Scene {
         this.add.rectangle(512, 20, 1024, 40, C.panelBg);
         this.add.rectangle(512, 40, 1024, 1, C.border);
 
-        this.add.text(16, 12, 'MERIDIAN STATION', {
+        const hubLabel = gs.currentHubId === 'farpoint' ? 'FARPOINT WAYSTATION' : 'MERIDIAN STATION';
+        this.add.text(16, 12, hubLabel, {
             fontFamily: 'Arial Black', fontSize: 14, color: C.textAccent,
         });
 
@@ -286,6 +345,11 @@ export class HubScene extends Scene {
             this.input.off('wheel', this._contractScrollHandler);
             this._contractScrollHandler = null;
         }
+        // Tear down the codex scroll handler whenever we leave that panel.
+        if (name !== 'codex' && this._codexScrollHandler) {
+            this.input.off('wheel', this._codexScrollHandler);
+            this._codexScrollHandler = null;
+        }
         // Re-populate the main panel so contract badges reflect the latest state.
         if (name === 'main') {
             const c = this.panels.get('main');
@@ -377,9 +441,15 @@ export class HubScene extends Scene {
     private populateMainPanel(c: Phaser.GameObjects.Container) {
         c.removeAll(true);
 
-        this.panelHeader(c, 'MERIDIAN STATION', 'Low-rent. Busy. Yours for now.');
-
         const gs = GameState.get();
+        const isFarpoint = gs.currentHubId === 'farpoint';
+
+        if (isFarpoint) {
+            this.panelHeader(c, 'FARPOINT WAYSTATION', "Frontier outpost. Kael's territory.");
+        } else {
+            this.panelHeader(c, 'MERIDIAN STATION', 'Low-rent. Busy. Yours for now.');
+        }
+
         const activeCount    = gs.contracts.filter(ct => ct.accepted && !ct.turnedIn).length;
         const readyCount     = gs.contracts.filter(ct => ct.completed && !ct.turnedIn).length;
 
@@ -388,14 +458,18 @@ export class HubScene extends Scene {
             activeCount > 0 ? ` (${activeCount} active)` : '';
         const contractBadgeColor = readyCount > 0 ? C.textSuccess : C.textSecond;
 
+        const unlockedLoreCount = gs.unlockedLoreIds.length;
+        const codexBadge = unlockedLoreCount > 0 ? ` (${unlockedLoreCount} entries)` : '';
+
         const items = [
-            { label: '[ CONTRACT BOARD ]', badge: contractBadge, badgeColor: contractBadgeColor, sub: 'Take on work in the Belt', target: 'contracts' },
-            { label: '[ SERVICES ]',       badge: '',             badgeColor: C.textSecond,       sub: 'Repair, fuel, sell salvage',         target: 'services' },
-            { label: '[ SECTOR MAP ]',     badge: '',             badgeColor: C.textSecond,       sub: 'Launch to Ashwake Belt',             target: 'sectormap' },
-            { label: '[ STATION CONTACTS ]', badge: '',           badgeColor: C.textSecond,       sub: 'Talk to the locals',                 target: 'npcs' },
-            { label: '[ FACTION STANDINGS ]', badge: '',          badgeColor: C.textSecond,       sub: 'Reputation + faction contacts',      target: 'factions' },
-            { label: '[ SHIP STATUS ]',    badge: '',             badgeColor: C.textSecond,       sub: 'Current ship + relay goal',          target: 'shipstatus' },
-            { label: '[ SHIPYARD ]',       badge: '',             badgeColor: C.textSecond,       sub: 'Upgrades from Ilya, Oziel & Jasso',  target: 'shipyard' },
+            { label: '[ CONTRACT BOARD ]',    badge: contractBadge, badgeColor: contractBadgeColor, sub: 'Take on work in the Belt', target: 'contracts' },
+            { label: '[ SERVICES ]',          badge: '',            badgeColor: C.textSecond,       sub: 'Repair, fuel, sell salvage',         target: 'services' },
+            { label: '[ SECTOR MAP ]',        badge: '',            badgeColor: C.textSecond,       sub: 'Launch to Ashwake Belt',             target: 'sectormap' },
+            { label: '[ STATION CONTACTS ]',  badge: '',            badgeColor: C.textSecond,       sub: 'Talk to the locals',                 target: 'npcs' },
+            { label: '[ FACTION STANDINGS ]', badge: '',            badgeColor: C.textSecond,       sub: 'Reputation + faction contacts',      target: 'factions' },
+            { label: '[ SHIP STATUS ]',       badge: '',            badgeColor: C.textSecond,       sub: 'Current ship + relay goal',          target: 'shipstatus' },
+            { label: '[ SHIPYARD ]',          badge: '',            badgeColor: C.textSecond,       sub: 'Upgrades from Ilya, Oziel & Jasso',  target: 'shipyard' },
+            { label: '[ CODEX ]',             badge: codexBadge,    badgeColor: C.textAccent,       sub: 'Unlocked lore entries',              target: 'codex' },
         ];
 
         items.forEach((item, i) => {
@@ -433,7 +507,10 @@ export class HubScene extends Scene {
         const relayJumped = GameState.getFlag('relay-jump-completed');
         let goalText: string;
         let goalColor: string;
-        if (relayJumped) {
+        if (isFarpoint) {
+            goalText = '✓  FARPOINT WAYSTATION — Kael\'s questline is active. Check the contract board and talk to the locals.';
+            goalColor = C.textWarn;
+        } else if (relayJumped) {
             goalText = '✓  RELAY TRANSITED — Farpoint Waystation is open. New contacts and contracts are available.';
             goalColor = C.textWarn;
         } else if (relayCapable) {
@@ -443,14 +520,15 @@ export class HubScene extends Scene {
             goalText = `▶ RELAY GOAL: Earn credits and upgrade your ship to reach Void Relay 7-9.`;
             goalColor = C.textWarn;
         }
-        c.add(this.add.text(512, 616, goalText, {
+        c.add(this.add.text(512, 706, goalText, {
             fontFamily: 'Arial', fontSize: 12, color: goalColor, align: 'center',
         }).setOrigin(0.5));
 
-        // Station flavor
-        c.add(this.add.text(512, 640, '"Thirty ships a day, once. Now eight. The Relays went out and everyone forgot we existed."', {
-            fontFamily: 'Arial', fontSize: 12, color: '#555566', align: 'center', fontStyle: 'italic',
-        }).setOrigin(0.5));
+        if (!isFarpoint) {
+            c.add(this.add.text(512, 726, '"Thirty ships a day, once. Now eight. The Relays went out and everyone forgot we existed."', {
+                fontFamily: 'Arial', fontSize: 12, color: '#555566', align: 'center', fontStyle: 'italic',
+            }).setOrigin(0.5));
+        }
     }
 
     // ── Contract board ────────────────────────────────────────────────────
@@ -462,13 +540,21 @@ export class HubScene extends Scene {
 
     private populateContractPanel(c: Phaser.GameObjects.Container) {
         c.removeAll(true);
-        this.panelHeader(c, 'CONTRACT BOARD', 'Meridian Station — Tamsin Vale, Dispatcher');
+        const gs = GameState.get();
+        const isFarpoint = gs.currentHubId === 'farpoint';
+        const boardSubtitle = isFarpoint
+            ? 'Farpoint Waystation — Kael Mourne, Coordinator'
+            : 'Meridian Station — Tamsin Vale, Dispatcher';
+        this.panelHeader(c, 'CONTRACT BOARD', boardSubtitle);
 
-        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts];
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts];
         const relayJumped = GameState.getFlag('relay-jump-completed');
+        const kaelStage2 = GameState.getFlag('kael-questline-stage-2');
+
         const contracts = allContracts.filter(ct =>
             BOARD_CONTRACT_IDS.includes(ct.id) &&
-            (!POST_RELAY_CONTRACT_IDS.has(ct.id) || relayJumped),
+            (!POST_RELAY_CONTRACT_IDS.has(ct.id) || relayJumped) &&
+            (!GHOST_SITE_CONTRACT_IDS.has(ct.id) || kaelStage2),
         );
         const rowH = 86;
         const startY = 148;
@@ -624,6 +710,23 @@ export class HubScene extends Scene {
                             }
                         }
                     }
+                    // ── Phase 6: questline flag triggers ─────────────────
+                    if (ct.id === 'kael-ping-investigation') {
+                        GameState.setFlag('kael-questline-stage-1', true);
+                    }
+                    if (ct.id === 'kael-zero-second-expedition') {
+                        GameState.setFlag('kael-questline-stage-2', true);
+                    }
+                    if (ct.id === 'farpoint-archive-lore-pull') {
+                        GameState.setFlag('farpoint-archive-pulled', true);
+                    }
+                    // ── Phase 6: lore unlocks ─────────────────────────────
+                    const loreUnlocks = CONTRACT_LORE_UNLOCKS[ct.id];
+                    if (loreUnlocks) {
+                        for (const loreId of loreUnlocks) {
+                            GameState.unlockLore(loreId);
+                        }
+                    }
                     this.refreshStatusBar();
                     this.buildContractPanel();
                     this.showPanel('contracts');
@@ -744,9 +847,16 @@ export class HubScene extends Scene {
     private buildNpcListPanel() {
         const c = this.add.container(0, 0);
         this.panels.set('npcs', c);
-        this.panelHeader(c, 'STATION CONTACTS', 'Meridian Station — talk to the locals');
+        const gs = GameState.get();
+        const isFarpoint = gs.currentHubId === 'farpoint';
+        const subtitle = isFarpoint
+            ? 'Farpoint Waystation — talk to the locals'
+            : 'Meridian Station — talk to the locals';
+        this.panelHeader(c, 'STATION CONTACTS', subtitle);
 
-        const npcs = meridianNPCs.filter(n => HUB_NPC_IDS.includes(n.id));
+        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase6NPCs];
+        const npcIds = isFarpoint ? FARPOINT_HUB_NPC_IDS : HUB_NPC_IDS;
+        const npcs = allNPCs.filter(n => npcIds.includes(n.id));
         const colW = 290;
         const startX = 160;
         const startY = 160;
@@ -790,7 +900,7 @@ export class HubScene extends Scene {
     }
 
     private showNpcDialogue(npcId: string) {
-        const npc = meridianNPCs.find(n => n.id === npcId);
+        const npc = this.findNpc(npcId);
         if (!npc) return;
 
         // Tear down any previous wheel handler before rebuilding the panel.
@@ -895,6 +1005,106 @@ export class HubScene extends Scene {
             return GameState.getFlag(flagMatch[1]);
         }
         return true;
+    }
+
+    /** Searches all NPC arrays to find an NPC by ID. */
+    private findNpc(npcId: string) {
+        return [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs].find(n => n.id === npcId) ?? null;
+    }
+
+    // ── Codex panel ───────────────────────────────────────────────────────
+    private buildCodexPanel() {
+        const c = this.add.container(0, 0);
+        this.panels.set('codex', c);
+        this.populateCodexPanel(c);
+    }
+
+    private populateCodexPanel(c: Phaser.GameObjects.Container) {
+        c.removeAll(true);
+
+        if (this._codexScrollHandler) {
+            this.input.off('wheel', this._codexScrollHandler);
+            this._codexScrollHandler = null;
+        }
+
+        this.panelHeader(c, 'CODEX', 'Unlocked field intelligence and personal records');
+
+        const unlockedEntries = phase6Lore.filter(entry => GameState.isLoreUnlocked(entry.id));
+
+        const CODEX_VIEWPORT_TOP    = 148;
+        const CODEX_VIEWPORT_HEIGHT = 552;
+        const ENTRY_HEIGHT          = 160;
+        const totalH                = unlockedEntries.length * ENTRY_HEIGHT;
+        const maxScroll             = Math.max(0, totalH - CODEX_VIEWPORT_HEIGHT);
+        let   codexScrollY          = 0;
+
+        if (unlockedEntries.length === 0) {
+            c.add(this.add.text(512, 380, 'No entries unlocked.\nComplete contracts and explore sites to build the archive.', {
+                fontFamily: 'Arial', fontSize: 14, color: C.textSecond, align: 'center',
+                wordWrap: { width: 600 },
+            }).setOrigin(0.5));
+            this.makeButton(c, 512, 700, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
+            return;
+        }
+
+        const maskGfx = this.make.graphics({ x: 0, y: 0 });
+        maskGfx.fillRect(0, CODEX_VIEWPORT_TOP, 1024, CODEX_VIEWPORT_HEIGHT);
+        const mask = maskGfx.createGeometryMask();
+
+        const scrollCt = this.add.container(0, 0);
+        scrollCt.setMask(mask);
+        c.add(scrollCt);
+
+        unlockedEntries.forEach((entry, i) => {
+            const y = CODEX_VIEWPORT_TOP + i * ENTRY_HEIGHT;
+            scrollCt.add(this.add.rectangle(492, y + 72, 900, ENTRY_HEIGHT - 8, C.panelBg).setStrokeStyle(1, C.border));
+
+            // Category tag
+            const catColor = '#6688aa';
+            scrollCt.add(this.add.text(80, y + 12, entry.category.toUpperCase().replace('-', ' '), {
+                fontFamily: 'Arial', fontSize: 10, color: catColor,
+            }).setOrigin(0.5));
+
+            // Title
+            scrollCt.add(this.add.text(140, y + 10, entry.title, {
+                fontFamily: 'Arial Black', fontSize: 13, color: C.textPrimary,
+            }));
+
+            // Source
+            if (entry.source) {
+                scrollCt.add(this.add.text(140, y + 30, entry.source, {
+                    fontFamily: 'Arial', fontSize: 10, color: C.textAccent,
+                }));
+            }
+
+            // Content (truncated/wrapped)
+            const contentLines = entry.content.length > CODEX_CONTENT_MAX_LENGTH
+                ? entry.content.slice(0, CODEX_CONTENT_MAX_LENGTH - 3) + '…'
+                : entry.content;
+            scrollCt.add(this.add.text(140, y + 50, contentLines, {
+                fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
+                wordWrap: { width: 800 },
+            }));
+
+            // Separator
+            if (i < unlockedEntries.length - 1) {
+                scrollCt.add(this.add.rectangle(492, y + ENTRY_HEIGHT - 4, 900, 1, C.border));
+            }
+        });
+
+        if (maxScroll > 0) {
+            c.add(this.add.text(512, CODEX_VIEWPORT_TOP + CODEX_VIEWPORT_HEIGHT + 6, '▼ scroll for more', {
+                fontFamily: 'Arial', fontSize: 11, color: C.textMuted, align: 'center',
+            }).setOrigin(0.5));
+
+            this._codexScrollHandler = (_pointer: unknown, _gameObjects: unknown, _deltaX: unknown, deltaY: unknown) => {
+                codexScrollY = Math.max(0, Math.min(maxScroll, codexScrollY + (deltaY as number) * CODEX_SCROLL_SPEED));
+                scrollCt.setY(-codexScrollY);
+            };
+            this.input.on('wheel', this._codexScrollHandler);
+        }
+
+        this.makeButton(c, 512, 700, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
     }
 
     // ── Services panel ────────────────────────────────────────────────────
@@ -1379,7 +1589,7 @@ export class HubScene extends Scene {
         c.removeAll(true);
         this.panelHeader(c, 'FACTION STANDINGS', 'Your reputation across the frontier');
 
-        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs];
+        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs];
 
         // Show all tracked factions in two columns
         const trackedFactionIds = Object.keys(GameState.get().reputation);
@@ -1446,7 +1656,7 @@ export class HubScene extends Scene {
                 fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
             }));
 
-            const contactNPCs = [...phase4NPCs, ...phase5NPCs];
+            const contactNPCs = [...phase4NPCs, ...phase5NPCs, ...phase6NPCs];
             const npcColW = 220;
             contactNPCs.forEach((npc, i) => {
                 const cx = 80 + i * npcColW;
@@ -1482,8 +1692,7 @@ export class HubScene extends Scene {
     }
 
     private showFactionNpcDialogue(npcId: string) {
-        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs];
-        const npc = allNPCs.find(n => n.id === npcId);
+        const npc = this.findNpc(npcId);
         if (!npc) return;
 
         // Tear down any previous wheel handler before rebuilding the panel.
@@ -1596,6 +1805,7 @@ export class HubScene extends Scene {
             'orins-crossing-locked-sector':   "Orin's Crossing — Locked Sector",
             'vault-of-the-broken-signal':     'Vault of the Broken Signal',
             'ashveil-observation-post':       'Ashveil Observation Post',
+            'transit-node-zero':              'Transit Node Zero',
         };
         const siteName = dungeonNames[gs.lastDungeonId ?? ''] ?? 'Unknown Site';
         c.add(this.add.text(512, 132, `${siteName} — Run Complete`, {
@@ -1662,7 +1872,7 @@ export class HubScene extends Scene {
         }
 
         // Contracts updated — all phases
-        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts];
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts];
         const completedContracts = gs.contracts.filter(ct => ct.completed && !ct.turnedIn);
         if (completedContracts.length > 0) {
             c.add(this.add.text(175, lootBottom, 'CONTRACTS READY TO TURN IN:', {

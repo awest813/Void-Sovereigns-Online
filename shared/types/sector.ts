@@ -1,4 +1,4 @@
-export type SectorType = 'station' | 'belt' | 'deep-space' | 'nebula' | 'ruins';
+export type SectorType = 'station' | 'belt' | 'deep-space' | 'nebula' | 'ruins' | 'ghost-site' | 'anomaly';
 export type SectorDanger = 'safe' | 'low' | 'moderate' | 'high' | 'extreme';
 
 export interface Sector {
