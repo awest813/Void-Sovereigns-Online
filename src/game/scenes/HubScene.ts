@@ -164,6 +164,7 @@ const DIALOGUE_VIEWPORT_TOP      = 260;  // y where the masked dialogue area beg
 const DIALOGUE_VIEWPORT_HEIGHT   = 316;  // visible height of the dialogue clip region
 const DIALOGUE_SCROLL_SPEED      = 0.3;  // wheel-delta multiplier for NPC dialogue scroll
 const CODEX_SCROLL_SPEED         = 0.3;  // wheel-delta multiplier for codex scroll
+const CODEX_CONTENT_MAX_LENGTH   = 360;  // max characters shown per lore entry in codex
 
 // Ghost-site contract IDs — only visible when kael-questline-stage-2 flag is set
 const GHOST_SITE_CONTRACT_IDS = new Set(['ghost-site-ica-recovery', 'ghost-site-covenant-witness']);
@@ -1077,8 +1078,8 @@ export class HubScene extends Scene {
             }
 
             // Content (truncated/wrapped)
-            const contentLines = entry.content.length > 360
-                ? entry.content.slice(0, 357) + '…'
+            const contentLines = entry.content.length > CODEX_CONTENT_MAX_LENGTH
+                ? entry.content.slice(0, CODEX_CONTENT_MAX_LENGTH - 3) + '…'
                 : entry.content;
             scrollCt.add(this.add.text(140, y + 50, contentLines, {
                 fontFamily: 'Arial', fontSize: 11, color: C.textSecond,

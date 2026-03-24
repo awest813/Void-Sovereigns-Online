@@ -235,7 +235,7 @@ export class SectorMapScene extends Scene {
                 this.add.rectangle(490, 170, 680, 26, 0x02000a).setStrokeStyle(1, 0x8800cc);
                 const ghostLabel = ghostSiteCleared
                     ? '◆ Transit Node Zero  ·  Tier 4  ·  REDLINE  ·  Ghost Site  [CLEARED]'
-                    : '◆ Transit Node Zero  ·  Tier 4  ·  ⚠ REDLINE  ·  Ghost Site  ★ NEW';
+                    : '◆ Transit Node Zero  ·  Tier 4  ·  ⚠ REDLINE  ·  Ghost Site';
                 this.add.text(350, 162, ghostLabel, {
                     fontFamily: 'Arial', fontSize: 12, color: ghostSiteCleared ? C.textSecond : '#cc44ff',
                 });

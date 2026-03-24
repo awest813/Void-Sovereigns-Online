@@ -16,12 +16,11 @@ export const phase6Contracts: Contract[] = [
         tier: 3,
         factionId: 'frontier-compact',
         description:
-            'Kael Mourne needs the outer ring charted. ' +
-            '"I\'ve been logging transit traffic for eight months," he says. ' +
-            '"I need a current picture of what\'s out there — not what was out there." ' +
-            'Standard Frontier Compact survey framing. The outer ring is uncontrolled. ' +
-            'That is what makes the data useful.',
-        giver: 'farpoint-kael-expanded',
+            'The Frontier Compact wants the outer ring beyond Farpoint Waystation surveyed and charted. ' +
+            'Transit traffic is increasing and the Compact needs accurate data on access routes, ' +
+            'debris fields, and signal interference zones. The outer ring is uncontrolled. ' +
+            'That is what makes the data valuable.',
+        giver: 'frontier-agent-leva',
         sector: 'farpoint-waystation-sector',
         objectives: [
             'Transit to the Farpoint outer ring.',
