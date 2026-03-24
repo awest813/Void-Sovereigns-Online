@@ -1,0 +1,73 @@
+import { Weapon } from '../../shared/types/weapon';
+
+export const starterWeapons: Weapon[] = [
+    {
+        id: 'compact-autopistol',
+        name: 'Compact Autopistol',
+        type: 'ballistic',
+        slot: 'sidearm',
+        damage: { base: 8, max: 14, type: 'kinetic' },
+        ammoType: 'ammo-9mm',
+        magazineSize: 12,
+        description: 'Standard issue sidearm found on virtually every station in the frontier. Reliable, easy to maintain, and cheap to feed.',
+        rarity: 'common',
+        tags: ['starter', 'common', 'ranged'],
+    },
+    {
+        id: 'heavy-autopistol',
+        name: 'Heavy Autopistol',
+        type: 'ballistic',
+        slot: 'sidearm',
+        damage: { base: 14, max: 22, type: 'kinetic' },
+        ammoType: 'ammo-12mm',
+        magazineSize: 8,
+        description: 'More stopping power, less magazine capacity. Preferred by enforcement personnel who expect armored targets.',
+        rarity: 'common',
+        tags: ['combat', 'common', 'ranged'],
+    },
+    {
+        id: 'salvage-cutter',
+        name: 'Salvage Cutter',
+        type: 'melee',
+        slot: 'sidearm',
+        damage: { base: 10, max: 18, type: 'kinetic' },
+        description: 'A heavy-duty cutting tool repurposed as a weapon. Works on bulkheads and bodies alike.',
+        rarity: 'common',
+        tags: ['melee', 'tool', 'common'],
+    },
+    {
+        id: 'combat-knife',
+        name: 'Combat Knife',
+        type: 'melee',
+        slot: 'sidearm',
+        damage: { base: 12, max: 16, type: 'kinetic' },
+        description: 'Purpose-built for close-quarters work. Light, fast, quiet.',
+        rarity: 'common',
+        tags: ['melee', 'common', 'silent'],
+    },
+    {
+        id: 'boarding-shotgun',
+        name: 'Boarding Shotgun',
+        type: 'ballistic',
+        slot: 'primary',
+        damage: { base: 24, max: 38, type: 'kinetic' },
+        ammoType: 'ammo-shotgun',
+        magazineSize: 5,
+        description: 'Short-barreled, devastating at close range. Standard equipment for ship boarding operations and corridor defense.',
+        rarity: 'uncommon',
+        tags: ['combat', 'close-range', 'uncommon'],
+    },
+    {
+        id: 'void-lance-mk1',
+        name: 'Void Lance Mk. I',
+        type: 'energy',
+        slot: 'primary',
+        damage: { base: 20, max: 35, type: 'void' },
+        description:
+            'A relic-adjacent energy weapon that fires a focused beam of void-resonant energy. ' +
+            'The power cell is derived from Relay-adjacent materials. ' +
+            'It makes a sound when it fires that engineers cannot explain.',
+        rarity: 'rare',
+        tags: ['energy', 'void', 'psi-adjacent', 'rare'],
+    },
+];
