@@ -85,4 +85,65 @@ export const ITEMS: Record<string, ItemDef> = {
         value: 8,
         description: 'Standard-issue 9mm rounds. Common and reliable.',
     },
+
+    // ── Phase 2 items ─────────────────────────────────────────────────────
+
+    'pressure-valve': {
+        id: 'pressure-valve',
+        name: 'Pressure Valve',
+        type: 'salvage',
+        value: 20,
+        description: 'A pressurized valve housing salvaged from a Coldframe unit. Useful to mechanics and equipment traders.',
+    },
+    'cryo-component': {
+        id: 'cryo-component',
+        name: 'Cryo Component',
+        type: 'salvage',
+        value: 55,
+        description: 'An intact cryo-storage module from Coldframe Station-B. Nera Quill will pay well for these.',
+    },
+    'cryo-component-x2': {
+        id: 'cryo-component-x2',
+        name: 'Cryo Component Set',
+        type: 'salvage',
+        value: 110,
+        description: 'Two intact cryo modules bundled for transport. Torrek Voss would want these back.',
+    },
+    'black-box-fragment': {
+        id: 'black-box-fragment',
+        name: 'Black Box Fragment',
+        type: 'key',
+        value: 120,
+        description:
+            'A partially corrupted flight data recorder recovered from Coldframe Station-B\'s Controller Alpha. ' +
+            'The last 90 minutes of sensor logs are intact. The content is — unusual. ' +
+            'Tamsin Vale will want to see this.',
+    },
+    'corrupted-maintenance-log': {
+        id: 'corrupted-maintenance-log',
+        name: 'Corrupted Maintenance Log',
+        type: 'key',
+        value: 40,
+        description:
+            'A hardcopy maintenance sheet from the Coldframe operations bay. ' +
+            'Most of the entries are routine. The final entry is dated six weeks ago and reads: ' +
+            '"UNIT RESTART ORIGIN: EXTERNAL QUERY. SOURCE: UNKNOWN RELAY NODE."',
+    },
+    'relay-static-archive': {
+        id: 'relay-static-archive',
+        name: 'Relay Static Archive',
+        type: 'key',
+        value: 80,
+        description:
+            'A data chip from Brother Caldus\'s archives. Contains partial recordings of unexplained transmission ' +
+            'activity from Void Relay 7-9 across the past six months. Some windows match known dates. ' +
+            'Others do not correspond to anything on record.',
+    },
+    'nav-chart-outer-belt': {
+        id: 'nav-chart-outer-belt',
+        name: 'Nav Chart: Outer Belt',
+        type: 'key',
+        value: 60,
+        description: 'A navigational chart covering Ashwake Belt\'s outer grid sectors. Useful for longer-range runs.',
+    },
 };

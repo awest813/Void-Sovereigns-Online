@@ -270,4 +270,105 @@ export const meridianNPCs: NPC[] = [
         services: ['info', 'drinks'],
         tags: ['bartender', 'info-broker', 'rumor-source', 'story'],
     },
+
+    // ── PHASE 2 NPCs ─────────────────────────────────────────────────────────
+
+    {
+        id: 'oziel-kaur',
+        name: 'Oziel Kaur',
+        role: ['merchant', 'shipwright'],
+        location: 'meridian-station',
+        description:
+            'A lean, soft-spoken man who operates a ship parts brokerage out of a converted cargo container ' +
+            'on the edge of the Ash Market. Oziel sources components from decommissioned vessels, ' +
+            'Guild surplus, and places he does not mention. He is one of the few people on Meridian ' +
+            'who can get you relay-grade navigation equipment without a seven-week import wait.',
+        portrait: 'assets/npcs/oziel.png',
+        dialogue: [
+            {
+                id: 'greeting-default',
+                text: 'Looking for something specific? I keep a ledger. Tell me what you need and I\'ll tell you if I have it.',
+            },
+            {
+                id: 'relay-upgrade-pitch',
+                text: 'You\'re flying a Cutter? You can make it relay-capable. Nav computer, Class-II drive. It\'s not cheap but it\'s cheaper than a new ship. Come back when you have the credits.',
+            },
+            {
+                id: 'hauler-offer',
+                text: 'I have a Meridian Hauler II sitting in Bay 6. Previous owner needed to settle a debt quickly. Ask me again when you have 3,800.',
+                condition: 'flag.asked-about-ships',
+            },
+            {
+                id: 'hint-parts-demand',
+                text: 'Control modules have been moving faster than usual lately. I\'ve had three separate buyers ask for the same part number in two weeks. Something is being built, or rebuilt.',
+                condition: 'flag.completed-coldframe',
+            },
+        ],
+        services: ['ship-upgrade', 'ship-broker', 'nav-computer', 'drift-drive'],
+        tags: ['merchant', 'shipwright', 'ship-broker', 'relay-path', 'phase-2'],
+    },
+
+    {
+        id: 'veera-mox',
+        name: 'Veera Mox',
+        role: ['info-broker'],
+        location: 'meridian-station',
+        description:
+            'A quiet woman who arrived on Meridian six months ago without a ship, a contract, or an explanation. ' +
+            'She occupies a table at the back of the Rust Anchor and asks careful questions. ' +
+            'Her faction affiliation is not obvious, but she has clearance codes that open doors ' +
+            'they should not. She seems to be waiting for something.',
+        portrait: 'assets/npcs/veera.png',
+        dialogue: [
+            {
+                id: 'greeting-default',
+                text: 'I\'m not looking for work. But I\'ll listen, if you have something to say.',
+            },
+            {
+                id: 'relay-theory',
+                text: 'The official reason the Relays failed is \'cascading calibration fault.\' That report took nine days to file and used seventeen pages to say nothing. I\'ve read it four times.',
+            },
+            {
+                id: 'coldframe-interest',
+                text: 'You were at Coldframe Station-B? I\'d like to hear what you found there. Specifically the control unit. What was it doing when you encountered it?',
+                condition: 'flag.completed-coldframe',
+            },
+            {
+                id: 'relay-warning',
+                text: 'If Relay Seven-Nine becomes active again — and I believe it will — do not go through it alone. Do not go through it at all until you know what is on the other side.',
+                condition: 'flag.relay-signal-observed',
+            },
+        ],
+        services: ['info'],
+        tags: ['info-broker', 'mystery', 'void-adjacent', 'phase-2', 'story'],
+    },
+
+    {
+        id: 'jasso',
+        name: 'Jasso',
+        role: ['merchant'],
+        location: 'meridian-station',
+        description:
+            'Nobody on Meridian Station has a second name for Jasso. He occupies a stall near Bay 14 ' +
+            'that has no official permit and no sign. He sells things that have no serial numbers ' +
+            'and asks no questions about what you need them for. His prices are fair and his memory is short.',
+        portrait: 'assets/npcs/jasso.png',
+        dialogue: [
+            {
+                id: 'greeting-default',
+                text: 'I\'ve got parts. I don\'t have receipts. If that\'s a problem, there\'s a licensed stall three doors down.',
+            },
+            {
+                id: 'shield-offer',
+                text: 'Guild surplus deflector arrays. Technically those aren\'t supposed to be on civilian ships. But Meridian Station\'s inspection rate is zero, so.',
+            },
+            {
+                id: 'hint-buyers',
+                text: 'Someone\'s been buying relay nav components in quantity. Not from me — I don\'t deal in certified kit. But they\'re moving through the station like something\'s being assembled in a hurry.',
+                condition: 'reputation.meridian-dock-authority >= 8',
+            },
+        ],
+        services: ['gray-market', 'trade'],
+        tags: ['merchant', 'gray-market', 'parts', 'bay-14', 'phase-2'],
+    },
 ];
