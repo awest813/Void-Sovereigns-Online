@@ -154,6 +154,42 @@ export class SectorMapScene extends Scene {
             fpBtn.on('pointerover', () => fpBtn.setColor(C.btnHover));
             fpBtn.on('pointerout',  () => fpBtn.setColor(farpointCleared ? C.textSecond : C.textWarn));
             fpBtn.on('pointerdown', () => this.launchToDungeon('farpoint-outer-ring'));
+
+            // ── Phase 4 sector nodes ──────────────────────────────────────
+            const kalindraClear = GameState.getFlag('kalindra-cleared');
+            const orinsClear    = GameState.getFlag('orins-crossing-cleared');
+
+            // Kalindra Drift node
+            this.add.rectangle(490, 345, 680, 26, 0x0a0e0a).setStrokeStyle(1, 0x445533);
+            const kalindraLabel = kalindraClear
+                ? '◆ Kalindra Drift  ·  Tier 3  ·  Salvage / Anomaly  [CLEARED]'
+                : '◆ Kalindra Drift  ·  Tier 3  ·  Salvage / Anomaly  ★ NEW';
+            this.add.text(350, 337, kalindraLabel, {
+                fontFamily: 'Arial', fontSize: 12, color: kalindraClear ? C.textSecond : C.textSuccess,
+            });
+            const kalindraBtn = this.add.text(500, 351, '[ LAUNCH TO KALINDRA DRIFT ]', {
+                fontFamily: 'Arial Black', fontSize: 13,
+                color: kalindraClear ? C.textSecond : C.textSuccess,
+            }).setInteractive({ useHandCursor: true });
+            kalindraBtn.on('pointerover', () => kalindraBtn.setColor(C.btnHover));
+            kalindraBtn.on('pointerout',  () => kalindraBtn.setColor(kalindraClear ? C.textSecond : C.textSuccess));
+            kalindraBtn.on('pointerdown', () => this.launchToDungeon('kalindra-processing-hub'));
+
+            // Orin's Crossing node
+            this.add.rectangle(490, 302, 680, 26, 0x0a0a12).setStrokeStyle(1, 0x443355);
+            const orinsLabel = orinsClear
+                ? "◆ Orin's Crossing  ·  Tier 4  ·  Military Checkpoint  [CLEARED]"
+                : "◆ Orin's Crossing  ·  Tier 4  ·  Military Checkpoint  ★ NEW";
+            this.add.text(350, 294, orinsLabel, {
+                fontFamily: 'Arial', fontSize: 12, color: orinsClear ? C.textSecond : C.textDanger,
+            });
+            const orinsBtn = this.add.text(500, 308, "[ LAUNCH TO ORIN'S CROSSING ]", {
+                fontFamily: 'Arial Black', fontSize: 13,
+                color: orinsClear ? C.textSecond : C.textDanger,
+            }).setInteractive({ useHandCursor: true });
+            orinsBtn.on('pointerover', () => orinsBtn.setColor(C.btnHover));
+            orinsBtn.on('pointerout',  () => orinsBtn.setColor(orinsClear ? C.textSecond : C.textDanger));
+            orinsBtn.on('pointerdown', () => this.launchToDungeon('orins-crossing-locked-sector'));
         }
 
         // ── Relay goal strip
@@ -193,9 +229,16 @@ export class SectorMapScene extends Scene {
         const farpointCleared = GameState.getFlag('farpoint-cleared');
 
         if (relayJumped) {
-            const nextGoal = farpointCleared
-                ? '✓  FARPOINT CLEARED — Watch for deeper anomaly contracts and Redline Run opportunities'
-                : '✓  RELAY TRANSITED — Farpoint Waystation is open. New contracts available.';
+            const kalindraClear = GameState.getFlag('kalindra-cleared');
+            const orinsClear    = GameState.getFlag('orins-crossing-cleared');
+            let nextGoal: string;
+            if (kalindraClear && orinsClear) {
+                nextGoal = '✓  FRONTIER CLEAR — Deeper anomaly contracts and Redline Runs are available. The pattern is not done yet.';
+            } else if (farpointCleared) {
+                nextGoal = '✓  FARPOINT CLEARED — Kalindra Drift and Orin\'s Crossing are open. Faction contracts active.';
+            } else {
+                nextGoal = '✓  RELAY TRANSITED — Farpoint Waystation is open. New contracts available.';
+            }
             this.add.text(512, y + 18, nextGoal, {
                 fontFamily: 'Arial Black', fontSize: 13, color: C.textWarn, align: 'center',
             }).setOrigin(0.5);

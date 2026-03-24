@@ -396,6 +396,191 @@ export const DUNGEON_REGISTRY: Record<string, DungeonDef> = {
         ],
         clearFlag: 'farpoint-cleared',
     },
+
+    // ── Phase 4 — Kalindra Processing Hub ────────────────────────────────────
+    'kalindra-processing-hub': {
+        id: 'kalindra-processing-hub',
+        name: 'Kalindra Processing Hub',
+        location: 'Kalindra Drift  ·  Dead Trade Node  ·  Interior Access',
+        tier: 3,
+        tagline: 'Tier 3  ·  Salvage & Anomaly  ·  Classified Interior',
+        introText:
+            'Kalindra Processing Hub processed bulk ore freight until two years ago, when the relay network collapsed ' +
+            'and the crew disappeared without filing an evacuation record. ' +
+            'The Frontier Compact has salvage rights on the outer sections. ' +
+            'Aegis Division has classified the inner sections under a notice dated before the relay reopened.\n\n' +
+            'Whatever is in the signal relay room, both organizations want it. ' +
+            'One of them hired you. The other will not be happy you are here.\n\n' +
+            'Your objectives: recover freight salvage, reach the classified inner sections, ' +
+            'and find out what the signal relay room has been receiving.',
+        rooms: [
+            {
+                id: 'kalindra-docking-collar',
+                name: 'Outer Docking Collar',
+                type: 'entrance',
+                description:
+                    'The outer collar cycles clean — well-maintained for an abandoned station. ' +
+                    'Emergency lighting activates on entry. ' +
+                    'A Frontier Compact access authorization is posted at the inner lock. ' +
+                    'Below it, an Aegis Division classification notice with a date stamp that reads eleven months ago — ' +
+                    'seven months before the relay reopened.',
+                enemies: [],
+                cleared: false,
+            },
+            {
+                id: 'kalindra-freight-floor',
+                name: 'Freight Processing Floor',
+                type: 'loot',
+                description:
+                    'Two years of unclaimed freight. Ore manifests, processed and packed, waiting for routes that no longer exist. ' +
+                    'Standard industrial cargo — and one container that is not standard. ' +
+                    'Non-standard lock code. Predates the hub\'s own cargo registry. ' +
+                    'Whatever is inside was not included in the official manifest.',
+                enemies: [],
+                lootItems: ['kalindra-nav-fragment', 'farpoint-cargo-bundle', 'power-cell'],
+                cleared: false,
+            },
+            {
+                id: 'kalindra-processing-level',
+                name: 'Processing Level — Automation Control',
+                type: 'combat',
+                description:
+                    'The ore processing floor. Automated conveyor systems still run their loops — someone or something ' +
+                    'has been running maintenance cycles. Two freight-handling drones have been repurposed for security. ' +
+                    'They were not designed for it. They are doing it anyway.',
+                enemies: ['kalindra-freight-drone', 'kalindra-freight-drone'],
+                cleared: false,
+            },
+            {
+                id: 'kalindra-operations-deck',
+                name: 'Operations Deck',
+                type: 'combat',
+                description:
+                    'The hub operations center. Consoles still display process logs — they end mid-cycle, mid-sentence, ' +
+                    'as if the crew stopped entering data rather than completing their shift. ' +
+                    'A Kalindra security sentinel runs a patrol pattern across the floor. ' +
+                    'In the far corner, a compact probe unit — the same chassis pattern as the ones found in Void Relay 7-9 — ' +
+                    'is active. Transmitting. It has no business being here.',
+                enemies: ['kalindra-security-sentinel', 'fractured-probe'],
+                cleared: false,
+            },
+            {
+                id: 'kalindra-signal-relay-room',
+                name: 'Signal Relay Room — Hub Coordinator',
+                type: 'boss',
+                description:
+                    'Every screen in the signal relay room is active. Every screen shows the same waveform. ' +
+                    'Not identical to the Coldframe or Relay 7-9 waveforms — but the same shape, the same interval, ' +
+                    'the same underlying pattern. ' +
+                    'The Kalindra Hub Coordinator stands in the center of the room — ' +
+                    'running management and logistics protocols for a station that has been dark for two years. ' +
+                    'It is receiving instructions from somewhere. ' +
+                    'It is sending responses. ' +
+                    'It registers your entry as an access event and responds to the only instruction it has ' +
+                    'for unauthorized personnel.',
+                enemies: ['kalindra-hub-coordinator'],
+                cleared: false,
+            },
+        ],
+        contractCompletions: [
+            { contractId: 'frontier-supply-run-kalindra',    requireAnyProgress: true },
+            { contractId: 'frontier-route-survey-kalindra',  requireAnyProgress: true },
+            { contractId: 'frontier-salvage-certification',  requireLootCleared: true },
+            { contractId: 'aegis-sealed-site-recovery',      requireBossCleared: true },
+            { contractId: 'aegis-missing-team-kalindra',     requireBossCleared: true },
+            { contractId: 'vanta-off-book-salvage',          requireLootCleared: true },
+            { contractId: 'redline-kalindra-core',           requireBossCleared: true },
+        ],
+        clearFlag: 'kalindra-cleared',
+    },
+
+    // ── Phase 4 — Orin's Crossing Locked Sector ──────────────────────────────
+    "orins-crossing-locked-sector": {
+        id: 'orins-crossing-locked-sector',
+        name: "Orin's Crossing — Locked Sector",
+        location: "Orin's Crossing Transit Station  ·  Restricted Access",
+        tier: 4,
+        tagline: "Tier 4  ·  Military Station  ·  Classified Zone",
+        introText:
+            "A sealed section of Orin's Crossing that Commander Dresh will not discuss. " +
+            'It has been locked for at least three years — predating the recent anomaly events — ' +
+            'and the access codes have been rotated seven times in the last four months.\n\n' +
+            'Someone keeps updating the locks. Someone who is not Commander Dresh.\n\n' +
+            'Inside are sensor array logs that have never been exported to the station record. ' +
+            'And equipment containers with markings that do not match any organization in the public registry.\n\n' +
+            'Your objectives: penetrate the locked sector, recover the raw sensor archive data, ' +
+            'and find out what is actually being run in there.',
+        rooms: [
+            {
+                id: 'crossing-sealed-threshold',
+                name: 'Sealed Sector Threshold',
+                type: 'entrance',
+                description:
+                    'Standard Sol Union lock panel — the same as every other checkpoint on the station. ' +
+                    'The access log shows the last authorized entry as three years ago. ' +
+                    'The last lock rotation was four days ago. ' +
+                    'Whoever is updating these codes has authorization that bypasses the garrison\'s own records.',
+                enemies: [],
+                cleared: false,
+            },
+            {
+                id: 'crossing-classified-storage',
+                name: 'Classified Equipment Storage',
+                type: 'loot',
+                description:
+                    'Containers with Sol Union markings, Aegis Division markings, and one set of markings ' +
+                    'that does not match any organization in the public registry. ' +
+                    'The third set uses a classification code prefix that does not appear in any index you have access to. ' +
+                    'The containers are sealed. The seals are recent.',
+                enemies: [],
+                lootItems: ['crossing-classified-data', 'transit-anomaly-log', 'power-cell'],
+                cleared: false,
+            },
+            {
+                id: 'crossing-enforcer-post',
+                name: 'Enforcer Post — Internal Patrol',
+                type: 'combat',
+                description:
+                    'Two Orin\'s Crossing enforcement units — active, running precise patrol patterns. ' +
+                    'Their identification codes are blanked. No registered assignment in the station roster. ' +
+                    'Whoever deployed them did not file the paperwork with Commander Dresh.',
+                enemies: ['crossing-enforcer', 'crossing-enforcer'],
+                cleared: false,
+            },
+            {
+                id: 'crossing-sensor-array-room',
+                name: 'Transit Sensor Array Hub',
+                type: 'combat',
+                description:
+                    'The locked sector\'s sensor array hub. Every display logs the twelve anomalous transit events ' +
+                    'that Commander Dresh forwarded to Sol Union command — and at least forty more that were never forwarded. ' +
+                    'An anomaly sensor unit is actively transmitting on a frequency that matches the relay ghost signal. ' +
+                    'A crossing enforcer stands between you and the archive terminal.',
+                enemies: ['anomaly-sensor-array', 'crossing-enforcer'],
+                cleared: false,
+            },
+            {
+                id: 'crossing-core-node',
+                name: 'Core Processing Node — Defense Prime',
+                type: 'boss',
+                description:
+                    'A hardened processing node running a comparison protocol — cross-referencing transit records ' +
+                    'from twelve separate relay sites against an unknown target pattern. ' +
+                    'The Orin\'s Defense Prime unit is configured for lethal response. ' +
+                    'Whatever it is protecting, someone decided it was worth more than the lives of anyone who got this far. ' +
+                    'The comparison protocol has been running for four months. ' +
+                    'The progress indicator reads: 94%.',
+                enemies: ['orins-defense-prime'],
+                cleared: false,
+            },
+        ],
+        contractCompletions: [
+            { contractId: 'sol-union-compliance-check',     requireAnyProgress: true },
+            { contractId: 'sol-union-sector-enforcement',   requireBossCleared: true },
+            { contractId: 'aegis-anomaly-trace-orin',       requireBossCleared: true },
+        ],
+        clearFlag: 'orins-crossing-cleared',
+    },
 };
 
 /** Returns a fresh copy of a dungeon (rooms reset to uncleared). */
