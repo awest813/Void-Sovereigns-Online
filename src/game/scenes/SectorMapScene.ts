@@ -2,20 +2,11 @@ import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
 import { GameState } from '../state/GameState';
 import { HAULER_PURCHASE_COST, RELAY_UPGRADE_REQUIREMENTS } from '../data/shipUpgrades';
+import { T } from '../ui/UITheme';
+import { DebugPanel } from '../ui/DebugPanel';
 
-const C = {
-    bg:          0x040412,
-    panelBg:     0x0d0d22,
-    border:      0x223355,
-    textPrimary: '#e8e0cc',
-    textSecond:  '#888899',
-    textAccent:  '#5599ee',
-    textWarn:    '#dd9944',
-    textDanger:  '#dd4444',
-    textSuccess: '#44cc88',
-    btnNormal:   '#aabbcc',
-    btnHover:    '#ffffff',
-};
+// Scene colour aliases — sourced from shared UITheme.
+const C = { ...T, bg: T.bgDeep };
 
 // ── SectorMapScene ──────────────────────────────────────────────────────────
 export class SectorMapScene extends Scene {
@@ -187,6 +178,8 @@ export class SectorMapScene extends Scene {
         backBtn.on('pointerover', () => backBtn.setColor(C.btnHover));
         backBtn.on('pointerout', () => backBtn.setColor(C.textSecond));
         backBtn.on('pointerdown', () => this.scene.start('Hub'));
+
+        new DebugPanel(this);
 
         EventBus.emit('current-scene-ready', this);
     }
