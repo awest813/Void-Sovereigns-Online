@@ -8,6 +8,7 @@ import { starterContracts } from '../../../content/contracts/starter-contracts';
 import { phase2Contracts } from '../../../content/contracts/phase2-contracts';
 import { phase3Contracts } from '../../../content/contracts/phase3-contracts';
 import { phase4Contracts } from '../../../content/contracts/phase4-contracts';
+import { phase5Contracts } from '../../../content/contracts/phase5-contracts';
 import { T } from '../ui/UITheme';
 import { DebugPanel } from '../ui/DebugPanel';
 
@@ -24,7 +25,7 @@ const C = {
 };
 
 // All contracts from all phases — used for ID→title lookups in completion screen.
-const ALL_CONTRACTS = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts];
+const ALL_CONTRACTS = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts];
 
 // ── DungeonScene ────────────────────────────────────────────────────────────
 type DungeonPhase =
@@ -203,7 +204,8 @@ export class DungeonScene extends Scene {
         this.phase = 'intro';
         this.clearContent();
         const def = this.dungeonDef!;
-        const isRedlineRun = GameState.get().activeRunIsRedline;
+        const gs = GameState.get();
+        const isRedlineRun = gs.activeRunIsRedline;
 
         // Panel
         this.contentContainer.add(
@@ -226,7 +228,7 @@ export class DungeonScene extends Scene {
             lineSpacing: 6,
         });
 
-        const warningPct = GameState.get().pilotHull / GameState.get().pilotMaxHull;
+        const warningPct = gs.pilotHull / gs.pilotMaxHull;
         if (warningPct < 0.5) {
             this.addContentText(512, 430, '⚠ WARNING: Pilot HP is low. Consider returning to Meridian for medical supplies.', {
                 fontFamily: 'Arial', fontSize: 13, color: C.textDanger, align: 'center',
@@ -237,10 +239,95 @@ export class DungeonScene extends Scene {
             this.addContentText(512, 452, '⚠ REDLINE RUN — Equipment loss on death. Extract alive.', {
                 fontFamily: 'Arial Black', fontSize: 13, color: '#ff3333', align: 'center',
             }).setOrigin(0.5);
+
+            // Show risk summary for Redline runs
+            this.addActionButton(350, 520, '[ ENTER SITE ]', () => this.showRedlineRiskSummary(), '#ff4422');
+        } else {
+            this.addActionButton(350, 520, '[ ENTER SITE ]', () => this.enterRoom(0), C.textWarn);
+        }
+        this.addActionButton(690, 520, '[ ABORT — RETURN ]', () => this.scene.start('SectorMap'), C.textSecond);
+    }
+
+    /** Redline-only: show a pre-run risk summary before entering the first room. */
+    private showRedlineRiskSummary() {
+        this.clearContent();
+        const gs = GameState.get();
+
+        this.contentContainer.add(
+            this.add.rectangle(512, 340, 900, 440, 0x0a0005).setStrokeStyle(2, 0xaa2222),
+        );
+
+        this.addContentText(512, 130, '⚠  REDLINE RUN — RISK SUMMARY', {
+            fontFamily: 'Arial Black', fontSize: 22, color: '#ff3333', align: 'center',
+        }).setOrigin(0.5);
+
+        this.addContentText(512, 168, 'Review what you are risking before entering.', {
+            fontFamily: 'Arial', fontSize: 13, color: '#cc8866', align: 'center',
+        }).setOrigin(0.5);
+
+        // At-risk consumables
+        this.addContentText(110, 210, 'FIELD GEAR AT RISK ON DEATH:', {
+            fontFamily: 'Arial Black', fontSize: 13, color: '#ff8866',
+        });
+
+        const atRiskItems = gs.inventory.filter(i => i.type === 'consumable');
+        const securedId = gs.redlineSecuredItemId;
+        const insuranceActive = gs.redlineInsuranceActive;
+
+        if (atRiskItems.length === 0) {
+            this.addContentText(110, 234, '  None. (No consumables in inventory)', {
+                fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
+            });
+        } else {
+            atRiskItems.forEach((item, i) => {
+                const isSecured = securedId === item.id;
+                const label = isSecured
+                    ? `  ◆ ${item.name}  ×${item.qty}   [ SECURED — PROTECTED ]`
+                    : `  ◆ ${item.name}  ×${item.qty}   [ AT RISK ]`;
+                const color = isSecured ? '#44ff88' : '#ff8855';
+                this.addContentText(110, 234 + i * 22, label, {
+                    fontFamily: 'Arial', fontSize: 12, color,
+                });
+            });
         }
 
-        this.addActionButton(350, 520, '[ ENTER SITE ]', () => this.enterRoom(0), isRedlineRun ? '#ff4422' : C.textWarn);
-        this.addActionButton(690, 520, '[ ABORT — RETURN ]', () => this.scene.start('SectorMap'), C.textSecond);
+        // Insurance status
+        const insuranceY = 240 + atRiskItems.length * 22;
+        if (insuranceActive) {
+            this.addContentText(110, insuranceY, '✓ FIELD INSURANCE ACTIVE — One additional item protected on death', {
+                fontFamily: 'Arial Black', fontSize: 12, color: '#44ff88',
+            });
+        } else {
+            this.addContentText(110, insuranceY, '✗ No insurance — Purchase at Meridian Services (250c) before launch', {
+                fontFamily: 'Arial', fontSize: 12, color: '#996644',
+            });
+        }
+
+        // What you gain on success
+        this.addContentText(110, insuranceY + 36, 'ON SUCCESSFUL EXTRACTION:', {
+            fontFamily: 'Arial Black', fontSize: 13, color: '#ffaa44',
+        });
+        this.addContentText(110, insuranceY + 56, '  All run loot recovered  ·  Full contract reward claimed  ·  Faction reputation earned', {
+            fontFamily: 'Arial', fontSize: 12, color: C.textPrimary,
+        });
+
+        // What you lose on death
+        this.addContentText(110, insuranceY + 88, 'ON DEATH (emergency extract):', {
+            fontFamily: 'Arial Black', fontSize: 13, color: '#ff5533',
+        });
+        const lossLines = insuranceActive
+            ? '  Run loot is lost  ·  1 field consumable lost (insurance reduces from 2 to 1)  ·  Secured item is safe'
+            : '  Run loot is lost  ·  Up to 2 field consumables lost  ·  Secured item (if set) is safe';
+        this.addContentText(110, insuranceY + 108, lossLines, {
+            fontFamily: 'Arial', fontSize: 12, color: '#cc6644',
+        });
+
+        this.addContentText(512, 576, '"Go prepared. Extract alive."', {
+            fontFamily: 'Arial', fontSize: 12, color: '#774433', align: 'center', fontStyle: 'italic',
+        }).setOrigin(0.5);
+
+        this.addActionButton(340, 630, '[ ENTER SITE — ACCEPT RISK ]', () => this.enterRoom(0), '#ff4422');
+        this.addActionButton(690, 630, '[ ABORT — RETURN ]', () => this.scene.start('SectorMap'), C.textSecond);
     }
 
     private enterRoom(idx: number) {
@@ -596,6 +683,7 @@ export class DungeonScene extends Scene {
         const completedContractIds: string[] = [];
         const gs = GameState.get();
         const def = this.dungeonDef!;
+        const isRedline = gs.activeRunIsRedline;
         const bossCleared = this.rooms.find(r => r.type === 'boss')?.cleared ?? false;
         const lootCleared = this.rooms.some(r => (r.type === 'loot' || r.type === 'hazard') && r.cleared);
 
@@ -613,45 +701,69 @@ export class DungeonScene extends Scene {
         GameState.setReturnFromDungeon(this.runLoot, this.runCredits, this.runXp, fullClear, completedContractIds, def.id);
         if (bossCleared && def.clearFlag) GameState.setFlag(def.clearFlag, true);
 
+        const panelBg = isRedline ? 0x050008 : C.panelBg;
+        const panelBorder = isRedline ? 0x886600 : C.border;
         this.contentContainer.add(
-            this.add.rectangle(512, 330, 900, 420, C.panelBg).setStrokeStyle(1, C.border),
+            this.add.rectangle(512, 330, 900, 420, panelBg).setStrokeStyle(2, panelBorder),
         );
 
-        const title = fullClear ? `${def.name.toUpperCase()} — CLEARED` : 'EXTRACTION SUCCESSFUL';
+        // Title
+        let title: string;
+        let titleColor: string;
+        if (isRedline && fullClear) {
+            title = `⚠ REDLINE EXTRACTION — ${def.name.toUpperCase()}`;
+            titleColor = '#ffaa22';
+        } else if (isRedline) {
+            title = '⚠ REDLINE — PARTIAL EXTRACTION';
+            titleColor = '#ff8822';
+        } else if (fullClear) {
+            title = `${def.name.toUpperCase()} — CLEARED`;
+            titleColor = C.textSuccess;
+        } else {
+            title = 'EXTRACTION SUCCESSFUL';
+            titleColor = C.textSuccess;
+        }
         this.addContentText(512, 110, title, {
-            fontFamily: 'Arial Black', fontSize: 24, color: C.textSuccess, align: 'center',
+            fontFamily: 'Arial Black', fontSize: 22, color: titleColor, align: 'center',
             stroke: '#000000', strokeThickness: 3,
         }).setOrigin(0.5);
 
-        this.addContentText(512, 148, 'Returning to Meridian Station...', {
-            fontFamily: 'Arial', fontSize: 14, color: C.textSecond, align: 'center',
-        }).setOrigin(0.5);
+        if (isRedline) {
+            this.addContentText(512, 144, 'You extracted alive. Gear is safe. Full contract reward secured.', {
+                fontFamily: 'Arial Black', fontSize: 13, color: '#ffaa44', align: 'center',
+            }).setOrigin(0.5);
+        } else {
+            this.addContentText(512, 144, 'Returning to Meridian Station...', {
+                fontFamily: 'Arial', fontSize: 14, color: C.textSecond, align: 'center',
+            }).setOrigin(0.5);
+        }
 
-        this.addContentText(512, 178, `CREDITS EARNED:  +${this.runCredits}c`, {
+        this.addContentText(512, 172, `CREDITS EARNED:  +${this.runCredits}c`, {
             fontFamily: 'Arial Black', fontSize: 16, color: C.textWarn, align: 'center',
         }).setOrigin(0.5);
 
-        this.addContentText(512, 204, `XP EARNED:       +${this.runXp}`, {
+        this.addContentText(512, 198, `XP EARNED:       +${this.runXp}`, {
             fontFamily: 'Arial', fontSize: 15, color: C.textAccent, align: 'center',
         }).setOrigin(0.5);
 
         if (this.runLoot.length > 0) {
-            this.addContentText(200, 240, 'SALVAGE:', {
-                fontFamily: 'Arial Black', fontSize: 13, color: C.textPrimary,
+            const lootLabel = isRedline ? 'LOOT SECURED:' : 'SALVAGE:';
+            const lootColor = isRedline ? '#ffaa44' : C.textPrimary;
+            this.addContentText(200, 234, lootLabel, {
+                fontFamily: 'Arial Black', fontSize: 13, color: lootColor,
             });
             this.runLoot.forEach((item, i) => {
-                this.addContentText(200, 262 + i * 22, `  ◆ ${item.name}  ×${item.qty}`, {
+                this.addContentText(200, 256 + i * 22, `  ◆ ${item.name}  ×${item.qty}`, {
                     fontFamily: 'Arial', fontSize: 13, color: C.textPrimary,
                 });
             });
         }
 
         if (completedContractIds.length > 0) {
-            const lootBase = 262 + this.runLoot.length * 22 + 14;
+            const lootBase = 256 + this.runLoot.length * 22 + 14;
             this.addContentText(200, lootBase, 'CONTRACTS COMPLETED:', {
                 fontFamily: 'Arial Black', fontSize: 13, color: C.textSuccess,
             });
-            // Build an ID→title map for O(1) lookup during render.
             const contractTitleById = new Map(ALL_CONTRACTS.map(ct => [ct.id, ct.title]));
             completedContractIds.forEach((id, i) => {
                 const label = contractTitleById.get(id) ?? id;
@@ -668,28 +780,80 @@ export class DungeonScene extends Scene {
 
     // ── Death / emergency extract ─────────────────────────────────────────
     private showDeathScreen() {
+        const gs = GameState.get();
+        const isRedline = gs.activeRunIsRedline;
+
         this.contentContainer.add(
-            this.add.rectangle(512, 360, 900, 400, 0x0a0308).setStrokeStyle(1, C.border),
+            this.add.rectangle(512, 360, 900, 440, isRedline ? 0x0a0005 : 0x0a0308)
+                .setStrokeStyle(2, isRedline ? 0xaa1111 : C.border),
         );
 
-        this.addContentText(512, 180, 'SYSTEMS CRITICAL', {
-            fontFamily: 'Arial Black', fontSize: 28, color: C.textDanger, align: 'center',
+        const titleText = isRedline ? '⚠ REDLINE FAILURE' : 'SYSTEMS CRITICAL';
+        const titleColor = isRedline ? '#ff2222' : C.textDanger;
+        this.addContentText(512, 160, titleText, {
+            fontFamily: 'Arial Black', fontSize: 28, color: titleColor, align: 'center',
             stroke: '#000000', strokeThickness: 4,
         }).setOrigin(0.5);
 
-        this.addContentText(512, 228, 'Emergency extraction initiated.', {
+        this.addContentText(512, 208, 'Emergency extraction initiated.', {
             fontFamily: 'Arial', fontSize: 16, color: C.textSecond, align: 'center',
-        }).setOrigin(0.5);
-
-        this.addContentText(512, 264, 'Salvage is lost. No contract credit.\nYour ship made it back to Meridian Station.', {
-            fontFamily: 'Arial', fontSize: 14, color: C.textSecond, align: 'center', lineSpacing: 5,
         }).setOrigin(0.5);
 
         // Set pilot to minimal HP so they can continue
         GameState.healPilot(10);
-        GameState.setReturnFromDungeon([], 0, Math.floor(this.runXp * 0.3), false, [], this.dungeonDef?.id);
 
-        this.addActionButton(512, 500, '[ RETURN TO MERIDIAN STATION ]', () => {
+        if (isRedline) {
+            // Apply Redline gear loss
+            const lossItems = GameState.resolveRedlineDeath();
+            const securedId = gs.redlineSecuredItemId;
+
+            this.addContentText(512, 246, 'Redline failure. Run loot is lost. Field gear loss calculated.', {
+                fontFamily: 'Arial', fontSize: 13, color: '#cc4422', align: 'center',
+            }).setOrigin(0.5);
+
+            // Loss summary
+            this.addContentText(200, 284, 'ITEMS LOST:', {
+                fontFamily: 'Arial Black', fontSize: 13, color: '#ff5533',
+            });
+            if (lossItems.length === 0) {
+                this.addContentText(200, 306, '  None. (No field consumables to lose)', {
+                    fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
+                });
+            } else {
+                lossItems.forEach((item, i) => {
+                    this.addContentText(200, 306 + i * 20, `  ◆ ${item.name}  ×${item.qty}  — LOST`, {
+                        fontFamily: 'Arial', fontSize: 12, color: '#ff5533',
+                    });
+                });
+            }
+
+            // Secured item
+            if (securedId) {
+                const securedItem = gs.inventory.find(i => i.id === securedId);
+                if (securedItem) {
+                    this.addContentText(200, 290 + lossItems.length * 20 + 20, `✓ SECURED: ${securedItem.name} — PROTECTED`, {
+                        fontFamily: 'Arial Black', fontSize: 12, color: '#44ff88',
+                    });
+                }
+            }
+
+            const insuranceWasUsed = lossItems.length <= 1 && !gs.redlineInsuranceActive && lossItems.length > 0;
+            if (insuranceWasUsed) {
+                this.addContentText(200, 320 + lossItems.length * 20 + 20, '✓ INSURANCE APPLIED — Loss reduced.', {
+                    fontFamily: 'Arial Black', fontSize: 12, color: '#44ffaa',
+                });
+            }
+
+            GameState.setReturnFromDungeon([], 0, Math.floor(this.runXp * 0.3), false, [], this.dungeonDef?.id);
+        } else {
+            this.addContentText(512, 264, 'Salvage is lost. No contract credit.\nYour ship made it back to Meridian Station.', {
+                fontFamily: 'Arial', fontSize: 14, color: C.textSecond, align: 'center', lineSpacing: 5,
+            }).setOrigin(0.5);
+
+            GameState.setReturnFromDungeon([], 0, Math.floor(this.runXp * 0.3), false, [], this.dungeonDef?.id);
+        }
+
+        this.addActionButton(512, 540, '[ RETURN TO MERIDIAN STATION ]', () => {
             this.scene.start('Hub');
         }, C.textWarn);
     }

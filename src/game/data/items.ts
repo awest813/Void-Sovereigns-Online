@@ -146,4 +146,179 @@ export const ITEMS: Record<string, ItemDef> = {
         value: 60,
         description: 'A navigational chart covering Ashwake Belt\'s outer grid sectors. Useful for longer-range runs.',
     },
+
+    // ── Phase 3 items ─────────────────────────────────────────────────────
+
+    'signal-fragment': {
+        id: 'signal-fragment',
+        name: 'Signal Fragment',
+        type: 'salvage',
+        value: 80,
+        description: 'A physical component of a relay signal array — partially fused, partially crystallized. ' +
+            'The Void Covenant pays well for these. The ICA wants to know where they came from.',
+    },
+    'relay-data-core': {
+        id: 'relay-data-core',
+        name: 'Relay Data Core',
+        type: 'key',
+        value: 150,
+        description: 'The primary data storage node from Void Relay 7-9\'s archive. ' +
+            'Contains transit records, sensor logs, and encrypted timestamps that should not exist.',
+    },
+    'anomaly-trace-log': {
+        id: 'anomaly-trace-log',
+        name: 'Anomaly Trace Log',
+        type: 'key',
+        value: 120,
+        description: 'A compiled sensor record of anomalous signal activity — multiple site sources, ' +
+            'impossible timestamps, repeating waveform signatures that do not match any known protocol.',
+    },
+    'void-pattern-record': {
+        id: 'void-pattern-record',
+        name: 'Void Pattern Record',
+        type: 'key',
+        value: 200,
+        description: 'A detailed waveform analysis record recovered from an automated system that ' +
+            'should not have been able to produce it. The pattern is consistent across every site. ' +
+            'What it means is not written down anywhere.',
+    },
+    'farpoint-cargo-bundle': {
+        id: 'farpoint-cargo-bundle',
+        name: 'Farpoint Cargo Bundle',
+        type: 'salvage',
+        value: 75,
+        description: 'A bundle of miscellaneous cargo from Farpoint Waystation\'s unclaimed freight holds. ' +
+            'Mixed contents — some tradeable, some unidentifiable.',
+    },
+    'farpoint-access-chip': {
+        id: 'farpoint-access-chip',
+        name: 'Farpoint Access Chip',
+        type: 'key',
+        value: 100,
+        description: 'An access authorization chip recovered from Farpoint\'s security prime coordinator. ' +
+            'Still active. Unlocks several sealed bays in the outer ring.',
+    },
+
+    // ── Phase 4 items ─────────────────────────────────────────────────────
+
+    'kalindra-nav-fragment': {
+        id: 'kalindra-nav-fragment',
+        name: 'Kalindra Nav Fragment',
+        type: 'salvage',
+        value: 90,
+        description: 'A navigational data chip recovered from Kalindra Processing Hub. ' +
+            'Contains the hub\'s local routing tables — including approach vectors the official charts do not show.',
+    },
+    'kalindra-signal-archive': {
+        id: 'kalindra-signal-archive',
+        name: 'Kalindra Signal Archive',
+        type: 'key',
+        value: 220,
+        description: 'The signal relay room\'s primary archive node. ' +
+            'Contains incoming transmission records from a source that is not on any registered frequency. ' +
+            'The record count covers a period when the relay network was officially down.',
+    },
+    'aegis-field-log': {
+        id: 'aegis-field-log',
+        name: 'Aegis Field Log',
+        type: 'key',
+        value: 180,
+        description: 'The final log upload from Operative Sable\'s missing survey team. ' +
+            'The last entry cuts off mid-sentence. What comes before it is carefully worded — ' +
+            'the kind of language a trained operative uses when trying not to sound afraid.',
+    },
+    'transit-anomaly-log': {
+        id: 'transit-anomaly-log',
+        name: 'Transit Anomaly Log',
+        type: 'key',
+        value: 160,
+        description: 'Raw sensor data from the Orin\'s Crossing transit corridor arrays. ' +
+            'Twelve documented anomalous transit events — plus at least forty more that were never forwarded ' +
+            'to Sol Union command.',
+    },
+    'crossing-classified-data': {
+        id: 'crossing-classified-data',
+        name: 'Crossing Classified Data',
+        type: 'key',
+        value: 200,
+        description: 'A data container recovered from the locked sector of Orin\'s Crossing. ' +
+            'Classification prefix does not appear in any index. The seal is recent. ' +
+            'Whatever is inside, someone updated the access restrictions four days ago.',
+    },
+
+    // ── Phase 5 items ─────────────────────────────────────────────────────
+
+    'void-fragment-sample': {
+        id: 'void-fragment-sample',
+        name: 'Void Fragment Sample',
+        type: 'key',
+        value: 280,
+        description: 'A physical sample of material recovered from the Ashveil Observation Post. ' +
+            'The sample reads as standard alloy on most scanners. ' +
+            'On a void-resonance scanner it reads as something that should not be here. ' +
+            'The Helion Synod will not discuss how they know the difference.',
+    },
+    'broken-signal-core': {
+        id: 'broken-signal-core',
+        name: 'Broken Signal Core',
+        type: 'key',
+        value: 240,
+        description: 'The primary coordination node from the Vault of the Broken Signal. ' +
+            'It was transmitting when you found it. It stopped the moment it registered your presence. ' +
+            'Whatever it was transmitting to was listening.',
+    },
+    'ashveil-observation-log': {
+        id: 'ashveil-observation-log',
+        name: 'Ashveil Observation Log',
+        type: 'key',
+        value: 320,
+        description: 'The complete observation record from Ashveil Post\'s monitoring equipment — ' +
+            'twenty-three months of uninterrupted void relay telemetry, collected long after the crew stopped being alive to collect it. ' +
+            'The final 400 entries were recorded by the building itself.',
+    },
+    'vault-encoded-manifest': {
+        id: 'vault-encoded-manifest',
+        name: 'Vault Encoded Manifest',
+        type: 'key',
+        value: 190,
+        description: 'An encrypted cargo manifest from the Vault of the Broken Signal. ' +
+            'The encryption is standard-grade — but the cargo descriptions are not. ' +
+            'Crow Veslin will know what to do with this.',
+    },
+    'restricted-nav-module': {
+        id: 'restricted-nav-module',
+        name: 'Restricted Nav Module',
+        type: 'key',
+        value: 350,
+        description: 'A navigational processing module rated for deep-relay transit. ' +
+            'Frontier Compact certification stamp on the casing — but it predates the Compact by fifteen years. ' +
+            'Whatever ship this came from was going somewhere the maps do not show.',
+    },
+    'helion-research-data': {
+        id: 'helion-research-data',
+        name: 'Helion Research Data',
+        type: 'key',
+        value: 220,
+        description: 'A compiled data packet from the Helion Synod\'s field research program. ' +
+            'Aris Vel calls it "preliminary findings." The attached void-resonance readings suggest ' +
+            'the Synod has been monitoring something with a consistency that implies they knew what to look for.',
+    },
+    'contraband-relay-module': {
+        id: 'contraband-relay-module',
+        name: 'Contraband Relay Module',
+        type: 'salvage',
+        value: 180,
+        description: 'A signal relay component with registry markings that have been deliberately obscured. ' +
+            'Functional, high-grade, and technically illegal to possess without a transit waiver. ' +
+            'The Vanta Corsairs have buyers who do not ask about the waivers.',
+    },
+    'anomaly-field-kit': {
+        id: 'anomaly-field-kit',
+        name: 'Anomaly Field Kit',
+        type: 'consumable',
+        value: 90,
+        description: 'An advanced composite trauma and environmental kit rated for void-adjacent field conditions. ' +
+            'Treats standard injuries plus void-exposure symptoms. Restores 50 pilot HP.',
+        effect: { healPilot: 50 },
+    },
 };

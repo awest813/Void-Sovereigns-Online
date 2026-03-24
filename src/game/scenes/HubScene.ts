@@ -5,8 +5,10 @@ import { starterContracts } from '../../../content/contracts/starter-contracts';
 import { phase2Contracts } from '../../../content/contracts/phase2-contracts';
 import { phase3Contracts } from '../../../content/contracts/phase3-contracts';
 import { phase4Contracts } from '../../../content/contracts/phase4-contracts';
+import { phase5Contracts } from '../../../content/contracts/phase5-contracts';
 import { meridianNPCs } from '../../../content/npcs/meridian-npcs';
 import { phase4NPCs } from '../../../content/npcs/phase4-npcs';
+import { phase5NPCs } from '../../../content/npcs/phase5-npcs';
 import { factions } from '../../../content/factions/factions';
 import { SHIP_UPGRADES, HAULER_PURCHASE_COST } from '../data/shipUpgrades';
 import { ITEMS } from '../data/items';
@@ -16,7 +18,7 @@ import { DebugPanel } from '../ui/DebugPanel';
 // Scene colour aliases — sourced from shared UITheme.
 const C = T;
 
-// All contracts shown on the Phase 4 board (Phase 1 + Phase 2 + Phase 3 + Phase 4)
+// All contracts shown on the Phase 5 board (Phase 1 + Phase 2 + Phase 3 + Phase 4 + Phase 5)
 const BOARD_CONTRACT_IDS = [
     // Phase 1
     'scrap-recovery-shalehook',
@@ -52,6 +54,14 @@ const BOARD_CONTRACT_IDS = [
     'aegis-anomaly-trace-orin',
     'vanta-off-book-salvage',
     'redline-kalindra-core',
+    // Phase 5 — post-relay Redline and high-risk contracts
+    'vanta-vault-intel-run',
+    'helion-contaminated-survey',
+    'redline-vault-broken-signal',
+    'frontier-ghost-box-extraction',
+    'redline-ashveil-data-extraction',
+    'redline-helion-anomaly-sample',
+    'aegis-black-site-breach',
 ];
 
 // Contract IDs that require relay jump to be visible on the board
@@ -71,6 +81,14 @@ const POST_RELAY_CONTRACT_IDS = new Set([
     'aegis-anomaly-trace-orin',
     'vanta-off-book-salvage',
     'redline-kalindra-core',
+    // Phase 5
+    'vanta-vault-intel-run',
+    'helion-contaminated-survey',
+    'redline-vault-broken-signal',
+    'frontier-ghost-box-extraction',
+    'redline-ashveil-data-extraction',
+    'redline-helion-anomaly-sample',
+    'aegis-black-site-breach',
 ]);
 
 // NPCs shown in the main Station Contacts panel (Meridian locals)
@@ -89,12 +107,15 @@ const HUB_NPC_IDS = [
     'farpoint-kael',
 ];
 
-// Phase 4 faction contact NPC IDs shown in the Faction Standings panel
+// Phase 4+5 faction contact NPC IDs shown in the Faction Standings panel
 const FACTION_NPC_IDS = [
     'frontier-agent-leva',
     'commander-dresh',
     'operative-sable',
     'crow-veslin',
+    // Phase 5
+    'aris-vel',
+    'the-broker',
 ];
 
 // ── HubScene ────────────────────────────────────────────────────────────────
@@ -435,7 +456,7 @@ export class HubScene extends Scene {
         c.removeAll(true);
         this.panelHeader(c, 'CONTRACT BOARD', 'Meridian Station — Tamsin Vale, Dispatcher');
 
-        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts];
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts];
         const relayJumped = GameState.getFlag('relay-jump-completed');
         const contracts = allContracts.filter(ct =>
             BOARD_CONTRACT_IDS.includes(ct.id) &&
@@ -616,23 +637,37 @@ export class HubScene extends Scene {
         const c = this.add.container(0, 0);
         this.panels.set('redline-warn', c);
 
-        c.add(this.add.rectangle(512, 384, 840, 420, 0x0f0005).setStrokeStyle(2, 0xaa2222));
-        c.add(this.add.text(512, 210, '⚠  REDLINE CONTRACT', {
+        c.add(this.add.rectangle(512, 384, 840, 440, 0x0f0005).setStrokeStyle(2, 0xaa2222));
+        c.add(this.add.text(512, 200, '⚠  REDLINE CONTRACT', {
             fontFamily: 'Arial Black', fontSize: 22, color: '#ff3333', align: 'center',
         }).setOrigin(0.5));
-        c.add(this.add.text(512, 246, contractTitle, {
+        c.add(this.add.text(512, 232, contractTitle, {
             fontFamily: 'Arial', fontSize: 14, color: '#ff8866', align: 'center',
         }).setOrigin(0.5));
-        c.add(this.add.rectangle(512, 270, 780, 1, 0x882222));
+        c.add(this.add.rectangle(512, 252, 780, 1, 0x882222));
 
         const warnText = warningText.length > 0 ? warningText
             : 'If you are killed during this run, most equipped field gear will not be recovered. Accept with full knowledge of the risk.';
-        c.add(this.add.text(512, 380, warnText, {
+        c.add(this.add.text(512, 348, warnText, {
             fontFamily: 'Arial', fontSize: 12, color: '#cc8866', align: 'center',
             wordWrap: { width: 740 },
         }).setOrigin(0.5));
 
-        const acceptBtn = this.add.text(380, 540, '[ ACCEPT REDLINE CONTRACT ]', {
+        // Show current insurance/secure slot status
+        const gs = GameState.get();
+        const insuranceStatus = gs.redlineInsuranceActive
+            ? '✓ Field Insurance ACTIVE'
+            : '✗ No insurance — buy at Services (250c)';
+        c.add(this.add.text(512, 472, insuranceStatus, {
+            fontFamily: 'Arial Black', fontSize: 11,
+            color: gs.redlineInsuranceActive ? '#44ff88' : '#886644', align: 'center',
+        }).setOrigin(0.5));
+
+        c.add(this.add.text(512, 490, 'Use Services → Field Insurance to protect gear. Set secure slot to protect 1 critical item.', {
+            fontFamily: 'Arial', fontSize: 11, color: '#665544', align: 'center',
+        }).setOrigin(0.5));
+
+        const acceptBtn = this.add.text(380, 560, '[ ACCEPT REDLINE CONTRACT ]', {
             fontFamily: 'Arial Black', fontSize: 14, color: '#ff3333', align: 'center',
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         acceptBtn.on('pointerover', () => acceptBtn.setColor('#ffffff'));
@@ -647,7 +682,7 @@ export class HubScene extends Scene {
         });
         c.add(acceptBtn);
 
-        const cancelBtn = this.add.text(650, 540, '[ CANCEL ]', {
+        const cancelBtn = this.add.text(650, 560, '[ CANCEL ]', {
             fontFamily: 'Arial Black', fontSize: 14, color: C.textSecond, align: 'center',
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         cancelBtn.on('pointerover', () => cancelBtn.setColor(C.btnHover));
@@ -896,8 +931,9 @@ export class HubScene extends Scene {
         }
 
         const shopItems: Array<{ id: string; name: string; cost: number }> = [
-            { id: 'medical-kit', name: 'Medical Kit (heal 35 HP)', cost: 50 },
-            { id: 'repair-kit',  name: 'Repair Kit (repair 30 hull)', cost: 65 },
+            { id: 'medical-kit',       name: 'Medical Kit (heal 35 HP)',       cost: 50 },
+            { id: 'repair-kit',        name: 'Repair Kit (repair 30 hull)',    cost: 65 },
+            { id: 'anomaly-field-kit', name: 'Anomaly Field Kit (heal 50 HP)', cost: 120 },
         ];
 
         shopItems.forEach((item, i) => {
@@ -925,19 +961,81 @@ export class HubScene extends Scene {
             c.add(buyBtn);
         });
 
+        // ── Field Insurance (Redline protection) ────────────────────────
+        const insuranceY = 380 + shopItems.length * 48 + 8;
+        const insuranceActive = gs.redlineInsuranceActive;
+        c.add(this.add.rectangle(512, insuranceY + 12, 700, 38, insuranceActive ? 0x0a1a0a : 0x0a0a1a)
+            .setStrokeStyle(1, insuranceActive ? 0x33aa55 : 0xaa4422));
+        const insuranceLabel = insuranceActive
+            ? '◆ FIELD INSURANCE — ACTIVE  (protects 1 extra item on Redline death)'
+            : '◆ Field Insurance (250c) — Redline: reduces gear loss by 1 item';
+        c.add(this.add.text(180, insuranceY + 2, insuranceLabel, {
+            fontFamily: 'Arial', fontSize: 12, color: insuranceActive ? C.textSuccess : '#cc7744',
+        }));
+        if (!insuranceActive) {
+            const insBtn = this.add.text(870, insuranceY + 12, `[ BUY INSURANCE (250c) ]`, {
+                fontFamily: 'Arial Black', fontSize: 12, color: gs.credits >= 250 ? '#ffaa22' : C.textDanger,
+            }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
+            insBtn.on('pointerover', () => insBtn.setColor(C.btnHover));
+            insBtn.on('pointerout',  () => insBtn.setColor(gs.credits >= 250 ? '#ffaa22' : C.textDanger));
+            insBtn.on('pointerdown', () => {
+                if (GameState.purchaseInsurance()) {
+                    this.refreshStatusBar();
+                    this.populateServicesPanel(c);
+                    this.showToast('Field Insurance active — Redline gear loss reduced.', '#ffaa22');
+                }
+            });
+            c.add(insBtn);
+        } else {
+            c.add(this.add.text(870, insuranceY + 12, '[ ACTIVE ✓ ]', {
+                fontFamily: 'Arial Black', fontSize: 12, color: C.textSuccess,
+            }).setOrigin(1, 0.5));
+        }
+
+        // ── Secure Slot (Redline protection) ───────────────────────────
+        const secureSlotY = insuranceY + 104;
+        c.add(this.add.text(180, secureSlotY, '◆ SECURE SLOT — One item protected on Redline death', {
+            fontFamily: 'Arial Black', fontSize: 12, color: '#ffcc44',
+        }));
+        const securedId = gs.redlineSecuredItemId;
+        const securableItems = gs.inventory.filter(i => i.type === 'consumable');
+        if (securableItems.length === 0) {
+            c.add(this.add.text(180, secureSlotY + 18, '  No consumables in inventory to secure.', {
+                fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
+            }));
+        } else {
+            securableItems.forEach((item, i) => {
+                const sy = secureSlotY + 18 + i * 22;
+                const isSecured = securedId === item.id;
+                const label = `  ${isSecured ? '✓ [SECURED]' : '[ SECURE ]'}  ${item.name}  ×${item.qty}`;
+                const secBtn = this.add.text(180, sy, label, {
+                    fontFamily: isSecured ? 'Arial Black' : 'Arial', fontSize: 11,
+                    color: isSecured ? '#44ff88' : '#aaaacc',
+                }).setInteractive({ useHandCursor: true });
+                secBtn.on('pointerover', () => secBtn.setColor(C.btnHover));
+                secBtn.on('pointerout',  () => secBtn.setColor(isSecured ? '#44ff88' : '#aaaacc'));
+                secBtn.on('pointerdown', () => {
+                    GameState.secureRunItem(isSecured ? null : item.id);
+                    this.populateServicesPanel(c);
+                });
+                c.add(secBtn);
+            });
+        }
+
         // ── Nera Quill — sell salvage ───────────────────────────────────
-        c.add(this.add.text(512, 488, 'SELL SALVAGE', {
+        const sellHeaderY = secureSlotY + 24 + Math.max(1, securableItems.length) * 22 + 12;
+        c.add(this.add.text(512, sellHeaderY, 'SELL SALVAGE', {
             fontFamily: 'Arial Black', fontSize: 14, color: C.textWarn, align: 'center',
         }).setOrigin(0.5));
 
         const sellable = gs.inventory.filter(item => item.type === 'salvage' && item.qty > 0);
         if (sellable.length === 0) {
-            c.add(this.add.text(512, 512, 'No salvage in inventory.', {
+            c.add(this.add.text(512, sellHeaderY + 24, 'No salvage in inventory.', {
                 fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
             }).setOrigin(0.5));
         } else {
             sellable.forEach((item, i) => {
-                const y = 506 + i * 40;
+                const y = sellHeaderY + 18 + i * 40;
                 c.add(this.add.rectangle(512, y + 10, 700, 34, 0x0a0a1a).setStrokeStyle(1, C.border));
                 c.add(this.add.text(180, y + 2, `◆ ${item.name}  ×${item.qty}  (${item.value}c each)`, {
                     fontFamily: 'Arial', fontSize: 12, color: C.textPrimary,
@@ -1209,7 +1307,7 @@ export class HubScene extends Scene {
         c.removeAll(true);
         this.panelHeader(c, 'FACTION STANDINGS', 'Your reputation across the frontier');
 
-        const allNPCs = [...meridianNPCs, ...phase4NPCs];
+        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs];
 
         // Show all tracked factions in two columns
         const trackedFactionIds = Object.keys(GameState.get().reputation);
@@ -1265,7 +1363,7 @@ export class HubScene extends Scene {
             }
         });
 
-        // Phase 4 contacts section header (only post-relay)
+        // Phase 4+5 contacts section header (only post-relay)
         const relayJumped = GameState.getFlag('relay-jump-completed');
         if (relayJumped) {
             const sectionY = startY + Math.ceil(displayFactions.length / 2) * rowH + 16;
@@ -1276,7 +1374,7 @@ export class HubScene extends Scene {
                 fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
             }));
 
-            const contactNPCs = phase4NPCs;
+            const contactNPCs = [...phase4NPCs, ...phase5NPCs];
             const npcColW = 220;
             contactNPCs.forEach((npc, i) => {
                 const cx = 80 + i * npcColW;
@@ -1312,7 +1410,7 @@ export class HubScene extends Scene {
     }
 
     private showFactionNpcDialogue(npcId: string) {
-        const allNPCs = [...meridianNPCs, ...phase4NPCs];
+        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs];
         const npc = allNPCs.find(n => n.id === npcId);
         if (!npc) return;
 
@@ -1391,13 +1489,25 @@ export class HubScene extends Scene {
         const c = this.add.container(0, 0);
         this.panels.set('debrief', c);
 
-        // Special relay milestone debrief
+        // Detect run type
         const isRelayMilestone = gs.lastDungeonId === 'void-relay-7-9' && gs.lastRunSuccess;
+        const isRedlineDeath   = !gs.lastRunSuccess && gs.lastRunRedlineLoss.length > 0;
 
-        const title = isRelayMilestone
-            ? 'RELAY TRANSIT COMPLETE'
-            : (gs.lastRunSuccess ? 'EXTRACTION SUCCESSFUL' : 'EMERGENCY EXTRACTION');
-        const titleColor = isRelayMilestone ? C.textWarn : (gs.lastRunSuccess ? C.textSuccess : C.textWarn);
+        let title: string;
+        let titleColor: string;
+        if (isRelayMilestone) {
+            title = 'RELAY TRANSIT COMPLETE';
+            titleColor = C.textWarn;
+        } else if (isRedlineDeath) {
+            title = '⚠ REDLINE FAILURE';
+            titleColor = '#ff3333';
+        } else if (gs.lastRunSuccess) {
+            title = 'EXTRACTION SUCCESSFUL';
+            titleColor = C.textSuccess;
+        } else {
+            title = 'EMERGENCY EXTRACTION';
+            titleColor = C.textWarn;
+        }
 
         c.add(this.add.text(512, 90, title, {
             fontFamily: 'Arial Black', fontSize: 28, color: titleColor,
@@ -1406,12 +1516,14 @@ export class HubScene extends Scene {
 
         // Use lastDungeonId to show dungeon name
         const dungeonNames: Record<string, string> = {
-            'shalehook-dig-site':          'Shalehook Dig Site',
-            'coldframe-station-b':         'Coldframe Station-B',
-            'void-relay-7-9':              'Void Relay 7-9',
-            'farpoint-outer-ring':         'Farpoint Waystation — Outer Ring',
-            'kalindra-processing-hub':     'Kalindra Processing Hub',
-            'orins-crossing-locked-sector': "Orin's Crossing — Locked Sector",
+            'shalehook-dig-site':             'Shalehook Dig Site',
+            'coldframe-station-b':            'Coldframe Station-B',
+            'void-relay-7-9':                 'Void Relay 7-9',
+            'farpoint-outer-ring':            'Farpoint Waystation — Outer Ring',
+            'kalindra-processing-hub':        'Kalindra Processing Hub',
+            'orins-crossing-locked-sector':   "Orin's Crossing — Locked Sector",
+            'vault-of-the-broken-signal':     'Vault of the Broken Signal',
+            'ashveil-observation-post':       'Ashveil Observation Post',
         };
         const siteName = dungeonNames[gs.lastDungeonId ?? ''] ?? 'Unknown Site';
         c.add(this.add.text(512, 132, `${siteName} — Run Complete`, {
@@ -1423,6 +1535,14 @@ export class HubScene extends Scene {
             c.add(this.add.rectangle(512, 166, 800, 28, 0x0a1a0a).setStrokeStyle(1, 0x335544));
             c.add(this.add.text(512, 166, '✓  FARPOINT WAYSTATION IS NOW ACCESSIBLE — Check the Sector Map and Contract Board', {
                 fontFamily: 'Arial Black', fontSize: 12, color: C.textSuccess, align: 'center',
+            }).setOrigin(0.5));
+        }
+
+        // Redline death alert
+        if (isRedlineDeath) {
+            c.add(this.add.rectangle(512, 166, 800, 28, 0x1a0005).setStrokeStyle(1, 0xaa2222));
+            c.add(this.add.text(512, 166, '⚠ Redline failure — field gear was lost during emergency extraction', {
+                fontFamily: 'Arial Black', fontSize: 12, color: '#ff4422', align: 'center',
             }).setOrigin(0.5));
         }
 
@@ -1453,11 +1573,26 @@ export class HubScene extends Scene {
             });
         }
 
+        let lootBottom = 278 + gs.lastRunLoot.length * 24 + 8;
+
+        // Redline gear loss section
+        if (isRedlineDeath && gs.lastRunRedlineLoss.length > 0) {
+            c.add(this.add.text(175, lootBottom, 'FIELD GEAR LOST:', {
+                fontFamily: 'Arial Black', fontSize: 14, color: '#ff5533',
+            }));
+            lootBottom += 22;
+            gs.lastRunRedlineLoss.forEach((item, i) => {
+                c.add(this.add.text(175, lootBottom + i * 22, `  ◆ ${item.name}  x${item.qty}  — LOST`, {
+                    fontFamily: 'Arial', fontSize: 13, color: '#ff5533',
+                }));
+            });
+            lootBottom += gs.lastRunRedlineLoss.length * 22 + 8;
+        }
+
         // Contracts updated — all phases
-        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts];
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts];
         const completedContracts = gs.contracts.filter(ct => ct.completed && !ct.turnedIn);
         if (completedContracts.length > 0) {
-            const lootBottom = 278 + gs.lastRunLoot.length * 24 + 16;
             c.add(this.add.text(175, lootBottom, 'CONTRACTS READY TO TURN IN:', {
                 fontFamily: 'Arial Black', fontSize: 14, color: C.textSuccess,
             }));

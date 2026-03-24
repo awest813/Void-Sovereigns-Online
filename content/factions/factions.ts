@@ -174,4 +174,28 @@ export const factions: Faction[] = [
             { minRep: 100, label: 'Corsair-Vouched', shortLabel: 'Vouched', unlocks: ['Restricted Vanta supply cache', 'Black-market ship modules'] },
         ],
     },
+
+    // ── Phase 5 factions ──────────────────────────────────────────────────
+
+    {
+        id: 'helion-synod',
+        name: 'Helion Synod',
+        shortName: 'Synod',
+        description:
+            'A research and documentation organization that studies void relay phenomena, relic sites, and anomaly activity. ' +
+            'The Synod began as an academic body and has become something harder to categorize. ' +
+            'Its membership is divided between those who believe the anomaly pattern is a natural phenomenon ' +
+            'and those who believe it is not natural at all. ' +
+            'Both factions agree that more data is needed. They disagree, sometimes violently, about how to get it. ' +
+            'Field researcher Aris Vel represents the Synod in the frontier zone — ' +
+            'cautious enough to survive, curious enough to keep going back.',
+        defaultStanding: 'neutral',
+        tags: ['research', 'anomaly', 'relic', 'frontier', 'divided', 'phase-5'],
+        reputationThresholds: [
+            { minRep: 0,   label: 'Unregistered', shortLabel: 'None', unlocks: [] },
+            { minRep: 20,  label: 'Field Contact', shortLabel: 'Contact', unlocks: ['Synod data requests', 'Aris Vel introduction'] },
+            { minRep: 55,  label: 'Research Asset', shortLabel: 'Asset', unlocks: ['Anomaly sample contracts', 'Synod field kit access'] },
+            { minRep: 110, label: 'Inner Lens',     shortLabel: 'Inner', unlocks: ['Classified anomaly site data', 'Void resonance equipment'] },
+        ],
+    },
 ];

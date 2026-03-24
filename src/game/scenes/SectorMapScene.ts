@@ -190,6 +190,42 @@ export class SectorMapScene extends Scene {
             orinsBtn.on('pointerover', () => orinsBtn.setColor(C.btnHover));
             orinsBtn.on('pointerout',  () => orinsBtn.setColor(orinsClear ? C.textSecond : C.textDanger));
             orinsBtn.on('pointerdown', () => this.launchToDungeon('orins-crossing-locked-sector'));
+
+            // ── Phase 5 Redline sector nodes ─────────────────────────────
+            const vaultClear  = GameState.getFlag('vault-broken-signal-cleared');
+            const ashveilClear = GameState.getFlag('ashveil-post-cleared');
+
+            // Vault of the Broken Signal node
+            this.add.rectangle(490, 258, 680, 26, 0x0a0008).setStrokeStyle(1, 0xaa2222);
+            const vaultLabel = vaultClear
+                ? '◆ Vault of the Broken Signal  ·  Tier 4  ·  REDLINE  ·  Industrial  [CLEARED]'
+                : '◆ Vault of the Broken Signal  ·  Tier 4  ·  ⚠ REDLINE  ·  Industrial';
+            this.add.text(350, 250, vaultLabel, {
+                fontFamily: 'Arial', fontSize: 12, color: vaultClear ? C.textSecond : '#ff6644',
+            });
+            const vaultBtn = this.add.text(500, 264, '[ LAUNCH TO VAULT — REDLINE ]', {
+                fontFamily: 'Arial Black', fontSize: 13,
+                color: vaultClear ? C.textSecond : '#ff4422',
+            }).setInteractive({ useHandCursor: true });
+            vaultBtn.on('pointerover', () => vaultBtn.setColor(C.btnHover));
+            vaultBtn.on('pointerout',  () => vaultBtn.setColor(vaultClear ? C.textSecond : '#ff4422'));
+            vaultBtn.on('pointerdown', () => this.confirmRedlineLaunch('vault-of-the-broken-signal', 'Vault of the Broken Signal'));
+
+            // Ashveil Observation Post node
+            this.add.rectangle(490, 214, 680, 26, 0x05000a).setStrokeStyle(1, 0xaa1166);
+            const ashveilLabel = ashveilClear
+                ? '◆ Ashveil Observation Post  ·  Tier 5  ·  REDLINE  ·  Anomaly Site  [CLEARED]'
+                : '◆ Ashveil Observation Post  ·  Tier 5  ·  ⚠ REDLINE  ·  Void-Adjacent';
+            this.add.text(350, 206, ashveilLabel, {
+                fontFamily: 'Arial', fontSize: 12, color: ashveilClear ? C.textSecond : '#ff44aa',
+            });
+            const ashveilBtn = this.add.text(500, 220, '[ LAUNCH TO ASHVEIL — REDLINE ]', {
+                fontFamily: 'Arial Black', fontSize: 13,
+                color: ashveilClear ? C.textSecond : '#ff22aa',
+            }).setInteractive({ useHandCursor: true });
+            ashveilBtn.on('pointerover', () => ashveilBtn.setColor(C.btnHover));
+            ashveilBtn.on('pointerout',  () => ashveilBtn.setColor(ashveilClear ? C.textSecond : '#ff22aa'));
+            ashveilBtn.on('pointerdown', () => this.confirmRedlineLaunch('ashveil-observation-post', 'Ashveil Observation Post'));
         }
 
         // ── Relay goal strip
@@ -298,14 +334,81 @@ export class SectorMapScene extends Scene {
         }
     }
 
-    private launchToDungeon(dungeonId: string) {
+    private launchToDungeon(dungeonId: string, isRedline = false) {
         const gs = GameState.get();
         if (gs.shipFuel < 2) {
             this.showWarning('NOT ENOUGH FUEL — Refuel at Meridian Services before launching.');
             return;
         }
-        GameState.launchDungeon(dungeonId);
+        GameState.launchDungeon(dungeonId, isRedline);
         this.scene.start('Dungeon');
+    }
+
+    private confirmRedlineLaunch(dungeonId: string, siteName: string) {
+        const existing = this.children.getByName('redline-confirm');
+        if (existing) return;
+
+        const gs = GameState.get();
+        const securedId = gs.redlineSecuredItemId;
+        const insuranceActive = gs.redlineInsuranceActive;
+
+        const panel = this.add.container(512, 320);
+        panel.setName('redline-confirm');
+        panel.add(this.add.rectangle(0, 0, 780, 340, 0x0a0005).setStrokeStyle(2, 0xaa2222));
+
+        panel.add(this.add.text(0, -148, `⚠  REDLINE RUN — ${siteName.toUpperCase()}`, {
+            fontFamily: 'Arial Black', fontSize: 18, color: '#ff4422', align: 'center',
+        }).setOrigin(0.5));
+
+        panel.add(this.add.text(0, -114, 'HIGH-RISK EXTRACTION  ·  Equipment loss on death', {
+            fontFamily: 'Arial', fontSize: 13, color: '#cc6644', align: 'center',
+        }).setOrigin(0.5));
+
+        // Risk lines
+        const lossLine = insuranceActive
+            ? 'On death: run loot lost  ·  1 consumable lost (insurance active)'
+            : 'On death: run loot lost  ·  up to 2 consumables lost';
+        panel.add(this.add.text(0, -82, lossLine, {
+            fontFamily: 'Arial', fontSize: 12, color: '#ff6644', align: 'center',
+        }).setOrigin(0.5));
+
+        const secureText = securedId
+            ? `Secure slot: ${securedId} — PROTECTED`
+            : 'Secure slot: not set — visit Services to set';
+        panel.add(this.add.text(0, -58, secureText, {
+            fontFamily: 'Arial', fontSize: 12,
+            color: securedId ? '#44ff88' : '#996644', align: 'center',
+        }).setOrigin(0.5));
+
+        panel.add(this.add.text(0, -34, insuranceActive
+            ? '✓ Field Insurance ACTIVE — loss reduced'
+            : '✗ No insurance — buy at Services for 250c', {
+            fontFamily: 'Arial', fontSize: 12,
+            color: insuranceActive ? '#44ffaa' : '#886644', align: 'center',
+        }).setOrigin(0.5));
+
+        panel.add(this.add.text(0, -4, 'On success: all loot secured  ·  full contract reward  ·  full reputation earned', {
+            fontFamily: 'Arial', fontSize: 12, color: '#ffaa44', align: 'center',
+        }).setOrigin(0.5));
+
+        const confirmBtn = this.add.text(-120, 68, '[ LAUNCH — ACCEPT RISK ]', {
+            fontFamily: 'Arial Black', fontSize: 15, color: '#ff4422', align: 'center',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        confirmBtn.on('pointerover', () => confirmBtn.setColor(C.btnHover));
+        confirmBtn.on('pointerout',  () => confirmBtn.setColor('#ff4422'));
+        confirmBtn.on('pointerdown', () => {
+            panel.destroy();
+            this.launchToDungeon(dungeonId, true);
+        });
+        panel.add(confirmBtn);
+
+        const cancelBtn = this.add.text(120, 68, '[ NOT YET ]', {
+            fontFamily: 'Arial Black', fontSize: 15, color: C.textSecond, align: 'center',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        cancelBtn.on('pointerover', () => cancelBtn.setColor(C.btnHover));
+        cancelBtn.on('pointerout',  () => cancelBtn.setColor(C.textSecond));
+        cancelBtn.on('pointerdown', () => panel.destroy());
+        panel.add(cancelBtn);
     }
 
     private showRelayLockedMessage() {
