@@ -135,6 +135,8 @@ export class HubScene extends Scene {
     private shipFuelText: Phaser.GameObjects.Text | null = null;
     // Wheel-scroll handler wired during NPC dialogue — removed when leaving that panel.
     private _npcScrollHandler: ((...args: unknown[]) => void) | null = null;
+    // Wheel-scroll handler wired during contract board — removed when leaving that panel.
+    private _contractScrollHandler: ((...args: unknown[]) => void) | null = null;
 
     constructor() {
         super('Hub');
@@ -218,7 +220,8 @@ export class HubScene extends Scene {
         this.add.rectangle(512, y, 1024, 1, C.border);
         this.add.rectangle(512, y + 10, 1024, 20, C.panelBg);
 
-        this.add.text(16, y + 3, 'SHIP: Cutter Mk.I', {
+        const shipDisplayName = gs.activeShipId === 'meridian-hauler-ii' ? 'Meridian Hauler II' : 'Cutter Mk.I';
+        this.add.text(16, y + 3, `SHIP: ${shipDisplayName}`, {
             fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
         });
 
@@ -277,6 +280,11 @@ export class HubScene extends Scene {
         if (name !== 'npc-dialogue' && this._npcScrollHandler) {
             this.input.off('wheel', this._npcScrollHandler);
             this._npcScrollHandler = null;
+        }
+        // Tear down the contract board scroll handler whenever we leave that panel.
+        if (name !== 'contracts' && this._contractScrollHandler) {
+            this.input.off('wheel', this._contractScrollHandler);
+            this._contractScrollHandler = null;
         }
         // Re-populate the main panel so contract badges reflect the latest state.
         if (name === 'main') {
@@ -488,7 +496,29 @@ export class HubScene extends Scene {
             'sol-union-directorate': 'Sol Union',
             'aegis-division': 'Aegis',
             'vanta-corsairs': 'Vanta',
+            'helion-synod': 'Synod',
         };
+
+        // ── Scrollable contract list ──────────────────────────────────────
+        const CONTRACT_VIEWPORT_TOP    = startY;
+        const CONTRACT_VIEWPORT_HEIGHT = 552; // 700 (back btn) - 148 (startY)
+        const totalContractH = contracts.length * rowH;
+        const maxContractScroll = Math.max(0, totalContractH - CONTRACT_VIEWPORT_HEIGHT);
+        let contractScrollY = 0;
+
+        // Tear down any previous contract scroll handler before rebuilding.
+        if (this._contractScrollHandler) {
+            this.input.off('wheel', this._contractScrollHandler);
+            this._contractScrollHandler = null;
+        }
+
+        const contractMaskGfx = this.make.graphics({ x: 0, y: 0 });
+        contractMaskGfx.fillRect(0, CONTRACT_VIEWPORT_TOP, 1024, CONTRACT_VIEWPORT_HEIGHT);
+        const contractMask = contractMaskGfx.createGeometryMask();
+
+        const scrollCt = this.add.container(0, 0);
+        scrollCt.setMask(contractMask);
+        c.add(scrollCt);
 
         contracts.forEach((ct, i) => {
             const y = startY + i * rowH;
@@ -504,11 +534,11 @@ export class HubScene extends Scene {
 
             const rowBg = isRedline ? 0x1a0505 : C.panelBg;
             const rowBorder = isRedline ? 0x882222 : C.border;
-            c.add(this.add.rectangle(492, y + 34, 860, rowH - 8, rowBg).setStrokeStyle(1, rowBorder));
+            scrollCt.add(this.add.rectangle(492, y + 34, 860, rowH - 8, rowBg).setStrokeStyle(1, rowBorder));
 
             // Tier badge
             const tierColor = ct.tier <= 2 ? C.textSuccess : ct.tier === 3 ? C.textWarn : C.textDanger;
-            c.add(this.add.text(78, y + 8, `T${ct.tier}`, {
+            scrollCt.add(this.add.text(78, y + 8, `T${ct.tier}`, {
                 fontFamily: 'Arial Black', fontSize: 13, color: tierColor,
             }).setOrigin(0.5));
 
@@ -516,11 +546,11 @@ export class HubScene extends Scene {
             const catLabel = ct.category.toUpperCase();
             const catColor = catColors[ct.category] ?? C.textSecond;
             if (isRedline) {
-                c.add(this.add.text(78, y + 28, '⚠ REDLINE', {
+                scrollCt.add(this.add.text(78, y + 28, '⚠ REDLINE', {
                     fontFamily: 'Arial Black', fontSize: 10, color: '#ff3333',
                 }).setOrigin(0.5));
             } else {
-                c.add(this.add.text(78, y + 28, catLabel, {
+                scrollCt.add(this.add.text(78, y + 28, catLabel, {
                     fontFamily: 'Arial', fontSize: 10, color: catColor,
                 }).setOrigin(0.5));
             }
@@ -528,14 +558,14 @@ export class HubScene extends Scene {
             // Faction tag
             if (ct.factionId) {
                 const fShort = factionShortNames[ct.factionId] ?? ct.factionId;
-                c.add(this.add.text(78, y + 46, `[${fShort}]`, {
+                scrollCt.add(this.add.text(78, y + 46, `[${fShort}]`, {
                     fontFamily: 'Arial', fontSize: 9, color: '#6688aa',
                 }).setOrigin(0.5));
             }
 
             // Title (dimmed if rep-locked)
             const titleColor = repLocked ? '#555566' : (isRedline ? '#ff8866' : C.textPrimary);
-            c.add(this.add.text(140, y + 6, ct.title, {
+            scrollCt.add(this.add.text(140, y + 6, ct.title, {
                 fontFamily: 'Arial Black', fontSize: 13, color: titleColor,
             }));
 
@@ -543,13 +573,13 @@ export class HubScene extends Scene {
             if (repLocked && repReq) {
                 const fShort = factionShortNames[repReq.factionId] ?? repReq.factionId;
                 const playerRep = GameState.getReputation(repReq.factionId);
-                c.add(this.add.text(140, y + 26, `REQUIRES ${fShort} reputation ${repReq.minRep} (current: ${playerRep})`, {
+                scrollCt.add(this.add.text(140, y + 26, `REQUIRES ${fShort} reputation ${repReq.minRep} (current: ${playerRep})`, {
                     fontFamily: 'Arial', fontSize: 11, color: '#665544',
                     wordWrap: { width: 560 },
                 }));
             } else {
                 const desc = ct.description.length > 110 ? ct.description.slice(0, 107) + '…' : ct.description;
-                c.add(this.add.text(140, y + 26, desc, {
+                scrollCt.add(this.add.text(140, y + 26, desc, {
                     fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
                     wordWrap: { width: 560 },
                 }));
@@ -561,13 +591,13 @@ export class HubScene extends Scene {
                 rewardParts.push(`+item`);
             }
             const rewardColor = isRedline ? '#ffaa44' : C.textWarn;
-            c.add(this.add.text(140, y + 60, `REWARD: ${rewardParts.join('  ·  ')}`, {
+            scrollCt.add(this.add.text(140, y + 60, `REWARD: ${rewardParts.join('  ·  ')}`, {
                 fontFamily: 'Arial', fontSize: 11, color: rewardColor,
             }));
 
             // State button
             if (repLocked) {
-                c.add(this.add.text(870, y + 34, '[ REP REQUIRED ]', {
+                scrollCt.add(this.add.text(870, y + 34, '[ REP REQUIRED ]', {
                     fontFamily: 'Arial', fontSize: 11, color: '#665544',
                 }).setOrigin(1, 0.5));
             } else if (isCompleted) {
@@ -599,9 +629,9 @@ export class HubScene extends Scene {
                     this.showPanel('contracts');
                     this.showToast(`Contract turned in — +${ct.reward.credits}c  +${ct.reward.xp} XP`, C.textSuccess);
                 });
-                c.add(turnInBtn);
+                scrollCt.add(turnInBtn);
             } else if (isAccepted) {
-                c.add(this.add.text(870, y + 34, '[ ACCEPTED ✓ ]', {
+                scrollCt.add(this.add.text(870, y + 34, '[ ACCEPTED ✓ ]', {
                     fontFamily: 'Arial', fontSize: 12, color: C.textAccent,
                 }).setOrigin(1, 0.5));
             } else {
@@ -622,9 +652,22 @@ export class HubScene extends Scene {
                         this.showToast(`Contract accepted: ${ct.title}`, C.textAccent);
                     }
                 });
-                c.add(acceptBtn);
+                scrollCt.add(acceptBtn);
             }
         });
+
+        // Scroll hint and wheel handler when content overflows the viewport.
+        if (maxContractScroll > 0) {
+            c.add(this.add.text(512, CONTRACT_VIEWPORT_TOP + CONTRACT_VIEWPORT_HEIGHT + 6, '▼ scroll for more', {
+                fontFamily: 'Arial', fontSize: 11, color: C.textMuted, align: 'center',
+            }).setOrigin(0.5));
+
+            this._contractScrollHandler = (_pointer: unknown, _gameObjects: unknown, _deltaX: unknown, deltaY: unknown) => {
+                contractScrollY = Math.max(0, Math.min(maxContractScroll, contractScrollY + (deltaY as number) * DIALOGUE_SCROLL_SPEED));
+                scrollCt.setY(-contractScrollY);
+            };
+            this.input.on('wheel', this._contractScrollHandler);
+        }
 
         this.makeButton(c, 512, 700, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
     }
@@ -775,8 +818,9 @@ export class HubScene extends Scene {
         }).setOrigin(0.5));
 
         // ── Scrollable dialogue area ──────────────────────────────────────
-        // All dialogue lines are shown; mouse-wheel scrolls when content overflows.
-        const totalH    = npc.dialogue.length * DIALOGUE_LINE_HEIGHT;
+        // Only lines whose condition evaluates true are shown.
+        const visibleLines = npc.dialogue.filter(line => this.evaluateDialogueCondition(line.condition));
+        const totalH    = visibleLines.length * DIALOGUE_LINE_HEIGHT;
         const maxScroll = Math.max(0, totalH - DIALOGUE_VIEWPORT_HEIGHT);
         let   scrollY   = 0;
 
@@ -789,7 +833,7 @@ export class HubScene extends Scene {
         scrollCt.setMask(mask);
         c.add(scrollCt);
 
-        npc.dialogue.forEach((line, i) => {
+        visibleLines.forEach((line, i) => {
             const y = DIALOGUE_VIEWPORT_TOP + i * DIALOGUE_LINE_HEIGHT;
             scrollCt.add(this.add.rectangle(512, y + 32, 720, DIALOGUE_LINE_HEIGHT - 8, 0x0a0a1a).setStrokeStyle(1, C.border));
             scrollCt.add(this.add.text(512, y + 32, `"${line.text}"`, {
@@ -823,6 +867,34 @@ export class HubScene extends Scene {
         }, C.textSecond);
 
         this.showPanel('npc-dialogue');
+    }
+
+    /**
+     * Evaluates an NPC dialogue condition string.
+     * Supported formats:
+     *   - `flag.<flag-id>`                         — true if the flag is set
+     *   - `reputation.<faction-id> >= <value>`     — compares player reputation
+     * Unknown or missing conditions return true (fail open).
+     */
+    private evaluateDialogueCondition(condition: string | undefined): boolean {
+        if (!condition) return true;
+        const repMatch = condition.match(/^reputation\.([^\s]+)\s*(>=|<=|>|<|==)\s*(\d+)$/);
+        if (repMatch) {
+            const playerRep = GameState.getReputation(repMatch[1]);
+            const threshold = parseInt(repMatch[3], 10);
+            switch (repMatch[2]) {
+                case '>=': return playerRep >= threshold;
+                case '<=': return playerRep <= threshold;
+                case '>':  return playerRep >  threshold;
+                case '<':  return playerRep <  threshold;
+                case '==': return playerRep === threshold;
+            }
+        }
+        const flagMatch = condition.match(/^flag\.(.+)$/);
+        if (flagMatch) {
+            return GameState.getFlag(flagMatch[1]);
+        }
+        return true;
     }
 
     // ── Services panel ────────────────────────────────────────────────────
@@ -1436,7 +1508,7 @@ export class HubScene extends Scene {
             fontFamily: 'Arial', fontSize: 13, color: C.textAccent, align: 'center',
         }).setOrigin(0.5));
 
-        const totalH = npc.dialogue.length * DIALOGUE_LINE_HEIGHT;
+        const totalH = npc.dialogue.filter(line => this.evaluateDialogueCondition(line.condition)).length * DIALOGUE_LINE_HEIGHT;
         const maxScroll = Math.max(0, totalH - DIALOGUE_VIEWPORT_HEIGHT);
         let scrollY = 0;
 
@@ -1448,7 +1520,7 @@ export class HubScene extends Scene {
         scrollCt.setMask(mask);
         c.add(scrollCt);
 
-        npc.dialogue.forEach((line, i) => {
+        npc.dialogue.filter(line => this.evaluateDialogueCondition(line.condition)).forEach((line, i) => {
             const y = DIALOGUE_VIEWPORT_TOP + i * DIALOGUE_LINE_HEIGHT;
             scrollCt.add(this.add.rectangle(512, y + 32, 720, DIALOGUE_LINE_HEIGHT - 8, 0x0a0a1a).setStrokeStyle(1, C.border));
             scrollCt.add(this.add.text(512, y + 32, `"${line.text}"`, {

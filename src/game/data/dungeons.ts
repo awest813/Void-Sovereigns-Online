@@ -782,6 +782,7 @@ export const DUNGEON_REGISTRY: Record<string, DungeonDef> = {
             { contractId: 'redline-ashveil-data-extraction',  requireBossCleared: true },
             { contractId: 'redline-helion-anomaly-sample',    requireLootCleared: true },
             { contractId: 'aegis-black-site-breach',          requireBossCleared: true },
+            { contractId: 'helion-contaminated-survey',       requireAnyProgress: true },
         ],
         clearFlag: 'ashveil-post-cleared',
     },
