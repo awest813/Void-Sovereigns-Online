@@ -6,25 +6,12 @@ import { phase2Contracts } from '../../../content/contracts/phase2-contracts';
 import { phase3Contracts } from '../../../content/contracts/phase3-contracts';
 import { meridianNPCs } from '../../../content/npcs/meridian-npcs';
 import { SHIP_UPGRADES, HAULER_PURCHASE_COST } from '../data/shipUpgrades';
+import { ITEMS } from '../data/items';
+import { T } from '../ui/UITheme';
+import { DebugPanel } from '../ui/DebugPanel';
 
-// ── Colour palette ──────────────────────────────────────────────────────────
-const C = {
-    bg:          0x080818,
-    panelBg:     0x0d0d22,
-    border:      0x223355,
-    textPrimary: '#e8e0cc',
-    textSecond:  '#888899',
-    textAccent:  '#5599ee',
-    textWarn:    '#dd9944',
-    textDanger:  '#dd4444',
-    textSuccess: '#44cc88',
-    btnNormal:   '#aabbcc',
-    btnHover:    '#ffffff',
-    btnAccent:   '#55aaff',
-    barFull:     0x44aa66,
-    barDamaged:  0xcc6622,
-    barFuel:     0x4488cc,
-};
+// Scene colour aliases — sourced from shared UITheme.
+const C = T;
 
 // All contracts shown on the Phase 3 board (Phase 1 + Phase 2 + Phase 3)
 const BOARD_CONTRACT_IDS = [
@@ -80,7 +67,7 @@ const HUB_NPC_IDS = [
 // ── HubScene ────────────────────────────────────────────────────────────────
 export class HubScene extends Scene {
     private panels: Map<string, Phaser.GameObjects.Container> = new Map();
-    private statusBarTexts: { credits: Phaser.GameObjects.Text; xp: Phaser.GameObjects.Text; level: Phaser.GameObjects.Text } | null = null;
+    private statusBarTexts: { credits: Phaser.GameObjects.Text; xp: Phaser.GameObjects.Text; level: Phaser.GameObjects.Text; pilotHp: Phaser.GameObjects.Text } | null = null;
     private shipHullBar: Phaser.GameObjects.Rectangle | null = null;
     private shipFuelBar: Phaser.GameObjects.Rectangle | null = null;
     private shipHullText: Phaser.GameObjects.Text | null = null;
@@ -111,6 +98,8 @@ export class HubScene extends Scene {
             this.showPanel('main');
         }
 
+        new DebugPanel(this);
+
         EventBus.emit('current-scene-ready', this);
     }
 
@@ -124,21 +113,25 @@ export class HubScene extends Scene {
             fontFamily: 'Arial Black', fontSize: 14, color: C.textAccent,
         });
 
+        const pilotHpColor = gs.pilotHull < gs.pilotMaxHull * 0.4 ? C.textDanger : C.textSecond;
         this.statusBarTexts = {
-            credits: this.add.text(400, 12, `CREDITS: ${gs.credits}c`, {
+            credits: this.add.text(300, 12, `CREDITS: ${gs.credits}c`, {
                 fontFamily: 'Arial', fontSize: 13, color: C.textWarn,
             }),
-            xp: this.add.text(580, 12, `XP: ${gs.xp}`, {
+            xp: this.add.text(480, 12, `XP: ${gs.xp}`, {
                 fontFamily: 'Arial', fontSize: 13, color: C.textSecond,
             }),
-            level: this.add.text(680, 12, `LVL: ${gs.level}`, {
+            level: this.add.text(570, 12, `LVL: ${gs.level}`, {
                 fontFamily: 'Arial', fontSize: 13, color: C.textPrimary,
+            }),
+            pilotHp: this.add.text(650, 12, `PILOT: ${gs.pilotHull}/${gs.pilotMaxHull}`, {
+                fontFamily: 'Arial', fontSize: 13, color: pilotHpColor,
             }),
         };
 
         // Show last-run credits if we just returned
         if (gs.returnFromDungeon && gs.lastRunCredits > 0) {
-            this.add.text(750, 12, `+${gs.lastRunCredits}c`, {
+            this.add.text(820, 12, `+${gs.lastRunCredits}c`, {
                 fontFamily: 'Arial', fontSize: 13, color: C.textSuccess,
             });
         }
@@ -150,6 +143,8 @@ export class HubScene extends Scene {
         this.statusBarTexts.credits.setText(`CREDITS: ${gs.credits}c`);
         this.statusBarTexts.xp.setText(`XP: ${gs.xp}`);
         this.statusBarTexts.level.setText(`LVL: ${gs.level}`);
+        const pilotHpColor = gs.pilotHull < gs.pilotMaxHull * 0.4 ? C.textDanger : C.textSecond;
+        this.statusBarTexts.pilotHp.setText(`PILOT: ${gs.pilotHull}/${gs.pilotMaxHull}`).setColor(pilotHpColor);
     }
 
     // ── Ship bar (bottom) ─────────────────────────────────────────────────
@@ -225,13 +220,27 @@ export class HubScene extends Scene {
         }
     }
 
+    /** Brief feedback message that fades out after 2 s. */
+    private showToast(text: string, color: string = C.textSuccess) {
+        const toast = this.add.text(512, 740, text, {
+            fontFamily: 'Arial', fontSize: 13, color, align: 'center',
+        }).setOrigin(0.5).setDepth(1000).setAlpha(1);
+        this.tweens.add({
+            targets: toast,
+            alpha: 0,
+            duration: 1800,
+            delay: 800,
+            onComplete: () => toast.destroy(),
+        });
+    }
+
     private makeButton(
         container: Phaser.GameObjects.Container,
         x: number,
         y: number,
         label: string,
         callback: () => void,
-        color = C.btnNormal,
+        color: string = C.btnNormal,
     ): Phaser.GameObjects.Text {
         const btn = this.add.text(x, y, label, {
             fontFamily: 'Arial', fontSize: 18, color,
@@ -266,22 +275,31 @@ export class HubScene extends Scene {
 
         this.panelHeader(c, 'MERIDIAN STATION', 'Low-rent. Busy. Yours for now.');
 
+        const gs = GameState.get();
+        const activeCount    = gs.contracts.filter(ct => ct.accepted && !ct.turnedIn).length;
+        const readyCount     = gs.contracts.filter(ct => ct.completed && !ct.turnedIn).length;
+
+        const contractBadge =
+            readyCount > 0 ? ` (${readyCount} READY TO TURN IN)` :
+            activeCount > 0 ? ` (${activeCount} active)` : '';
+        const contractBadgeColor = readyCount > 0 ? C.textSuccess : C.textSecond;
+
         const items = [
-            { label: '[ CONTRACT BOARD ]', sub: 'Take on work in the Belt',              target: 'contracts' },
-            { label: '[ SERVICES ]',        sub: 'Repair, fuel, sell salvage',            target: 'services' },
-            { label: '[ SECTOR MAP ]',      sub: 'Launch to Ashwake Belt',                target: 'sectormap' },
-            { label: '[ STATION CONTACTS ]',sub: 'Talk to the locals',                    target: 'npcs' },
-            { label: '[ SHIP STATUS ]',     sub: 'Current ship + relay goal',             target: 'shipstatus' },
-            { label: '[ SHIPYARD ]',        sub: 'Upgrades from Ilya, Oziel & Jasso',     target: 'shipyard' },
+            { label: '[ CONTRACT BOARD ]', badge: contractBadge, badgeColor: contractBadgeColor, sub: 'Take on work in the Belt', target: 'contracts' },
+            { label: '[ SERVICES ]',       badge: '',             badgeColor: C.textSecond,       sub: 'Repair, fuel, sell salvage',         target: 'services' },
+            { label: '[ SECTOR MAP ]',     badge: '',             badgeColor: C.textSecond,       sub: 'Launch to Ashwake Belt',             target: 'sectormap' },
+            { label: '[ STATION CONTACTS ]', badge: '',           badgeColor: C.textSecond,       sub: 'Talk to the locals',                 target: 'npcs' },
+            { label: '[ SHIP STATUS ]',    badge: '',             badgeColor: C.textSecond,       sub: 'Current ship + relay goal',          target: 'shipstatus' },
+            { label: '[ SHIPYARD ]',       badge: '',             badgeColor: C.textSecond,       sub: 'Upgrades from Ilya, Oziel & Jasso',  target: 'shipyard' },
         ];
 
         items.forEach((item, i) => {
             const y = 170 + i * 72;
             c.add(this.add.rectangle(512, y + 18, 420, 60, C.panelBg).setStrokeStyle(1, C.border));
 
-            const btn = this.add.text(512, y + 6, item.label, {
-                fontFamily: 'Arial Black', fontSize: 19, color: C.textPrimary, align: 'center',
-            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            const btn = this.add.text(370, y + 6, item.label, {
+                fontFamily: 'Arial Black', fontSize: 19, color: C.textPrimary, align: 'left',
+            }).setOrigin(0, 0).setInteractive({ useHandCursor: true });
             btn.on('pointerover', () => btn.setColor(C.btnHover));
             btn.on('pointerout', () => btn.setColor(C.textPrimary));
             btn.on('pointerdown', () => {
@@ -293,9 +311,15 @@ export class HubScene extends Scene {
             });
             c.add(btn);
 
-            c.add(this.add.text(512, y + 30, item.sub, {
-                fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
-            }).setOrigin(0.5));
+            if (item.badge) {
+                c.add(this.add.text(512, y + 30, item.badge, {
+                    fontFamily: 'Arial', fontSize: 11, color: item.badgeColor, align: 'center',
+                }).setOrigin(0.5));
+            } else {
+                c.add(this.add.text(512, y + 30, item.sub, {
+                    fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+                }).setOrigin(0.5));
+            }
         });
 
         // Relay goal / milestone banner
@@ -412,9 +436,19 @@ export class HubScene extends Scene {
                             GameState.gainReputation(fac, amt);
                         }
                     }
+                    // Grant any item rewards
+                    if (ct.reward.itemRewards && ct.reward.itemRewards.length > 0) {
+                        for (const itemId of ct.reward.itemRewards) {
+                            const def = ITEMS[itemId];
+                            if (def) {
+                                GameState.addItem({ id: def.id, name: def.name, qty: 1, type: def.type, value: def.value });
+                            }
+                        }
+                    }
                     this.refreshStatusBar();
                     this.buildContractPanel();
                     this.showPanel('contracts');
+                    this.showToast(`Contract turned in — +${ct.reward.credits}c  +${ct.reward.xp} XP`, C.textSuccess);
                 });
                 c.add(turnInBtn);
             } else if (isAccepted) {
@@ -431,6 +465,7 @@ export class HubScene extends Scene {
                     GameState.acceptContract(ct.id);
                     this.buildContractPanel();
                     this.showPanel('contracts');
+                    this.showToast(`Contract accepted: ${ct.title}`, C.textAccent);
                 });
                 c.add(acceptBtn);
             }

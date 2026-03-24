@@ -1,9 +1,22 @@
+/* Void Sovereigns Online — base styles */
+:root {
+    --color-bg:       #050510;
+    --color-accent:   #5599ee;
+    --color-warn:     #dd9944;
+    --color-success:  #44cc88;
+    --color-danger:   #dd4444;
+    --color-text:     rgba(232, 224, 204, 0.87);
+    --color-text-dim: rgba(136, 136, 153, 0.87);
+    --font-ui:        'Arial', 'Helvetica Neue', sans-serif;
+}
+
 body {
     margin: 0;
     padding: 0;
-    color: rgba(255, 255, 255, 0.87);
-    background-color: #000000; 
-    font-family: Arial, Helvetica, sans-serif;
+    color: var(--color-text);
+    background-color: var(--color-bg);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
 }
 
 #app {
@@ -13,36 +26,44 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    background-color: var(--color-bg);
 }
 
 .spritePosition {
     margin: 10px 0 0 10px;
     font-size: 0.8em;
+    color: var(--color-text-dim);
 }
 
+/* HTML button style (used outside the Phaser canvas) */
 .button {
-    width: 140px;
-    margin: 10px;
-    padding: 10px;
-    background-color: #000000;
-    color: rgba(255, 255, 255, 0.87);
-    border: 1px solid rgba(255, 255, 255, 0.87);
+    min-width: 120px;
+    margin: 8px;
+    padding: 8px 14px;
+    background-color: transparent;
+    color: var(--color-text);
+    border: 1px solid rgba(232, 224, 204, 0.5);
     cursor: pointer;
-    transition: all 0.3s;
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
 
     &:hover {
-        border: 1px solid #0ec3c9;
-        color: #0ec3c9;
+        border-color: var(--color-accent);
+        color: var(--color-accent);
     }
 
     &:active {
-        background-color: #0ec3c9;
+        background-color: rgba(85, 153, 238, 0.15);
+        color: #ffffff;
     }
 
-    /* Disabled styles */
+    /* Disabled */
     &:disabled {
         cursor: not-allowed;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        color: rgba(255, 255, 255, 0.3);
+        border-color: rgba(232, 224, 204, 0.18);
+        color: rgba(232, 224, 204, 0.25);
     }
 }

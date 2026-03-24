@@ -4,25 +4,26 @@ import { GameState, InventoryItem } from '../state/GameState';
 import { ENEMIES, EnemyDef, rollLoot, rollCredits } from '../data/enemies';
 import { ITEMS } from '../data/items';
 import { DUNGEON_REGISTRY as _DUNGEON_REGISTRY, DungeonDef, Room, loadDungeon } from '../data/dungeons';
+import { starterContracts } from '../../../content/contracts/starter-contracts';
+import { phase2Contracts } from '../../../content/contracts/phase2-contracts';
+import { phase3Contracts } from '../../../content/contracts/phase3-contracts';
+import { T } from '../ui/UITheme';
+import { DebugPanel } from '../ui/DebugPanel';
 
-// ── Colour palette ──────────────────────────────────────────────────────────
+// Scene colour palette — extends shared UITheme with dungeon-atmosphere overrides.
 const C = {
-    bg:          0x04070f,
-    panelBg:     0x0a0d16,
-    border:      0x1a2a3a,
-    textPrimary: '#d8d0bc',
-    textSecond:  '#666677',
-    textAccent:  '#4488cc',
-    textWarn:    '#cc8833',
-    textDanger:  '#cc3333',
-    textSuccess: '#33aa66',
-    btnNormal:   '#99aabb',
-    btnHover:    '#ffffff',
-    barHull:     0x33994d,
-    barDamaged:  0xaa4422,
-    barEnemy:    0xcc4422,
-    barFuel:     0x336699,
+    ...T,
+    bg:        T.bgDeep,     // deeper space
+    panelBg:   T.panelMid,   // greenish-dark panels
+    border:    T.borderFaint, // subtle border
+    textSecond:'#666677',     // dimmer secondary text
+    barHull:   0x33994d,      // slightly cooler hull green
+    barDamaged:0xaa4422,      // slightly muted damaged
+    barFuel:   0x336699,      // muted fuel blue
 };
+
+// All contracts from all phases — used for ID→title lookups in completion screen.
+const ALL_CONTRACTS = [...starterContracts, ...phase2Contracts, ...phase3Contracts];
 
 // ── DungeonScene ────────────────────────────────────────────────────────────
 type DungeonPhase =
@@ -95,6 +96,8 @@ export class DungeonScene extends Scene {
 
         this.buildHeader();
         this.showIntro();
+
+        new DebugPanel(this);
 
         EventBus.emit('current-scene-ready', this);
     }
@@ -178,7 +181,7 @@ export class DungeonScene extends Scene {
     private addActionButton(
         x: number, y: number, label: string,
         callback: () => void,
-        color = C.btnNormal,
+        color: string = C.btnNormal,
         disabled = false,
     ): Phaser.GameObjects.Text {
         const btn = this.add.text(x, y, label, {
@@ -638,8 +641,11 @@ export class DungeonScene extends Scene {
             this.addContentText(200, lootBase, 'CONTRACTS COMPLETED:', {
                 fontFamily: 'Arial Black', fontSize: 13, color: C.textSuccess,
             });
+            // Build an ID→title map for O(1) lookup during render.
+            const contractTitleById = new Map(ALL_CONTRACTS.map(ct => [ct.id, ct.title]));
             completedContractIds.forEach((id, i) => {
-                this.addContentText(200, lootBase + 22 + i * 20, `  ✓ ${id}`, {
+                const label = contractTitleById.get(id) ?? id;
+                this.addContentText(200, lootBase + 22 + i * 20, `  ✓ ${label}`, {
                     fontFamily: 'Arial', fontSize: 12, color: C.textSuccess,
                 });
             });
