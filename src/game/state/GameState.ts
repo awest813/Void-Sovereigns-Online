@@ -52,6 +52,18 @@ interface State {
     pendingDungeon: string | null;
     /** Whether the active dungeon run is a Redline contract. */
     activeRunIsRedline: boolean;
+    // ── Phase 5: Redline system ──────────────────────────────────────────
+    /** Item ID the player has secured for the current Redline run (survives death). */
+    redlineSecuredItemId: string | null;
+    /** Whether field insurance is active (purchased, protects one extra item on death). */
+    redlineInsuranceActive: boolean;
+    /** Items lost on the last Redline death — shown in the debrief. */
+    lastRunRedlineLoss: InventoryItem[];
+    /**
+     * Session ID stub for future co-op compatibility.
+     * Not used yet but reserved so multiplayer can be layered on without state migration.
+     */
+    sessionId: string | null;
 }
 
 const state: State = {
@@ -89,6 +101,8 @@ const state: State = {
         'sol-union-directorate': 0,
         'aegis-division': 0,
         'vanta-corsairs': 0,
+        // Phase 5 factions
+        'helion-synod': 0,
     },
     flags: {},
     returnFromDungeon: false,
@@ -99,6 +113,10 @@ const state: State = {
     lastDungeonId: null,
     pendingDungeon: null,
     activeRunIsRedline: false,
+    redlineSecuredItemId: null,
+    redlineInsuranceActive: false,
+    lastRunRedlineLoss: [],
+    sessionId: null,
 };
 
 function clampMin(n: number, min = 0): number {
@@ -299,6 +317,7 @@ export const GameState = {
     launchDungeon(dungeonId: string, isRedline = false) {
         state.pendingDungeon = dungeonId;
         state.activeRunIsRedline = isRedline;
+        state.lastRunRedlineLoss = [];
         GameState.damageShip(2); // fuel burn to reach site
     },
     setReturnFromDungeon(
@@ -322,6 +341,37 @@ export const GameState = {
         for (const item of loot) GameState.addItem(item);
         for (const id of affectedContractIds) GameState.markContractComplete(id);
     },
+
+    /**
+     * Resolves a Redline run death: removes up to 2 field consumables from inventory
+     * (respecting the secured item and insurance), records lost items for debrief.
+     */
+    resolveRedlineDeath() {
+        const lossItems: InventoryItem[] = [];
+        let lossQuota = 2;
+
+        // Insurance halves the quota (one-time use)
+        if (state.redlineInsuranceActive) {
+            lossQuota = 1;
+            state.redlineInsuranceActive = false;
+        }
+
+        // Iterate all consumables; prefer ones that are NOT secured
+        const consumables = state.inventory.filter(i => i.type === 'consumable');
+        for (const item of consumables) {
+            if (lossQuota <= 0) break;
+            if (state.redlineSecuredItemId === item.id) continue; // secured — skip
+            const lostQty = Math.min(item.qty, 1);
+            item.qty -= lostQty;
+            if (item.qty === 0) state.inventory = state.inventory.filter(i => i.id !== item.id);
+            lossItems.push({ id: item.id, name: item.name, qty: lostQty, type: item.type, value: item.value });
+            lossQuota--;
+        }
+
+        state.lastRunRedlineLoss = lossItems;
+        return lossItems;
+    },
+
     clearReturnFromDungeon() {
         state.returnFromDungeon = false;
         state.lastRunLoot = [];
@@ -329,5 +379,21 @@ export const GameState = {
         state.lastRunXp = 0;
         state.lastRunSuccess = false;
         state.activeRunIsRedline = false;
+        state.redlineSecuredItemId = null;
+        state.lastRunRedlineLoss = [];
+    },
+
+    // ── Phase 5: Redline helpers ───────────────────────────────────────────
+    /** Mark an inventory item as secured for the upcoming Redline run. */
+    secureRunItem(itemId: string | null) {
+        state.redlineSecuredItemId = itemId;
+    },
+
+    /** Purchase field insurance (250c). Returns false if insufficient credits. */
+    purchaseInsurance(): boolean {
+        if (state.redlineInsuranceActive) return true; // already active
+        if (!GameState.spendCredits(250)) return false;
+        state.redlineInsuranceActive = true;
+        return true;
     },
 };

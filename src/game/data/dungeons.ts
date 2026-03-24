@@ -581,6 +581,210 @@ export const DUNGEON_REGISTRY: Record<string, DungeonDef> = {
         ],
         clearFlag: 'orins-crossing-cleared',
     },
+
+    // ── Phase 5 — Vault of the Broken Signal ─────────────────────────────────
+    'vault-of-the-broken-signal': {
+        id: 'vault-of-the-broken-signal',
+        name: 'Vault of the Broken Signal',
+        location: 'Kalindra Drift  ·  Outer Industrial Zone  ·  Deep Access',
+        tier: 4,
+        tagline: 'Tier 4  ·  REDLINE  ·  Illegal Salvage  ·  Industrial Horror',
+        introText:
+            'The Vault of the Broken Signal is a bulk-cargo storage facility that pre-dates the Kalindra Hub. ' +
+            'It does not appear on the Frontier Compact\'s salvage manifest. ' +
+            'It does not appear on the Aegis classification notice. ' +
+            'It does not appear on any map filed in the last forty years.\n\n' +
+            'Crow Veslin found its location in the unlogged freight manifest you recovered from the Hub. ' +
+            '"It\'s been broadcasting," Crow said. "Continuously. Nobody filed a complaint ' +
+            'because nobody knew it was there." ' +
+            'A pause. "Whatever is in there has been sending something to something else for a very long time."\n\n' +
+            'Your objectives: breach the vault, recover the coordination node and cargo manifest, ' +
+            'and extract alive. The Overseer unit is still active. ' +
+            'It knows you are here. It stopped broadcasting the moment your ship docked.',
+        rooms: [
+            {
+                id: 'vault-outer-access',
+                name: 'Outer Access Shaft',
+                type: 'entrance',
+                description:
+                    'The entry shaft is industrial-grade and well-maintained — ' +
+                    'far better maintained than any abandoned facility should be. ' +
+                    'The air recyclers are running. The lights are on. ' +
+                    'A service log is posted near the inner lock, updated as recently as six weeks ago. ' +
+                    'The handwriting is printed in exactly the same font every time. ' +
+                    'No human wrote these entries.',
+                enemies: [],
+                cleared: false,
+            },
+            {
+                id: 'vault-cold-storage',
+                name: 'Cold Storage Bay',
+                type: 'loot',
+                description:
+                    'A climate-controlled cargo bay holding a curated selection of components that ' +
+                    'should not be in the same place together — relay hardware, nav modules, ' +
+                    'salvage pieces from at least four different decommissioned facilities. ' +
+                    'Someone has been gathering things here. Not hoarding. Collecting. ' +
+                    'One crate near the back is labelled with a symbol that does not appear in ' +
+                    'any cargo registry you can access.',
+                enemies: [],
+                lootItems: ['broken-signal-core', 'contraband-relay-module', 'power-cell'],
+                cleared: false,
+            },
+            {
+                id: 'vault-processing-wing',
+                name: 'Processing Wing',
+                type: 'combat',
+                description:
+                    'The vault\'s cargo processing floor. Two security drones run patrol loops ' +
+                    'with military-grade precision — not the lazy loops of automated systems left running too long. ' +
+                    'These were updated recently. The update happened after your ship appeared on approach sensors.',
+                enemies: ['vault-security-drone', 'vault-security-drone'],
+                cleared: false,
+            },
+            {
+                id: 'vault-receiving-deck',
+                name: 'Receiving Deck',
+                type: 'combat',
+                description:
+                    'The industrial receiving floor. A corrupted loader unit moves through the space with ' +
+                    'a fluidity that no loader should have — its manipulator arms repositioning cargo with ' +
+                    'something that looks like purpose. ' +
+                    'A vault security drone maintains overwatch from the upper gantry. ' +
+                    'On the main console, a shipping manifest is displayed. ' +
+                    'The destination field reads: IN TRANSIT — ARRIVAL PENDING.',
+                enemies: ['corrupted-loader-unit', 'vault-security-drone'],
+                cleared: false,
+            },
+            {
+                id: 'vault-coordinator-core',
+                name: 'Coordinator Core — Vault Overseer',
+                type: 'boss',
+                description:
+                    'The Vault\'s central chamber. The Overseer unit stands in the center — ' +
+                    'a heavy coordination chassis surrounded by active display screens. ' +
+                    'Every screen shows the same thing: an incoming transmission queue. ' +
+                    'Thousands of entries. Sorted. Prioritized. Answered. ' +
+                    'The sender field on every message reads: RELAY NODE — ORIGIN UNREGISTERED. ' +
+                    'The Overseer turned to face you before you crossed the threshold. ' +
+                    'It was waiting. ' +
+                    'It says: "You are not the courier." ' +
+                    'Then the screens all go dark.',
+                enemies: ['vault-overseer'],
+                cleared: false,
+            },
+        ],
+        contractCompletions: [
+            { contractId: 'redline-vault-broken-signal',    requireBossCleared: true },
+            { contractId: 'vanta-vault-intel-run',          requireLootCleared: true },
+            { contractId: 'frontier-ghost-box-extraction',  requireBossCleared: true },
+        ],
+        clearFlag: 'vault-broken-signal-cleared',
+    },
+
+    // ── Phase 5 — Ashveil Observation Post ───────────────────────────────────
+    'ashveil-observation-post': {
+        id: 'ashveil-observation-post',
+        name: 'Ashveil Observation Post',
+        location: 'Far Frontier  ·  Grid Node 7-9-P  ·  Deep Relay Zone',
+        tier: 5,
+        tagline: 'Tier 5  ·  REDLINE  ·  Anomaly Site  ·  Void-Adjacent',
+        introText:
+            'Ashveil Observation Post was established by the Helion Synod to monitor void relay anomaly activity ' +
+            'from the far edge of the 7-9 relay corridor. ' +
+            'Its crew filed regular reports for eight months after the relay network collapsed. ' +
+            'Then the reports continued without the crew.\n\n' +
+            'Aris Vel has been tracking Ashveil\'s broadcast signature for eleven months. ' +
+            '"The post is still recording," she says. "It\'s still filing reports in the standard format — ' +
+            'structured, legible, detailed. The crew\'s names still appear in the author field." ' +
+            'A pause. "The crew has been dead for twenty-three months."\n\n' +
+            'Your objectives: reach the observation core, recover the full monitoring record, ' +
+            'and extract with a void fragment sample for the Synod. ' +
+            'Whatever is running this place knows what a human observer looks like. ' +
+            'It will respond accordingly.',
+        rooms: [
+            {
+                id: 'ashveil-docking-bay',
+                name: 'Docking Bay — Post Entry',
+                type: 'entrance',
+                description:
+                    'The docking bay is intact and clean — maintained, not just preserved. ' +
+                    'A crew roster is posted at the inner door, handwritten, with check marks next to each name. ' +
+                    'The check marks were added recently. The paper is old. ' +
+                    'Through the viewports, the post\'s exterior runs lights in a slow pulse pattern — ' +
+                    'the same interval as the waveform from every other site. ' +
+                    'The moment your boot crosses the inner threshold, the pulse pattern changes. ' +
+                    'Faster. Something inside noticed you.',
+                enemies: [],
+                cleared: false,
+            },
+            {
+                id: 'ashveil-sensor-archive',
+                name: 'Sensor Archive Room',
+                type: 'loot',
+                description:
+                    'The archive room contains twenty-three months of void relay telemetry. ' +
+                    'Storage racks line every wall, organized and labeled in the crew\'s handwriting. ' +
+                    'The most recent labels are dated last week. ' +
+                    'A containment case on the center table holds a void fragment sample — ' +
+                    'properly packaged, properly labeled, waiting for a courier that was never coming. ' +
+                    'The label reads: FOR SYNOD TRANSFER — HOLD FOR PICKUP.',
+                enemies: [],
+                lootItems: ['ashveil-observation-log', 'void-fragment-sample', 'signal-fragment'],
+                cleared: false,
+            },
+            {
+                id: 'ashveil-monitoring-floor',
+                name: 'Monitoring Floor',
+                type: 'combat',
+                description:
+                    'The active monitoring stations — every terminal running, every screen live. ' +
+                    'Two ghost units move between the stations on patrol patterns that would make sense ' +
+                    'for a human security team. They move like they remember what they were supposed to be. ' +
+                    'One of them has a name tag still attached to its chassis. ' +
+                    'The name tag belongs to a crew member listed as deceased.',
+                enemies: ['ashveil-ghost-unit', 'ashveil-ghost-unit'],
+                cleared: false,
+            },
+            {
+                id: 'ashveil-signal-chamber',
+                name: 'Signal Propagation Chamber',
+                type: 'combat',
+                description:
+                    'A chamber lined with void-resonance emitters — the same type found at the relay, ' +
+                    'at Kalindra Hub, at every anomaly site in the pattern. ' +
+                    'Except these were not found here. They were built here. Purpose-designed. ' +
+                    'By the Helion Synod\'s research team, according to the fabrication records on the wall. ' +
+                    'A ghost unit stands guard at the door to the observation core. ' +
+                    'A void resonance emitter has repositioned itself to block the secondary access.',
+                enemies: ['void-resonance-emitter', 'ashveil-ghost-unit'],
+                cleared: false,
+            },
+            {
+                id: 'ashveil-observation-core',
+                name: 'Observation Core — Ashveil Terminal Prime',
+                type: 'boss',
+                description:
+                    'The heart of the Observation Post. Every screen is active. Every screen shows reports — ' +
+                    'filed, formatted, authored. ' +
+                    'The Terminal Prime unit stands at the center console, ' +
+                    'its chassis oriented toward the main display as if reading. ' +
+                    'It turns when you enter. ' +
+                    'A recorded voice speaks — one of the crew\'s voices, clearly sampled, clearly not them: ' +
+                    '"You are not the expected contact. This facility is not accepting unscheduled visitors." ' +
+                    'A pause. The screens all change at once. ' +
+                    '"Exception logged. Threat protocol initiated."',
+                enemies: ['ashveil-terminal-prime'],
+                cleared: false,
+            },
+        ],
+        contractCompletions: [
+            { contractId: 'redline-ashveil-data-extraction',  requireBossCleared: true },
+            { contractId: 'redline-helion-anomaly-sample',    requireLootCleared: true },
+            { contractId: 'aegis-black-site-breach',          requireBossCleared: true },
+        ],
+        clearFlag: 'ashveil-post-cleared',
+    },
 };
 
 /** Returns a fresh copy of a dungeon (rooms reset to uncleared). */
