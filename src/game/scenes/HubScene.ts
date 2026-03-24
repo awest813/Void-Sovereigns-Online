@@ -163,6 +163,22 @@ const DIALOGUE_LINE_HEIGHT       = 80;   // px per NPC dialogue row
 const DIALOGUE_VIEWPORT_TOP      = 260;  // y where the masked dialogue area begins
 const DIALOGUE_VIEWPORT_HEIGHT   = 316;  // visible height of the dialogue clip region
 const DIALOGUE_SCROLL_SPEED      = 0.3;  // wheel-delta multiplier for NPC dialogue scroll
+const CODEX_SCROLL_SPEED         = 0.3;  // wheel-delta multiplier for codex scroll
+
+// Ghost-site contract IDs — only visible when kael-questline-stage-2 flag is set
+const GHOST_SITE_CONTRACT_IDS = new Set(['ghost-site-ica-recovery', 'ghost-site-covenant-witness']);
+
+// Lore entries unlocked when specific contracts are turned in
+const CONTRACT_LORE_UNLOCKS: Record<string, string[]> = {
+    'kael-ping-investigation':      ['kael-personal-record'],
+    'kael-zero-second-expedition':  ['transit-node-zero-approach', 'transit-zero-interior-partial'],
+    'ghost-site-ica-recovery':      ['ica-relay-archive-fragment', 'null-architect-encounter-report'],
+    'ghost-site-covenant-witness':  ['covenant-field-report-tovan', 'null-architect-encounter-report'],
+    'farpoint-archive-lore-pull':   ['farpoint-ops-log-month-14'],
+    'aegis-farpoint-audit':         ['vorren-zero-second-analysis'],
+    'void-covenant-signal-trace':   ['covenant-field-report-tovan'],
+    'ica-relay-lockdown':           ['ica-relay-archive-fragment'],
+};
 
 export class HubScene extends Scene {
     private panels: Map<string, Phaser.GameObjects.Container> = new Map();
@@ -534,9 +550,6 @@ export class HubScene extends Scene {
         const relayJumped = GameState.getFlag('relay-jump-completed');
         const kaelStage2 = GameState.getFlag('kael-questline-stage-2');
 
-        // Ghost-site contract IDs — only visible when Kael questline stage 2 is unlocked
-        const GHOST_SITE_CONTRACT_IDS = new Set(['ghost-site-ica-recovery', 'ghost-site-covenant-witness']);
-
         const contracts = allContracts.filter(ct =>
             BOARD_CONTRACT_IDS.includes(ct.id) &&
             (!POST_RELAY_CONTRACT_IDS.has(ct.id) || relayJumped) &&
@@ -707,16 +720,6 @@ export class HubScene extends Scene {
                         GameState.setFlag('farpoint-archive-pulled', true);
                     }
                     // ── Phase 6: lore unlocks ─────────────────────────────
-                    const CONTRACT_LORE_UNLOCKS: Record<string, string[]> = {
-                        'kael-ping-investigation':      ['kael-personal-record'],
-                        'kael-zero-second-expedition':  ['transit-node-zero-approach', 'transit-zero-interior-partial'],
-                        'ghost-site-ica-recovery':      ['ica-relay-archive-fragment', 'null-architect-encounter-report'],
-                        'ghost-site-covenant-witness':  ['covenant-field-report-tovan', 'null-architect-encounter-report'],
-                        'farpoint-archive-lore-pull':   ['farpoint-ops-log-month-14'],
-                        'aegis-farpoint-audit':         ['vorren-zero-second-analysis'],
-                        'void-covenant-signal-trace':   ['covenant-field-report-tovan'],
-                        'ica-relay-lockdown':           ['ica-relay-archive-fragment'],
-                    };
                     const loreUnlocks = CONTRACT_LORE_UNLOCKS[ct.id];
                     if (loreUnlocks) {
                         for (const loreId of loreUnlocks) {
@@ -1094,7 +1097,7 @@ export class HubScene extends Scene {
             }).setOrigin(0.5));
 
             this._codexScrollHandler = (_pointer: unknown, _gameObjects: unknown, _deltaX: unknown, deltaY: unknown) => {
-                codexScrollY = Math.max(0, Math.min(maxScroll, codexScrollY + (deltaY as number) * DIALOGUE_SCROLL_SPEED));
+                codexScrollY = Math.max(0, Math.min(maxScroll, codexScrollY + (deltaY as number) * CODEX_SCROLL_SPEED));
                 scrollCt.setY(-codexScrollY);
             };
             this.input.on('wheel', this._codexScrollHandler);
