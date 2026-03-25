@@ -1,7 +1,7 @@
 import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
 import { GameState, InventoryItem } from '../state/GameState';
-import { ENEMIES, EnemyDef, rollLoot, rollCredits } from '../data/enemies';
+import { ENEMIES, EnemyDef, EnemySpecialAbility, rollLoot, rollCredits } from '../data/enemies';
 import { ITEMS } from '../data/items';
 import { DUNGEON_REGISTRY as _DUNGEON_REGISTRY, DungeonDef, Room, loadDungeon } from '../data/dungeons';
 import { starterContracts } from '../../../content/contracts/starter-contracts';
@@ -50,6 +50,8 @@ const HIGH_TIER_ATTACK_THRESHOLD = 35;
 const HIGH_TIER_CRIT_CHANCE = 0.08;
 /** Enemy crit chance for standard-tier enemies. */
 const NORMAL_ENEMY_CRIT_CHANCE = 0.05;
+/** Attack damage multiplier when the player is DISRUPTED (reduces output by 30%). */
+const DISRUPTED_ATTACK_MULT = 0.70;
 /**
  * Returns the combat damage reduction provided by the pilot's shielding upgrades.
  * Each 4 points of shielding blocks 1 point of damage.
@@ -68,6 +70,18 @@ type DungeonPhase =
     | 'complete'
     | 'dead';
 
+/** A persistent status effect applied to the player during combat. */
+interface PlayerStatusEffect {
+    type: 'burning' | 'disrupted';
+    /** Remaining turns this effect lasts. */
+    turnsLeft: number;
+    /**
+     * For burning: HP damage dealt at the start of each player action.
+     * For disrupted: unused (reduction percentage is a fixed constant).
+     */
+    value: number;
+}
+
 interface CombatState {
     enemies: Array<EnemyDef & { currentHp: number }>;
     enemyIndex: number;   // which enemy is active
@@ -75,6 +89,16 @@ interface CombatState {
     playerDodging: boolean;
     /** True once a boss drops below 33% HP — increases damage output. */
     bossEnrageActive: boolean;
+    /** Status effects currently active on the player (burning, disrupted). */
+    playerStatus: PlayerStatusEffect[];
+    /** True when the current enemy has triggered its special and is charging — fires next turn. */
+    enemyCharging: boolean;
+    /** True once the current enemy's special has already been triggered this combat. */
+    enemySpecialUsed: boolean;
+    /** True once the player has used SCAN on the current enemy this combat. */
+    enemyScanned: boolean;
+    /** Total HP damage dealt to the player during this combat room (used for flawless detection). */
+    damageTakenThisRoom: number;
 }
 
 export class DungeonScene extends Scene {
@@ -426,8 +450,25 @@ export class DungeonScene extends Scene {
 
         if (room.type === 'entrance') {
             this.addActionButton(512, 500, '[ ADVANCE ]', () => this.enterRoom(idx + 1));
-        } else if (room.type === 'loot' || room.type === 'hazard') {
+        } else if (room.type === 'loot') {
             this.addActionButton(512, 500, '[ SEARCH ROOM ]', () => this.showLootRoom(room));
+        } else if (room.type === 'hazard') {
+            const hazardDamage = room.hazardDamage ?? 15;
+            const lootNames = (room.lootItems ?? []).map(id => ITEMS[id]?.name ?? id).join(', ');
+            this.addContentText(512, 390, `⚠ ENVIRONMENTAL HAZARD — Breaching this zone costs ${hazardDamage} pilot HP`, {
+                fontFamily: 'Arial', fontSize: 13, color: C.textDanger, align: 'center',
+            }).setOrigin(0.5);
+            if (lootNames) {
+                this.addContentText(512, 412, `Potential salvage: ${lootNames}`, {
+                    fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+                }).setOrigin(0.5);
+            }
+            this.addActionButton(340, 500, '[ BYPASS — ADVANCE SAFELY ]', () => {
+                if (idx + 1 < this.rooms.length) this.enterRoom(idx + 1);
+                else this.showCompletion();
+            }, C.textSecond);
+            this.addActionButton(720, 500, `[ BRAVE HAZARD (−${hazardDamage} HP) ]`,
+                () => this.showHazardRoom(room), C.textWarn);
         } else if (room.type === 'combat' || room.type === 'boss') {
             const enemyNames = room.enemies.map(e => ENEMIES[e]?.name ?? e).join(', ');
             this.addContentText(512, 390, `THREATS DETECTED: ${enemyNames}`, {
@@ -474,7 +515,68 @@ export class DungeonScene extends Scene {
         });
     }
 
-    // ── Combat ────────────────────────────────────────────────────────────
+    /**
+     * Player chose to brave a hazard room: apply environmental damage, collect loot.
+     * Sets room.cleared = true so requireLootCleared contracts count this room.
+     */
+    private showHazardRoom(room: Room) {
+        const hazardDamage = room.hazardDamage ?? 15;
+        GameState.damagePilot(hazardDamage);
+        this.buildHeader();
+
+        // Check if the hazard killed the player
+        if (GameState.get().pilotHull <= 0) {
+            this.phase = 'dead';
+            this.clearContent();
+            this.showDeathScreen();
+            return;
+        }
+
+        this.clearContent();
+
+        this.contentContainer.add(
+            this.add.rectangle(512, 330, 900, 400, C.panelBg).setStrokeStyle(1, C.border),
+        );
+
+        this.addContentText(512, 130, 'HAZARD BREACHED', {
+            fontFamily: 'Arial Black', fontSize: 22, color: C.textWarn, align: 'center',
+        }).setOrigin(0.5);
+
+        this.addContentText(512, 162,
+            `Environmental damage: −${hazardDamage} HP  ·  Pilot HP: ${GameState.get().pilotHull}/${GameState.get().pilotMaxHull}`,
+        {
+            fontFamily: 'Arial', fontSize: 13, color: C.textDanger, align: 'center',
+        }).setOrigin(0.5);
+
+        this.addContentText(512, 192, 'SALVAGE RECOVERED:', {
+            fontFamily: 'Arial Black', fontSize: 14, color: C.textSuccess, align: 'center',
+        }).setOrigin(0.5);
+
+        const lootItems = room.lootItems ?? [];
+        let yOff = 220;
+        lootItems.forEach(itemId => {
+            const def = ITEMS[itemId];
+            if (!def) return;
+            const item: InventoryItem = { id: def.id, name: def.name, qty: 1, type: def.type, value: def.value };
+            this.runLoot.push(item);
+            this.addContentText(220, yOff, `  ◆ ${def.name}  (${def.value}c value)`, {
+                fontFamily: 'Arial', fontSize: 14, color: C.textPrimary,
+            });
+            yOff += 28;
+        });
+
+        room.cleared = true;
+
+        this.addActionButton(512, 560, '[ CONTINUE ]', () => {
+            if (this.currentRoomIdx + 1 < this.rooms.length) {
+                this.enterRoom(this.currentRoomIdx + 1);
+            } else {
+                this.showCompletion();
+            }
+        });
+    }
+
+
     private startCombat(room: Room) {
         this.phase = 'combat';
         const enemyDefs = room.enemies
@@ -488,6 +590,11 @@ export class DungeonScene extends Scene {
             log: [],
             playerDodging: false,
             bossEnrageActive: false,
+            playerStatus: [],
+            enemyCharging: false,
+            enemySpecialUsed: false,
+            enemyScanned: false,
+            damageTakenThisRoom: 0,
         };
 
         const firstEnemy = this.combat.enemies[0];
@@ -507,10 +614,13 @@ export class DungeonScene extends Scene {
             this.add.rectangle(512, 360, 1000, 580, C.panelBg).setStrokeStyle(1, C.border),
         );
 
-        // Enemy block
-        const enemyHpPct = enemy.currentHp / enemy.hp;
-        const enrageColor = cb.bossEnrageActive ? '#ff2222' : C.textDanger;
-        this.addContentText(512, 82, enemy.name.toUpperCase(), {
+        // Enemy name — highlight when charging
+        const isCharging = cb.enemyCharging;
+        const enrageColor = cb.bossEnrageActive ? '#ff2222' : (isCharging ? '#ff6622' : C.textDanger);
+        const enemyDisplayName = isCharging
+            ? `${enemy.name.toUpperCase()} — ⚠ CHARGING!`
+            : enemy.name.toUpperCase();
+        this.addContentText(512, 82, enemyDisplayName, {
             fontFamily: 'Arial Black', fontSize: 18, color: enrageColor, align: 'center',
         }).setOrigin(0.5);
 
@@ -519,6 +629,7 @@ export class DungeonScene extends Scene {
         }).setOrigin(0.5);
 
         // Enemy HP bar
+        const enemyHpPct = enemy.currentHp / enemy.hp;
         this.contentContainer.add(this.add.rectangle(512, 130, 360, 16, 0x130a08).setStrokeStyle(1, C.border));
         this.contentContainer.add(this.add.rectangle(
             332 + (enemyHpPct * 360) / 2, 130,
@@ -533,6 +644,14 @@ export class DungeonScene extends Scene {
             const remaining = cb.enemies.filter(e => e.currentHp > 0).length;
             this.addContentText(512, 152, `${remaining} threat${remaining !== 1 ? 's' : ''} remaining in room`, {
                 fontFamily: 'Arial', fontSize: 11, color: C.textSecond, align: 'center',
+            }).setOrigin(0.5);
+        }
+
+        // Charging special warning
+        if (isCharging) {
+            const spec = (enemy as EnemyDef & { specialAbility?: EnemySpecialAbility }).specialAbility;
+            this.addContentText(512, 168, `⚠  ${spec?.name ?? 'SPECIAL ATTACK'} INCOMING — use Anomaly Kit or act wisely!`, {
+                fontFamily: 'Arial Black', fontSize: 12, color: '#ff4422', align: 'center',
             }).setOrigin(0.5);
         }
 
@@ -587,18 +706,55 @@ export class DungeonScene extends Scene {
             fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
         });
 
-        // ── Action buttons ──────────────────────────────────────────────
-        const actionY = 420;
+        // Active player status effects
+        if (cb.playerStatus.length > 0) {
+            const parts = cb.playerStatus.map(s => {
+                if (s.type === 'burning')   return `🔥 BURNING ${s.value} dmg/turn (${s.turnsLeft}t)`;
+                if (s.type === 'disrupted') return `⚡ DISRUPTED −30% ATK (${s.turnsLeft}t)`;
+                return '';
+            }).filter(Boolean);
+            this.addContentText(80, 392, `STATUS: ${parts.join('  |  ')}`, {
+                fontFamily: 'Arial', fontSize: 12, color: '#ff8844',
+            });
+        }
+
+        // ── Action buttons (shifted down to accommodate status row) ──────────
+        const actionY = 440;
         this.addActionButton(180, actionY, '[ ATTACK ]', () => this.combatAttack(), C.textDanger);
         this.addActionButton(380, actionY, '[ DODGE ]', () => this.combatDodge(), C.textWarn);
         this.addActionButton(570, actionY, '[ USE MED KIT ]', () => this.combatUseItem('medical-kit'),
             medKits > 0 ? C.textSuccess : C.textSecond, medKits === 0);
         this.addActionButton(780, actionY, '[ USE REPAIR KIT ]', () => this.combatUseItem('repair-kit'),
             repairKits > 0 ? C.textAccent : C.textSecond, repairKits === 0);
-        this.addActionButton(512, actionY + 52, '[ USE ANOMALY KIT ]', () => this.combatUseItem('anomaly-field-kit'),
+
+        this.addActionButton(350, actionY + 50, '[ USE ANOMALY KIT ]', () => this.combatUseItem('anomaly-field-kit'),
             anomalyKits > 0 ? '#88ddff' : C.textSecond, anomalyKits === 0);
+        this.addActionButton(700, actionY + 50, '[ SCAN TARGET ]', () => this.combatScan(), C.textAccent);
 
         this.addActionButton(512, actionY + 104, '[ EMERGENCY RETREAT ]', () => this.doRetreat(), '#445566');
+    }
+
+    /**
+     * Processes burning and other persistent status effects at the start of the
+     * player's turn, BEFORE their chosen action resolves.
+     * @returns true if the player died from status-effect damage (caller should return early).
+     */
+    private processPlayerTurnStart(): boolean {
+        const cb = this.combat!;
+        const burning = cb.playerStatus.find(s => s.type === 'burning');
+        if (burning) {
+            GameState.damagePilot(burning.value);
+            cb.damageTakenThisRoom += burning.value;
+            cb.log.push(`🔥 BURNING — ${burning.value} damage. Pilot HP: ${GameState.get().pilotHull}`);
+            burning.turnsLeft--;
+            if (burning.turnsLeft <= 0) {
+                cb.playerStatus = cb.playerStatus.filter(s => s.type !== 'burning');
+                cb.log.push('Burning cleared.');
+            }
+            this.buildHeader();
+            if (this.checkPlayerDeath()) return true;
+        }
+        return false;
     }
 
     private combatAttack() {
@@ -606,15 +762,29 @@ export class DungeonScene extends Scene {
         const enemy = cb.enemies[cb.enemyIndex];
         const gs = GameState.get();
 
+        if (this.processPlayerTurnStart()) return;
+
+        // Apply DISRUPTED penalty if active (reduces attack output by 30%)
+        const disrupted = cb.playerStatus.find(s => s.type === 'disrupted');
+        const disruptMult = disrupted ? DISRUPTED_ATTACK_MULT : 1.0;
+        if (disrupted) {
+            disrupted.turnsLeft--;
+            if (disrupted.turnsLeft <= 0) {
+                cb.playerStatus = cb.playerStatus.filter(s => s.type !== 'disrupted');
+                cb.log.push('Disruption cleared — attack effectiveness restored.');
+            }
+        }
+
         // Player attack — base damage scales +PLAYER_LEVEL_DAMAGE_BONUS per level above 1
         const levelBonus = (gs.level - 1) * PLAYER_LEVEL_DAMAGE_BONUS;
         const rawRoll = Phaser.Math.Between(PLAYER_BASE_DMG_MIN + levelBonus, PLAYER_BASE_DMG_MAX + levelBonus);
         const isPlayerCrit = Math.random() < PLAYER_CRIT_CHANCE;
-        const playerDmg = Math.max(1, Math.floor(rawRoll * (isPlayerCrit ? CRIT_MULTIPLIER : 1.0)) - enemy.defense);
+        const playerDmg = Math.max(1, Math.floor(rawRoll * (isPlayerCrit ? CRIT_MULTIPLIER : 1.0) * disruptMult) - enemy.defense);
         enemy.currentHp = Math.max(0, enemy.currentHp - playerDmg);
 
         const critPrefix = isPlayerCrit ? '⚡ CRITICAL STRIKE — ' : '';
-        cb.log.push(`${critPrefix}You attack for ${playerDmg} damage. (${enemy.currentHp}/${enemy.hp} HP)`);
+        const disruptSuffix = (disrupted && disruptMult < 1.0) ? ' [disrupted]' : '';
+        cb.log.push(`${critPrefix}You attack for ${playerDmg} damage.${disruptSuffix} (${enemy.currentHp}/${enemy.hp} HP)`);
 
         // Check for boss enrage (boss room, HP drops below BOSS_ENRAGE_THRESHOLD)
         const room = this.rooms[this.currentRoomIdx];
@@ -628,14 +798,24 @@ export class DungeonScene extends Scene {
             return;
         }
 
-        // Enemy counter-attack
-        this.enemyAttack(false);
+        // Enemy turn (handles charging / special execution / normal attack)
+        this.processEnemyTurn();
     }
 
     private combatDodge() {
         const cb = this.combat!;
         const enemy = cb.enemies[cb.enemyIndex];
         const gs = GameState.get();
+
+        if (this.processPlayerTurnStart()) return;
+
+        // If the enemy was charging a special, dodge cannot prevent it from firing.
+        if (cb.enemyCharging) {
+            cb.log.push('You attempt to dodge — but the charged attack cannot be fully avoided!');
+            cb.playerDodging = false;
+            this.processEnemyTurn();
+            return;
+        }
 
         // 15% chance to fully evade the incoming attack
         const isEvade = Math.random() < PERFECT_EVASION_CHANCE;
@@ -646,6 +826,7 @@ export class DungeonScene extends Scene {
             const rawDmg = Phaser.Math.Between(enemy.attackMin, enemy.attackMax);
             const reduced = Math.max(1, Math.floor(rawDmg * 0.35) - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus));
             GameState.damagePilot(reduced);
+            cb.damageTakenThisRoom += reduced;
             cb.log.push(`${enemy.name} attacks for ${reduced} damage (reduced). Pilot HP: ${GameState.get().pilotHull}`);
         }
         cb.playerDodging = false;
@@ -657,6 +838,9 @@ export class DungeonScene extends Scene {
     private combatUseItem(itemId: string) {
         const cb = this.combat!;
         const enemy = cb.enemies[cb.enemyIndex];
+
+        if (this.processPlayerTurnStart()) return;
+
         const item = GameState.useItem(itemId);
         if (!item) return;
 
@@ -672,14 +856,140 @@ export class DungeonScene extends Scene {
         }
 
         // Anomaly Field Kit suppresses the enemy's targeting this turn (no counter-attack)
+        // and cancels any in-progress charge.
         if (itemId === 'anomaly-field-kit') {
-            cb.log.push(`Signal disruption from ${item.name} — ${enemy.name} targeting suppressed this turn.`);
+            if (cb.enemyCharging) {
+                cb.enemyCharging = false;
+                cb.log.push(`⚡ Signal disruption — ${enemy.name}'s charged special CANCELLED.`);
+            } else {
+                cb.log.push(`Signal disruption from ${item.name} — ${enemy.name} targeting suppressed this turn.`);
+            }
             this.buildHeader();
             if (!this.checkPlayerDeath()) this.renderCombat();
         } else {
             // Enemy still attacks
-            this.enemyAttack(false);
+            this.processEnemyTurn();
         }
+    }
+
+    /**
+     * Decides what the enemy does on its turn:
+     * - Executes the queued special attack if charging.
+     * - Triggers a new charge if HP is below the special threshold (enemy skips attack).
+     * - Falls back to a normal attack.
+     */
+    private processEnemyTurn() {
+        const cb = this.combat!;
+        const enemy = cb.enemies[cb.enemyIndex];
+        const spec = (enemy as EnemyDef & { specialAbility?: EnemySpecialAbility }).specialAbility;
+
+        // Fire the queued special — spec is guaranteed because enemyCharging is only set
+        // when spec exists (see the trigger check below). Guard defensively in case.
+        if (cb.enemyCharging) {
+            cb.enemyCharging = false;
+            if (spec) {
+                this.enemySpecialAttack(spec);
+            } else {
+                this.enemyAttack(false);
+            }
+            return;
+        }
+
+        // Check if the special should trigger now
+        if (spec && !cb.enemySpecialUsed && enemy.currentHp > 0 && enemy.currentHp / enemy.hp < spec.triggerHpPct) {
+            cb.enemySpecialUsed = true;
+            cb.enemyCharging = true;
+            cb.log.push(`⚠  ${enemy.name}: ${spec.chargeMsg}`);
+            this.buildHeader();
+            this.renderCombat();
+            return; // Enemy charges this turn — no normal attack
+        }
+
+        this.enemyAttack(false);
+    }
+
+    /** Fires the enemy's telegraphed special attack and applies any status effect. */
+    private enemySpecialAttack(spec: EnemySpecialAbility) {
+        const cb = this.combat!;
+        const enemy = cb.enemies[cb.enemyIndex];
+        const gs = GameState.get();
+
+        const rawDmg = Phaser.Math.Between(enemy.attackMin, enemy.attackMax);
+        const enrageMult = cb.bossEnrageActive ? BOSS_ENRAGE_MULTIPLIER : 1.0;
+        const dmg = Math.max(1,
+            Math.floor(rawDmg * spec.damageMult * enrageMult)
+            - 2
+            - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus),
+        );
+        GameState.damagePilot(dmg);
+        cb.damageTakenThisRoom += dmg;
+
+        cb.log.push(`💥 ${enemy.name}: ${spec.executeMsg} — ${dmg} damage!`);
+
+        // Apply status effect
+        if (spec.appliesEffect) {
+            const existing = cb.playerStatus.find(s => s.type === spec.appliesEffect);
+            if (existing) {
+                // Refresh / extend the duration
+                existing.turnsLeft = Math.max(existing.turnsLeft, spec.effectTurns ?? 2);
+            } else {
+                cb.playerStatus.push({
+                    type: spec.appliesEffect,
+                    turnsLeft: spec.effectTurns ?? 2,
+                    value: spec.effectValue ?? 8,
+                });
+            }
+            const effectLabel = spec.appliesEffect === 'burning'
+                ? `🔥 BURNING applied — ${spec.effectValue ?? 8} dmg/turn for ${spec.effectTurns ?? 2} turns`
+                : `⚡ DISRUPTED applied — attacks weakened for ${spec.effectTurns ?? 2} turns`;
+            cb.log.push(effectLabel);
+        }
+
+        this.buildHeader();
+        if (!this.checkPlayerDeath()) this.renderCombat();
+    }
+
+    /**
+     * SCAN action: reveals detailed enemy intel in the combat log.
+     * The enemy fires back at 50% damage (player is distracted by scanning).
+     */
+    private combatScan() {
+        const cb = this.combat!;
+        const enemy = cb.enemies[cb.enemyIndex];
+        const gs = GameState.get();
+
+        if (this.processPlayerTurnStart()) return;
+
+        const spec = (enemy as EnemyDef & { specialAbility?: EnemySpecialAbility }).specialAbility;
+        const hpPct = enemy.currentHp / enemy.hp;
+        const nearEnrage = this.rooms[this.currentRoomIdx].type === 'boss'
+            && !cb.bossEnrageActive
+            && hpPct < BOSS_ENRAGE_THRESHOLD + 0.15;
+        const nearSpecial = spec && !cb.enemySpecialUsed && hpPct < spec.triggerHpPct + 0.20;
+
+        cb.log.push(`SCAN: ${enemy.name} — ${enemy.currentHp}/${enemy.hp} HP  |  ATK ${enemy.attackMin}–${enemy.attackMax}  |  DEF ${enemy.defense}`);
+        if (spec && !cb.enemySpecialUsed) {
+            cb.log.push(`SCAN: Special — ${spec.name} (triggers below ${Math.round(spec.triggerHpPct * 100)}% HP)`);
+        }
+        if (nearEnrage) cb.log.push('SCAN: ⚠ Approaching enrage threshold.');
+        if (nearSpecial && spec) cb.log.push(`SCAN: ⚠ ${spec.name} charge is imminent.`);
+
+        cb.enemyScanned = true;
+
+        // Enemy fires at 50% damage during the scan
+        const rawDmg = Phaser.Math.Between(enemy.attackMin, enemy.attackMax);
+        const enrageMult = cb.bossEnrageActive ? BOSS_ENRAGE_MULTIPLIER : 1.0;
+        const dmg = Math.max(1,
+            Math.floor(rawDmg * 0.5 * enrageMult)
+            - 2
+            - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus),
+        );
+        GameState.damagePilot(dmg);
+        cb.damageTakenThisRoom += dmg;
+        cb.log.push(`${enemy.name} fires during scan — ${dmg} damage (reduced). Pilot HP: ${GameState.get().pilotHull}`);
+
+        this.buildHeader();
+        if (!this.checkPlayerDeath()) this.renderCombat();
     }
 
     private enemyAttack(logOnly: boolean) {
@@ -696,6 +1006,7 @@ export class DungeonScene extends Scene {
 
         const dmg = Math.max(1, Math.floor(rawDmg * (isEnemyCrit ? CRIT_MULTIPLIER : 1.0) * enrageMult) - 2 - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus));
         GameState.damagePilot(dmg);
+        cb.damageTakenThisRoom += dmg;
 
         if (!logOnly) {
             const critLabel = isEnemyCrit ? '  [CRIT]' : '';
@@ -737,10 +1048,13 @@ export class DungeonScene extends Scene {
             cb.log.push(`Loot: ${loot.map(l => l.name).join(', ')}`);
         }
 
-        // Advance to next enemy
+        // Advance to next enemy — reset per-enemy charge/scan state
         const nextEnemy = cb.enemies.find((e, i) => i > cb.enemyIndex && e.currentHp > 0);
         if (nextEnemy) {
             cb.enemyIndex = cb.enemies.indexOf(nextEnemy);
+            cb.enemyCharging = false;
+            cb.enemySpecialUsed = false;
+            cb.enemyScanned = false;
             cb.log.push(`${nextEnemy.name} engages.`);
             this.buildHeader();
             this.renderCombat();
@@ -756,6 +1070,13 @@ export class DungeonScene extends Scene {
         this.clearContent();
         const room = this.rooms[this.currentRoomIdx];
 
+        // Flawless room bonus: no damage taken during this combat
+        const flawless = (this.combat?.damageTakenThisRoom ?? 1) === 0;
+        const flawlessBonus = 25;
+        if (flawless) {
+            this.runCredits += flawlessBonus;
+        }
+
         this.contentContainer.add(
             this.add.rectangle(512, 330, 900, 400, C.panelBg).setStrokeStyle(1, C.border),
         );
@@ -767,16 +1088,25 @@ export class DungeonScene extends Scene {
             fontFamily: 'Arial Black', fontSize: 22, color: C.textSuccess, align: 'center',
         }).setOrigin(0.5);
 
-        this.addContentText(512, 162, `+${this.runCredits}c total  ·  +${this.runXp} XP this run`, {
+        // Flawless badge
+        if (flawless) {
+            this.addContentText(512, 158, `★ FLAWLESS — No damage taken! +${flawlessBonus}c bonus`, {
+                fontFamily: 'Arial Black', fontSize: 13, color: '#ffdd44', align: 'center',
+            }).setOrigin(0.5);
+        }
+
+        const creditY = flawless ? 178 : 162;
+        this.addContentText(512, creditY, `+${this.runCredits}c total  ·  +${this.runXp} XP this run`, {
             fontFamily: 'Arial', fontSize: 14, color: C.textWarn, align: 'center',
         }).setOrigin(0.5);
 
         if (this.runLoot.length > 0) {
-            this.addContentText(200, 200, 'LOOT COLLECTED THIS RUN:', {
+            const lootY = flawless ? 216 : 200;
+            this.addContentText(200, lootY, 'LOOT COLLECTED THIS RUN:', {
                 fontFamily: 'Arial Black', fontSize: 13, color: C.textPrimary,
             });
             this.runLoot.forEach((item, i) => {
-                this.addContentText(200, 224 + i * 22, `  ◆ ${item.name}  ×${item.qty}`, {
+                this.addContentText(200, lootY + 24 + i * 22, `  ◆ ${item.name}  ×${item.qty}`, {
                     fontFamily: 'Arial', fontSize: 13, color: C.textPrimary,
                 });
             });

@@ -11,6 +11,11 @@ export interface Room {
     enemies: string[];
     /** Item IDs always found in loot/hazard rooms. */
     lootItems?: string[];
+    /**
+     * HP damage dealt to the pilot when the player braves a hazard room
+     * instead of bypassing it. Defaults to 15 if omitted.
+     */
+    hazardDamage?: number;
     cleared: boolean;
 }
 
@@ -919,6 +924,7 @@ export const DUNGEON_REGISTRY: Record<string, DungeonDef> = {
                     'Intermittent decompression vents along a narrow spine corridor. Movement windows are brief.',
                 enemies: ['voidclass-shepherd'],
                 lootItems: ['transit-key-fragment'],
+                hazardDamage: 18,
                 cleared: false,
             },
             {
