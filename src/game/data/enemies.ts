@@ -847,6 +847,73 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'threshold-resonance-record',  chance: 0.8, qty: 2 },
         ],
     },
+
+    // ── Phase 11: Origin Node enemies ─────────────────────────────────────
+    'origin-node-echo': {
+        id: 'origin-node-echo',
+        name: 'Origin Echo',
+        description: 'A residual enforcement fragment from one of the forty-one civilizations that entered the Origin Node and did not reach the terminal. Centuries of unattended operation have left it unstable but active — a record that was never completed, still trying to be.',
+        hp: 175,
+        attackMin: 36,
+        attackMax: 56,
+        defense: 13,
+        xpReward: 160,
+        creditDropMin: 100,
+        creditDropMax: 170,
+        lootPool: [
+            { itemId: 'origin-cycle-fragment',     chance: 0.42, qty: 1 },
+            { itemId: 'signal-fragment',           chance: 0.28, qty: 1 },
+        ],
+    },
+    'origin-node-arbiter': {
+        id: 'origin-node-arbiter',
+        name: 'Origin Arbiter',
+        description: 'An enforcement construct from the first cycles — built before the Architect had operational data on how civilizations approach secured sites. Its protocol is older than any known Architect enforcement architecture and has run without update for centuries.',
+        hp: 315,
+        attackMin: 50,
+        attackMax: 76,
+        defense: 25,
+        xpReward: 255,
+        creditDropMin: 160,
+        creditDropMax: 255,
+        lootPool: [
+            { itemId: 'origin-cycle-fragment',     chance: 0.38, qty: 1 },
+            { itemId: 'origin-node-access-token',  chance: 0.18, qty: 1 },
+        ],
+    },
+    'origin-node-guardian': {
+        id: 'origin-node-guardian',
+        name: 'Origin Guardian',
+        description: 'A heavy corridor sentinel built to protect the first-record terminal. Older and less refined than threshold constructs, it compensates with raw durability — centuries of continuous operation have not degraded its structural integrity, only its predictability.',
+        hp: 415,
+        attackMin: 56,
+        attackMax: 86,
+        defense: 31,
+        xpReward: 335,
+        creditDropMin: 210,
+        creditDropMax: 360,
+        lootPool: [
+            { itemId: 'origin-node-access-token',  chance: 0.28, qty: 1 },
+            { itemId: 'origin-cycle-fragment',     chance: 0.45, qty: 1 },
+        ],
+    },
+    'origin-node-apex': {
+        id: 'origin-node-apex',
+        name: 'Origin Apex',
+        description: 'The record-keeping construct for the first cycle entry. It is not protecting the record from outside — it IS the record, manifested as enforcement. The Null Architect\'s original decision: that unknown is not acceptable. It has been waiting for a witness for centuries.',
+        hp: 820,
+        attackMin: 70,
+        attackMax: 108,
+        defense: 40,
+        xpReward: 720,
+        creditDropMin: 580,
+        creditDropMax: 940,
+        lootPool: [
+            { itemId: 'architect-origin-seal',     chance: 1.0, qty: 1 },
+            { itemId: 'first-record-extract',      chance: 0.9, qty: 1 },
+            { itemId: 'origin-cycle-fragment',     chance: 0.8, qty: 2 },
+        ],
+    },
 };
 
 /** Roll loot from an enemy's loot pool. Returns InventoryItem-shaped objects. */
@@ -904,6 +971,11 @@ export function rollLoot(enemyId: string): Array<{ id: string; name: string; qty
         'threshold-resonance-record': { name: 'Threshold Resonance Record', type: 'key',     value: 620 },
         'forced-sovereignty-record':  { name: 'Forced Sovereignty Record',  type: 'key',     value: 780 },
         'sealed-cycle-record':        { name: 'Sealed Cycle Record',        type: 'key',     value: 900 },
+        // Phase 11 items
+        'origin-cycle-fragment':      { name: 'Origin Cycle Fragment',      type: 'salvage', value: 460 },
+        'first-record-extract':       { name: 'First Record Extract',       type: 'key',     value: 650 },
+        'origin-node-access-token':   { name: 'Origin Node Access Token',   type: 'key',     value: 520 },
+        'architect-origin-seal':      { name: 'Architect Origin Seal',      type: 'key',     value: 1100 },
     };
 
     for (const entry of enemy.lootPool) {

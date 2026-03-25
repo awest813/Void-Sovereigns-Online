@@ -135,4 +135,14 @@ export const T = {
     sovereignText:     '#c8960a',
     /** Sovereign Threshold dim text — muted amber. */
     sovereignTextDim:  '#906800',
+
+    // ── Origin Node — Null Architect first record site (Phase 11) ─────────
+    /** Origin Node panel background — near-black with rust undertone. */
+    originPanelBg:  0x080400,
+    /** Origin Node border — deep rust-copper. */
+    originBorder:   0x5c2200,
+    /** Origin Node label text — warm copper. */
+    originText:     '#c06020',
+    /** Origin Node dim text — muted dark copper. */
+    originTextDim:  '#8a4418',
 } as const;
