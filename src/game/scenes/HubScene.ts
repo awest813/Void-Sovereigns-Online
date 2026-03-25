@@ -473,7 +473,7 @@ export class HubScene extends Scene {
         ];
 
         items.forEach((item, i) => {
-            const y = 170 + i * 72;
+            const y = 170 + i * 68;
             c.add(this.add.rectangle(512, y + 18, 420, 60, C.panelBg).setStrokeStyle(1, C.border));
 
             const btn = this.add.text(370, y + 6, item.label, {

@@ -4,14 +4,18 @@ import { MainMenu } from './scenes/MainMenu';
 import { HubScene } from './scenes/HubScene';
 import { SectorMapScene } from './scenes/SectorMapScene';
 import { DungeonScene } from './scenes/DungeonScene';
-import { AUTO, Game } from 'phaser';
+import { AUTO, Game, Scale } from 'phaser';
 
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
-    width: 1024,
-    height: 768,
     parent: 'game-container',
     backgroundColor: '#050510',
+    scale: {
+        mode: Scale.FIT,
+        autoCenter: Scale.CENTER_BOTH,
+        width: 1024,
+        height: 768,
+    },
     scene: [
         Boot,
         Preloader,
