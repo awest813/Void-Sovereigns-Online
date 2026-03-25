@@ -116,4 +116,14 @@ export const T = {
     indexText:     '#3a9878',
     /** Index Chamber dim text — muted dark teal. */
     indexTextDim:  '#2a7058',
+
+    // ── Cycle Archive — Null Architect terminal site (Phase 9) ────────────
+    /** Cycle Archive panel background — deep void-violet black. */
+    cyclePanelBg:  0x070408,
+    /** Cycle Archive border — deep violet. */
+    cycleBorder:   0x3a1858,
+    /** Cycle Archive label text — medium violet. */
+    cycleText:     '#7048a8',
+    /** Cycle Archive dim text — dark violet. */
+    cycleTextDim:  '#583890',
 } as const;

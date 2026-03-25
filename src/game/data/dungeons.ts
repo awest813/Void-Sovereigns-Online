@@ -1022,6 +1022,93 @@ export const DUNGEON_REGISTRY: Record<string, DungeonDef> = {
         ],
         clearFlag: 'index-chamber-cleared',
     },
+
+    // ── Phase 9: Cycle Archive ────────────────────────────────────────────
+    'cycle-archive-sanctum': {
+        id: 'cycle-archive-sanctum',
+        name: 'The Cycle Archive',
+        tier: 5,
+        description:
+            'The Null Architect opened this site forty-eight hours after the Index Chamber was cleared. ' +
+            'The archive contains records of every civilization that has entered this space. ' +
+            'Yours is the forty-second entry. It is currently open.',
+        isRedline: true,
+        introText:
+            'The second approach corridor is even cleaner than the first. ' +
+            'No sensor drift. No hazard variance. The Architect prepared this one too.\n\n' +
+            'The Null Archivist output a single line when you filed the approach: ' +
+            '"YOUR ARRIVAL HAS BEEN LOGGED. TERMINAL WITNESS PROTOCOL IS ACTIVE."\n\n' +
+            'Your objectives: reach the terminal chamber, document the cycle record, and return alive. ' +
+            'The archive enforcement constructs here do not distinguish between observation and extraction. ' +
+            'Proceed accordingly.',
+        rooms: [
+            {
+                id: 'cycle-archive-threshold',
+                name: 'Archive Threshold',
+                type: 'entrance',
+                description:
+                    'The threshold sequence completes before you dock. ' +
+                    'Your vessel\'s registry is already in the approach log. The cycle entry is open.',
+                enemies: [],
+                cleared: false,
+            },
+            {
+                id: 'cycle-archive-outer-hall',
+                name: 'Outer Record Hall',
+                type: 'combat',
+                description:
+                    'Seraph patrol units move into position as you enter the outer hall. ' +
+                    'They respond to record interaction, not presence. ' +
+                    'The outer cycle records are visible on either side of the corridor.',
+                enemies: ['cycle-archive-seraph', 'cycle-archive-seraph'],
+                cleared: false,
+            },
+            {
+                id: 'cycle-archive-record-annex',
+                name: 'Cycle Record Annex',
+                type: 'loot',
+                description:
+                    'A structured annex of open cycle records. ' +
+                    'Each rack is indexed by civilization entry and resolution classification. ' +
+                    'Forty-one entries. The forty-second is marked as pending.',
+                enemies: [],
+                lootItems: ['cycle-record-fragment', 'archive-classification-core', 'cycle-terminal-record'],
+                cleared: false,
+            },
+            {
+                id: 'cycle-archive-restricted-tier',
+                name: 'Restricted Terminal Tier',
+                type: 'combat',
+                description:
+                    'The restricted tier threshold. An Arbiter and an Executor hold the corridor. ' +
+                    'Beyond them is the terminal chamber. ' +
+                    'The two cycle entries marked ENFORCEMENT ACTION REQUIRED are in there.',
+                enemies: ['cycle-archive-arbiter', 'cycle-archive-executor'],
+                cleared: false,
+            },
+            {
+                id: 'cycle-archive-terminal',
+                name: 'Cycle Archive Terminal — Warden',
+                type: 'boss',
+                description:
+                    'The terminal chamber. The Warden is already active — it does not escalate. ' +
+                    'The terminal record is behind it. The cycle entry for this civilization is in there too. ' +
+                    'The Warden does not have a deescalation threshold in this chamber.',
+                enemies: ['cycle-archive-warden'],
+                cleared: false,
+            },
+        ],
+        contractCompletions: [
+            { contractId: 'frontier-cycle-approach-survey',      requireAnyProgress: true },
+            { contractId: 'synod-cycle-cognitive-record',        requireLootCleared: true },
+            { contractId: 'covenant-cycle-archive-recovery',     requireAnyProgress: true },
+            { contractId: 'ica-cycle-jurisdiction',              requireAnyProgress: true },
+            { contractId: 'aegis-cycle-archive-scout',           requireAnyProgress: true },
+            { contractId: 'redline-cycle-archive-forced-access', requireBossCleared: true },
+            { contractId: 'redline-cycle-record-terminal',       requireBossCleared: true },
+        ],
+        clearFlag: 'cycle-archive-cleared',
+    },
 };
 
 /** Returns a fresh copy of a dungeon (rooms reset to uncleared). */

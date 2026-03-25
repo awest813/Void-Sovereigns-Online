@@ -9,16 +9,19 @@ import { phase5Contracts } from '../../../content/contracts/phase5-contracts';
 import { phase6Contracts } from '../../../content/contracts/phase6-contracts';
 import { phase7Contracts } from '../../../content/contracts/phase7-contracts';
 import { phase8Contracts } from '../../../content/contracts/phase8-contracts';
+import { phase9Contracts } from '../../../content/contracts/phase9-contracts';
 import { meridianNPCs } from '../../../content/npcs/meridian-npcs';
 import { phase4NPCs } from '../../../content/npcs/phase4-npcs';
 import { phase5NPCs } from '../../../content/npcs/phase5-npcs';
 import { phase6NPCs } from '../../../content/npcs/phase6-npcs';
 import { phase7NPCs } from '../../../content/npcs/phase7-npcs';
 import { phase8NPCs } from '../../../content/npcs/phase8-npcs';
+import { phase9NPCs } from '../../../content/npcs/phase9-npcs';
 import { phase5Lore } from '../../../content/lore/phase5-lore';
 import { phase6Lore } from '../../../content/lore/phase6-lore';
 import { phase7Lore } from '../../../content/lore/phase7-lore';
 import { phase8Lore } from '../../../content/lore/phase8-lore';
+import { phase9Lore } from '../../../content/lore/phase9-lore';
 import { starterLore } from '../../../content/lore/starter-lore';
 import { phase4Lore } from '../../../content/lore/phase4-lore';
 import { factions } from '../../../content/factions/factions';
@@ -101,6 +104,14 @@ const BOARD_CONTRACT_IDS = [
     'aegis-index-extraction-prep',
     'redline-index-archive-breach',
     'redline-index-cycle-record',
+    // Phase 9
+    'frontier-cycle-approach-survey',
+    'synod-cycle-cognitive-record',
+    'covenant-cycle-archive-recovery',
+    'ica-cycle-jurisdiction',
+    'aegis-cycle-archive-scout',
+    'redline-cycle-archive-forced-access',
+    'redline-cycle-record-terminal',
 ];
 
 // Contract IDs that require relay jump to be visible on the board
@@ -155,6 +166,14 @@ const POST_RELAY_CONTRACT_IDS = new Set([
     'aegis-index-extraction-prep',
     'redline-index-archive-breach',
     'redline-index-cycle-record',
+    // Phase 9
+    'frontier-cycle-approach-survey',
+    'synod-cycle-cognitive-record',
+    'covenant-cycle-archive-recovery',
+    'ica-cycle-jurisdiction',
+    'aegis-cycle-archive-scout',
+    'redline-cycle-archive-forced-access',
+    'redline-cycle-record-terminal',
 ]);
 
 // NPCs shown in the main Station Contacts panel (Meridian hub)
@@ -186,6 +205,9 @@ const FARPOINT_HUB_NPC_IDS = [
     'corvus-renn',
     'director-vael',
     'null-voice-echo',
+    // Phase 9
+    'commander-thess-dray',
+    'null-archivist',
     // Phase 3/4 faction contacts accessible at Farpoint
     'ica-agent-vorren',
     'void-covenant-kestrel',
@@ -209,6 +231,8 @@ const FACTION_NPC_IDS = [
     // Phase 8
     'director-vael',
     'corvus-renn',
+    // Phase 9
+    'commander-thess-dray',
 ];
 
 // ── HubScene ────────────────────────────────────────────────────────────────
@@ -263,6 +287,14 @@ const CONTRACT_LORE_UNLOCKS: Record<string, string[]> = {
     'aegis-index-extraction-prep':      ['aegis-index-extraction-brief'],
     'redline-index-archive-breach':     ['null-architect-first-transmission', 'index-cycle-first-observation'],
     'redline-index-cycle-record':       ['frontier-index-approach-routes'],
+    // Phase 9
+    'frontier-cycle-approach-survey':       ['cycle-archive-approach-brief'],
+    'synod-cycle-cognitive-record':         ['synod-cycle-cognitive-study'],
+    'covenant-cycle-archive-recovery':      ['covenant-archive-witness-account'],
+    'ica-cycle-jurisdiction':               ['ica-cycle-jurisdiction-report'],
+    'aegis-cycle-archive-scout':            ['aegis-cycle-extraction-notes'],
+    'redline-cycle-archive-forced-access':  ['null-architect-second-transmission', 'cycle-record-civilization-log'],
+    'redline-cycle-record-terminal':        ['null-architect-archive-purpose'],
 };
 
 export class HubScene extends Scene {
@@ -644,7 +676,7 @@ export class HubScene extends Scene {
             : 'Meridian Station — Tamsin Vale, Dispatcher';
         this.panelHeader(c, 'CONTRACT BOARD', boardSubtitle);
 
-        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts, ...phase8Contracts];
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts, ...phase8Contracts, ...phase9Contracts];
         const relayJumped = GameState.getFlag('relay-jump-completed');
         const kaelStage2 = GameState.getFlag('kael-questline-stage-2');
 
@@ -957,7 +989,7 @@ export class HubScene extends Scene {
         const existing = this.panels.get('contract-detail');
         if (existing) { existing.destroy(); this.panels.delete('contract-detail'); }
 
-        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts, ...phase8Contracts];
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts, ...phase8Contracts, ...phase9Contracts];
         const ct = allContracts.find(c => c.id === contractId);
         if (!ct) return;
 
@@ -1108,7 +1140,7 @@ export class HubScene extends Scene {
             : 'Meridian Station — talk to the locals';
         this.panelHeader(c, 'STATION CONTACTS', subtitle);
 
-        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs];
+        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs];
         const npcIds = isFarpoint ? FARPOINT_HUB_NPC_IDS : HUB_NPC_IDS;
         const npcs = allNPCs.filter(n => npcIds.includes(n.id));
         const colW = 290;
@@ -1263,7 +1295,7 @@ export class HubScene extends Scene {
 
     /** Searches all NPC arrays to find an NPC by ID. */
     private findNpc(npcId: string) {
-        return [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs].find(n => n.id === npcId) ?? null;
+        return [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs].find(n => n.id === npcId) ?? null;
     }
 
     // ── Codex panel ───────────────────────────────────────────────────────
@@ -1283,7 +1315,7 @@ export class HubScene extends Scene {
 
         this.panelHeader(c, 'CODEX', 'Unlocked field intelligence and personal records');
 
-        const unlockedEntries = [...starterLore, ...phase4Lore, ...phase5Lore, ...phase6Lore, ...phase7Lore, ...phase8Lore]
+        const unlockedEntries = [...starterLore, ...phase4Lore, ...phase5Lore, ...phase6Lore, ...phase7Lore, ...phase8Lore, ...phase9Lore]
             .filter(entry => GameState.isLoreUnlocked(entry.id));
 
         const CODEX_VIEWPORT_TOP    = 148;
@@ -1945,7 +1977,7 @@ export class HubScene extends Scene {
         c.removeAll(true);
         this.panelHeader(c, 'FACTION STANDINGS', 'Your reputation across the frontier');
 
-        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs];
+        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs];
 
         // Show all tracked factions in two columns
         const trackedFactionIds = Object.keys(GameState.get().reputation);
@@ -2012,7 +2044,7 @@ export class HubScene extends Scene {
                 fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
             }));
 
-            const contactNPCs = [...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs];
+            const contactNPCs = [...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs];
             const npcColW = 220;
             contactNPCs.forEach((npc, i) => {
                 const cx = 80 + i * npcColW;
@@ -2407,7 +2439,7 @@ export class HubScene extends Scene {
         }
 
         // Contracts updated — all phases
-        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts, ...phase8Contracts];
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts, ...phase8Contracts, ...phase9Contracts];
         const completedContracts = gs.contracts.filter(ct => ct.completed && !ct.turnedIn);
         if (completedContracts.length > 0) {
             c.add(this.add.text(175, lootBottom, 'CONTRACTS READY TO TURN IN:', {
