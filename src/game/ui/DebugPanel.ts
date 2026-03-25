@@ -56,7 +56,7 @@ export class DebugPanel {
 
         const panelW = 340;
         const panelH = 440;
-        const panelX = 1024 - panelW / 2 - 6;
+        const panelX = scene.scale.width - panelW / 2 - 6;
         const panelY = panelH / 2 + 6;
 
         // Background + border
@@ -64,7 +64,7 @@ export class DebugPanel {
             .setStrokeStyle(1, T.border));
 
         // Title bar
-        c.add(scene.add.rectangle(panelX, panelY - panelH / 2 + 12, panelW, 24, 0x0a0a22)
+        c.add(scene.add.rectangle(panelX, panelY - panelH / 2 + 12, panelW, 24, T.debugTitleBg)
             .setStrokeStyle(1, T.border));
         c.add(scene.add.text(panelX - panelW / 2 + 8, panelY - panelH / 2 + 3, 'DEBUG  —  F1 to close', {
             fontFamily: 'monospace', fontSize: 11, color: T.textWarn,

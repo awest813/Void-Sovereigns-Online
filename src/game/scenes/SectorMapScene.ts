@@ -45,7 +45,7 @@ export class SectorMapScene extends Scene {
         }).setOrigin(0.5);
 
         // Connection line
-        this.add.rectangle(340, 340, 120, 2, 0x2c2818);
+        this.add.rectangle(340, 340, 120, 2, C.border);
 
         // ── Ashwake Belt node
         const hasAcceptedContract = gs.contracts.some(c => c.accepted && !c.turnedIn);
@@ -58,13 +58,13 @@ export class SectorMapScene extends Scene {
 
         // Connection line (dashed — broken toward Relay)
         for (let x = 650; x < 820; x += 20) {
-            this.add.rectangle(x, 340, 12, 2, 0x1e1c14);
+            this.add.rectangle(x, 340, 12, 2, C.borderFaint);
         }
 
         // ── Void Relay node
         const isRelayCapable = GameState.isRelayCapable();
         const relayJumped = GameState.getFlag('relay-jump-completed');
-        const relayColor = isRelayCapable ? C.textSuccess : '#444455';
+        const relayColor = isRelayCapable ? C.textSuccess : C.textMuted;
         const relaySubtitle = relayJumped
             ? 'Relay Jump — TRANSITED'
             : isRelayCapable ? 'Relay Jump — UNLOCKED' : 'Relay Jump — LOCKED';
@@ -198,53 +198,53 @@ export class SectorMapScene extends Scene {
             const ashveilClear = GameState.getFlag('ashveil-post-cleared');
 
             // Vault of the Broken Signal node
-            this.add.rectangle(490, 258, 680, 26, 0x0a0808).setStrokeStyle(1, 0x702020);
+            this.add.rectangle(490, 258, 680, 26, C.redlinePanelBg).setStrokeStyle(1, C.redlineBorder);
             const vaultLabel = vaultClear
                 ? '◆ Vault of the Broken Signal  ·  Tier 4  ·  REDLINE  ·  Industrial  [CLEARED]'
                 : '◆ Vault of the Broken Signal  ·  Tier 4  ·  ⚠ REDLINE  ·  Industrial';
             this.add.text(350, 250, vaultLabel, {
-                fontFamily: 'Arial', fontSize: 12, color: vaultClear ? C.textSecond : '#c04028',
+                fontFamily: 'Arial', fontSize: 12, color: vaultClear ? C.textSecond : C.redlineText,
             });
             const vaultBtn = this.add.text(500, 264, '[ LAUNCH TO VAULT — REDLINE ]', {
                 fontFamily: 'Arial Black', fontSize: 13,
-                color: vaultClear ? C.textSecond : '#a03020',
+                color: vaultClear ? C.textSecond : C.redlineTextDim,
             }).setInteractive({ useHandCursor: true });
             vaultBtn.on('pointerover', () => vaultBtn.setColor(C.btnHover));
-            vaultBtn.on('pointerout',  () => vaultBtn.setColor(vaultClear ? C.textSecond : '#a03020'));
+            vaultBtn.on('pointerout',  () => vaultBtn.setColor(vaultClear ? C.textSecond : C.redlineTextDim));
             vaultBtn.on('pointerdown', () => this.confirmRedlineLaunch('vault-of-the-broken-signal', 'Vault of the Broken Signal'));
 
             // Ashveil Observation Post node
-            this.add.rectangle(490, 214, 680, 26, 0x090608).setStrokeStyle(1, 0x601830);
+            this.add.rectangle(490, 214, 680, 26, C.ashveilPanelBg).setStrokeStyle(1, C.ashveilBorder);
             const ashveilLabel = ashveilClear
                 ? '◆ Ashveil Observation Post  ·  Tier 5  ·  REDLINE  ·  Anomaly Site  [CLEARED]'
                 : '◆ Ashveil Observation Post  ·  Tier 5  ·  ⚠ REDLINE  ·  Void-Adjacent';
             this.add.text(350, 206, ashveilLabel, {
-                fontFamily: 'Arial', fontSize: 12, color: ashveilClear ? C.textSecond : '#904060',
+                fontFamily: 'Arial', fontSize: 12, color: ashveilClear ? C.textSecond : C.ashveilText,
             });
             const ashveilBtn = this.add.text(500, 220, '[ LAUNCH TO ASHVEIL — REDLINE ]', {
                 fontFamily: 'Arial Black', fontSize: 13,
-                color: ashveilClear ? C.textSecond : '#783050',
+                color: ashveilClear ? C.textSecond : C.ashveilTextDim,
             }).setInteractive({ useHandCursor: true });
             ashveilBtn.on('pointerover', () => ashveilBtn.setColor(C.btnHover));
-            ashveilBtn.on('pointerout',  () => ashveilBtn.setColor(ashveilClear ? C.textSecond : '#783050'));
+            ashveilBtn.on('pointerout',  () => ashveilBtn.setColor(ashveilClear ? C.textSecond : C.ashveilTextDim));
             ashveilBtn.on('pointerdown', () => this.confirmRedlineLaunch('ashveil-observation-post', 'Ashveil Observation Post'));
 
             // ── Phase 6: Transit Node Zero ghost site ─────────────────────
             if (GameState.getFlag('kael-questline-stage-2')) {
                 const ghostSiteCleared = GameState.getFlag('transit-node-zero-cleared');
-                this.add.rectangle(490, 170, 680, 26, 0x070408).setStrokeStyle(1, 0x401860);
+                this.add.rectangle(490, 170, 680, 26, C.ghostPanelBg).setStrokeStyle(1, C.ghostBorder);
                 const ghostLabel = ghostSiteCleared
                     ? '◆ Transit Node Zero  ·  Tier 4  ·  REDLINE  ·  Ghost Site  [CLEARED]'
                     : '◆ Transit Node Zero  ·  Tier 4  ·  ⚠ REDLINE  ·  Ghost Site';
                 this.add.text(350, 162, ghostLabel, {
-                    fontFamily: 'Arial', fontSize: 12, color: ghostSiteCleared ? C.textSecond : '#8860a8',
+                    fontFamily: 'Arial', fontSize: 12, color: ghostSiteCleared ? C.textSecond : C.ghostText,
                 });
                 const ghostBtn = this.add.text(500, 176, '[ LAUNCH TO TRANSIT NODE ZERO — REDLINE ]', {
                     fontFamily: 'Arial Black', fontSize: 13,
-                    color: ghostSiteCleared ? C.textSecond : '#6840a0',
+                    color: ghostSiteCleared ? C.textSecond : C.ghostTextDim,
                 }).setInteractive({ useHandCursor: true });
                 ghostBtn.on('pointerover', () => ghostBtn.setColor(C.btnHover));
-                ghostBtn.on('pointerout',  () => ghostBtn.setColor(ghostSiteCleared ? C.textSecond : '#6840a0'));
+                ghostBtn.on('pointerout',  () => ghostBtn.setColor(ghostSiteCleared ? C.textSecond : C.ghostTextDim));
                 ghostBtn.on('pointerdown', () => this.confirmRedlineLaunch('transit-node-zero', 'Transit Node Zero'));
             }
         }
@@ -335,8 +335,8 @@ export class SectorMapScene extends Scene {
         interactive: boolean,
         callback: () => void,
     ) {
-        this.add.circle(x, y, 42, 0x0e0c09).setStrokeStyle(2, 0x2c2818);
-        this.add.circle(x, y, 28, 0x0b0a08);
+        this.add.circle(x, y, 42, C.panelBg).setStrokeStyle(2, C.border);
+        this.add.circle(x, y, 28, C.panelDark);
 
         const nameText = this.add.text(x, y - 60, name, {
             fontFamily: 'Arial Black', fontSize: 12, color, align: 'center',
@@ -375,14 +375,14 @@ export class SectorMapScene extends Scene {
 
         const panel = this.add.container(512, 320);
         panel.setName('redline-confirm');
-        panel.add(this.add.rectangle(0, 0, 780, 340, 0x0b0808).setStrokeStyle(2, 0x702020));
+        panel.add(this.add.rectangle(0, 0, 780, 340, C.redlinePanelBg).setStrokeStyle(2, C.redlineBorder));
 
         panel.add(this.add.text(0, -148, `⚠  REDLINE RUN — ${siteName.toUpperCase()}`, {
-            fontFamily: 'Arial Black', fontSize: 18, color: '#c03828', align: 'center',
+            fontFamily: 'Arial Black', fontSize: 18, color: C.redlineText, align: 'center',
         }).setOrigin(0.5));
 
         panel.add(this.add.text(0, -114, 'HIGH-RISK EXTRACTION  ·  Equipment loss on death', {
-            fontFamily: 'Arial', fontSize: 13, color: '#905038', align: 'center',
+            fontFamily: 'Arial', fontSize: 13, color: C.redlineTextDim, align: 'center',
         }).setOrigin(0.5));
 
         // Risk lines
@@ -390,7 +390,7 @@ export class SectorMapScene extends Scene {
             ? 'On death: run loot lost  ·  1 consumable lost (insurance active)'
             : 'On death: run loot lost  ·  up to 2 consumables lost';
         panel.add(this.add.text(0, -82, lossLine, {
-            fontFamily: 'Arial', fontSize: 12, color: '#a04030', align: 'center',
+            fontFamily: 'Arial', fontSize: 12, color: C.redlineTextDim, align: 'center',
         }).setOrigin(0.5));
 
         const securedName = securedId
@@ -401,25 +401,25 @@ export class SectorMapScene extends Scene {
             : 'Secure slot: not set — visit Services to set';
         panel.add(this.add.text(0, -58, secureText, {
             fontFamily: 'Arial', fontSize: 12,
-            color: securedName ? '#44ff88' : '#996644', align: 'center',
+            color: securedName ? C.redlineSecured : C.textSecond, align: 'center',
         }).setOrigin(0.5));
 
         panel.add(this.add.text(0, -34, insuranceActive
             ? '✓ Field Insurance ACTIVE — loss reduced'
             : '✗ No insurance — buy at Services for 250c', {
             fontFamily: 'Arial', fontSize: 12,
-            color: insuranceActive ? '#44ffaa' : '#886644', align: 'center',
+            color: insuranceActive ? C.redlineInsure : C.textSecond, align: 'center',
         }).setOrigin(0.5));
 
         panel.add(this.add.text(0, -4, 'On success: all loot secured  ·  full contract reward  ·  full reputation earned', {
-            fontFamily: 'Arial', fontSize: 12, color: '#ffaa44', align: 'center',
+            fontFamily: 'Arial', fontSize: 12, color: C.textAccent, align: 'center',
         }).setOrigin(0.5));
 
         const confirmBtn = this.add.text(-120, 68, '[ LAUNCH — ACCEPT RISK ]', {
-            fontFamily: 'Arial Black', fontSize: 15, color: '#ff4422', align: 'center',
+            fontFamily: 'Arial Black', fontSize: 15, color: C.redlineBtn, align: 'center',
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         confirmBtn.on('pointerover', () => confirmBtn.setColor(C.btnHover));
-        confirmBtn.on('pointerout',  () => confirmBtn.setColor('#ff4422'));
+        confirmBtn.on('pointerout',  () => confirmBtn.setColor(C.redlineBtn));
         confirmBtn.on('pointerdown', () => {
             panel.destroy();
             this.launchToDungeon(dungeonId, true);
