@@ -6,6 +6,8 @@ import { DebugPanel } from '../ui/DebugPanel';
 // MainMenu: title screen with game logo and start prompt.
 export class MainMenu extends Scene
 {
+    private debugPanel?: DebugPanel;
+
     constructor ()
     {
         super('MainMenu');
@@ -52,7 +54,7 @@ export class MainMenu extends Scene
             align: 'center',
         }).setOrigin(0.5).setDepth(100);
 
-        new DebugPanel(this);
+        this.debugPanel = new DebugPanel(this);
 
         this.input.keyboard?.once('keydown', () => this.changeScene());
         this.input.once('pointerdown', () => this.changeScene());

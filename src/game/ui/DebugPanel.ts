@@ -17,6 +17,7 @@ export class DebugPanel {
     private container: Phaser.GameObjects.Container | null = null;
     private visible = false;
     private readonly keyHandler: () => void;
+    private destroyed = false;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -24,11 +25,7 @@ export class DebugPanel {
         scene.input.keyboard?.on(`keydown-${TOGGLE_KEY}`, this.keyHandler);
 
         // Clean up when the scene shuts down to avoid duplicate listeners on restart.
-        scene.events.once('shutdown', () => {
-            scene.input.keyboard?.off(`keydown-${TOGGLE_KEY}`, this.keyHandler);
-            this.container?.destroy();
-            this.container = null;
-        });
+        scene.events.once('shutdown', () => this.destroy());
     }
 
     toggle() {
@@ -44,6 +41,15 @@ export class DebugPanel {
     /** Re-render the panel with fresh data (call from scene update if desired). */
     refresh() {
         if (this.visible) this.render();
+    }
+
+    destroy() {
+        if (this.destroyed) return;
+        this.destroyed = true;
+        this.scene.input.keyboard?.off(`keydown-${TOGGLE_KEY}`, this.keyHandler);
+        this.container?.destroy();
+        this.container = null;
+        this.visible = false;
     }
 
     private render() {
