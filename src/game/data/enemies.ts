@@ -646,6 +646,73 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'psi-lattice-sample', chance: 0.8, qty: 2 },
         ],
     },
+
+    // ── Phase 8 — Index Chamber entities ────────────────────────────────
+    'index-warden-sentry': {
+        id: 'index-warden-sentry',
+        name: 'Index Warden Sentry',
+        description: 'Outer-corridor access management unit. Responds to posture, not presence.',
+        hp: 160,
+        attackMin: 32,
+        attackMax: 50,
+        defense: 13,
+        xpReward: 140,
+        creditDropMin: 85,
+        creditDropMax: 150,
+        lootPool: [
+            { itemId: 'signal-fragment',    chance: 0.50, qty: 1 },
+            { itemId: 'index-cycle-fragment', chance: 0.20, qty: 1 },
+        ],
+    },
+    'index-warden-herald': {
+        id: 'index-warden-herald',
+        name: 'Index Warden Herald',
+        description: 'Mid-tier Index entity that broadcasts coordinated escalation signals to nearby units.',
+        hp: 220,
+        attackMin: 38,
+        attackMax: 58,
+        defense: 16,
+        xpReward: 185,
+        creditDropMin: 110,
+        creditDropMax: 185,
+        lootPool: [
+            { itemId: 'architect-response-record', chance: 0.25, qty: 1 },
+            { itemId: 'index-cycle-fragment',      chance: 0.35, qty: 1 },
+        ],
+    },
+    'index-warden-guardian': {
+        id: 'index-warden-guardian',
+        name: 'Index Warden Guardian',
+        description: 'Heavy-frame access enforcer positioned at archive threshold corridors.',
+        hp: 280,
+        attackMin: 40,
+        attackMax: 62,
+        defense: 22,
+        xpReward: 240,
+        creditDropMin: 150,
+        creditDropMax: 250,
+        lootPool: [
+            { itemId: 'index-access-token',        chance: 0.20, qty: 1 },
+            { itemId: 'architect-response-record', chance: 0.30, qty: 1 },
+        ],
+    },
+    'index-chamber-warden': {
+        id: 'index-chamber-warden',
+        name: 'Index Chamber Warden',
+        description: 'Primary enforcement entity of the Index Chamber core. Operates without deescalation threshold.',
+        hp: 520,
+        attackMin: 48,
+        attackMax: 76,
+        defense: 28,
+        xpReward: 480,
+        creditDropMin: 380,
+        creditDropMax: 620,
+        lootPool: [
+            { itemId: 'warden-core-extract',       chance: 1.0, qty: 1 },
+            { itemId: 'architect-response-record', chance: 0.9, qty: 1 },
+            { itemId: 'index-cycle-fragment',      chance: 0.8, qty: 2 },
+        ],
+    },
 };
 
 /** Roll loot from an enemy's loot pool. Returns InventoryItem-shaped objects. */
@@ -694,6 +761,11 @@ export function rollLoot(enemyId: string): Array<{ id: string; name: string; qty
         'psi-lattice-sample':       { name: 'Psi Lattice Sample',       type: 'key',     value: 360 },
         'deepfrontier-core-signature': { name: 'Deepfrontier Core Signature', type: 'key', value: 520 },
         'null-lattice-segment':     { name: 'Null Lattice Segment',     type: 'key',     value: 500 },
+        // Phase 8 items
+        'index-cycle-fragment':     { name: 'Index Cycle Fragment',     type: 'salvage', value: 440 },
+        'architect-response-record':{ name: 'Architect Response Record',type: 'key',     value: 600 },
+        'index-access-token':       { name: 'Index Access Token',       type: 'key',     value: 480 },
+        'warden-core-extract':      { name: 'Warden Core Extract',      type: 'key',     value: 700 },
     };
 
     for (const entry of enemy.lootPool) {
