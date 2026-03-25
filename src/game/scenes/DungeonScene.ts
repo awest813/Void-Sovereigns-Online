@@ -103,8 +103,8 @@ export class DungeonScene extends Scene {
         const dungeonId = GameState.get().pendingDungeon ?? 'shalehook-dig-site';
         this.dungeonDef = loadDungeon(dungeonId);
         if (!this.dungeonDef) {
-            // Fallback if invalid ID: use shalehook
-            this.dungeonDef = loadDungeon('shalehook-dig-site')!;
+            this.showInvalidDungeonError(dungeonId);
+            return;
         }
         this.rooms = this.dungeonDef.rooms;
 
@@ -233,6 +233,47 @@ export class DungeonScene extends Scene {
     }
 
     // ── Phases ────────────────────────────────────────────────────────────
+
+    /** Shown when `pendingDungeon` refers to an ID not found in the registry. */
+    private showInvalidDungeonError(badId: string) {
+        // Starfield
+        for (let i = 0; i < 60; i++) {
+            this.add.rectangle(
+                Phaser.Math.Between(0, 1024),
+                Phaser.Math.Between(0, 768),
+                1, 1, 0xffffff,
+            ).setAlpha(0.1 + Math.random() * 0.2);
+        }
+
+        this.add.rectangle(512, 384, 780, 280, C.panelBg).setStrokeStyle(2, C.border);
+
+        this.add.text(512, 270, 'NAVIGATION ERROR', {
+            fontFamily: 'Arial Black', fontSize: 24, color: C.textDanger, align: 'center',
+            stroke: '#000000', strokeThickness: 3,
+        }).setOrigin(0.5);
+
+        this.add.text(512, 316, `Dungeon registry lookup failed for: "${badId}"`, {
+            fontFamily: 'Arial', fontSize: 13, color: C.textWarn, align: 'center',
+        }).setOrigin(0.5);
+
+        this.add.text(512, 354, 'This site could not be located in the navigation database.\n' +
+            'Launch parameters may be corrupted or the site ID is outdated.',
+        {
+            fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+            wordWrap: { width: 680 },
+        }).setOrigin(0.5);
+
+        const abortBtn = this.add.text(512, 440, '[ ABORT — RETURN TO SECTOR MAP ]', {
+            fontFamily: 'Arial Black', fontSize: 15, color: C.textPrimary, align: 'center',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        abortBtn.on('pointerover', () => abortBtn.setColor(C.btnHover));
+        abortBtn.on('pointerout',  () => abortBtn.setColor(C.textPrimary));
+        abortBtn.on('pointerdown', () => this.scene.start('SectorMap'));
+
+        new DebugPanel(this);
+        EventBus.emit('current-scene-ready', this);
+    }
+
     private showIntro() {
         this.phase = 'intro';
         this.clearContent();
