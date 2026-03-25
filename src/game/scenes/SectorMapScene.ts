@@ -284,6 +284,25 @@ export class SectorMapScene extends Scene {
                 indexBtn.on('pointerover', () => indexBtn.setColor(C.btnHover));
                 indexBtn.on('pointerout',  () => indexBtn.setColor(indexCleared ? C.textSecond : C.indexTextDim));
                 indexBtn.on('pointerdown', () => this.confirmRedlineLaunch('index-chamber-null-prime', 'The Index Chamber'));
+
+                // ── Phase 9: Cycle Archive — Null Architect terminal site ──
+                if (indexCleared) {
+                    const cycleCleared = GameState.getFlag('cycle-archive-cleared');
+                    this.add.rectangle(490, 38, 680, 26, C.cyclePanelBg).setStrokeStyle(1, C.cycleBorder);
+                    const cycleLabel = cycleCleared
+                        ? '◆ The Cycle Archive  ·  Tier 5  ·  REDLINE  ·  Null Architect  [CLEARED]'
+                        : '◆ The Cycle Archive  ·  Tier 5  ·  ⚠ REDLINE  ·  Null Architect  ★ SECOND TRANSMISSION';
+                    this.add.text(350, 30, cycleLabel, {
+                        fontFamily: 'Arial', fontSize: 12, color: cycleCleared ? C.textSecond : C.cycleText,
+                    });
+                    const cycleBtn = this.add.text(500, 44, '[ LAUNCH TO CYCLE ARCHIVE — REDLINE ]', {
+                        fontFamily: 'Arial Black', fontSize: 13,
+                        color: cycleCleared ? C.textSecond : C.cycleTextDim,
+                    }).setInteractive({ useHandCursor: true });
+                    cycleBtn.on('pointerover', () => cycleBtn.setColor(C.btnHover));
+                    cycleBtn.on('pointerout',  () => cycleBtn.setColor(cycleCleared ? C.textSecond : C.cycleTextDim));
+                    cycleBtn.on('pointerdown', () => this.confirmRedlineLaunch('cycle-archive-sanctum', 'The Cycle Archive'));
+                }
             }
         }
 

@@ -713,6 +713,73 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'index-cycle-fragment',      chance: 0.8, qty: 2 },
         ],
     },
+
+    // ── Phase 9: Cycle Archive enemies ───────────────────────────────────
+    'cycle-archive-seraph': {
+        id: 'cycle-archive-seraph',
+        name: 'Cycle Archive Seraph',
+        description: 'Outer-corridor patrol entity of the Cycle Archive. Faster than Index Wardens and responds to record interaction, not presence.',
+        hp: 175,
+        attackMin: 36,
+        attackMax: 55,
+        defense: 14,
+        xpReward: 155,
+        creditDropMin: 95,
+        creditDropMax: 165,
+        lootPool: [
+            { itemId: 'cycle-record-fragment',  chance: 0.45, qty: 1 },
+            { itemId: 'signal-fragment',         chance: 0.35, qty: 1 },
+        ],
+    },
+    'cycle-archive-arbiter': {
+        id: 'cycle-archive-arbiter',
+        name: 'Cycle Archive Arbiter',
+        description: 'Mid-tier archive enforcement unit. Deploys suppression fields that reduce operative effectiveness near restricted record chambers.',
+        hp: 260,
+        attackMin: 40,
+        attackMax: 62,
+        defense: 20,
+        xpReward: 215,
+        creditDropMin: 130,
+        creditDropMax: 210,
+        lootPool: [
+            { itemId: 'cycle-record-fragment',       chance: 0.40, qty: 1 },
+            { itemId: 'archive-classification-core', chance: 0.20, qty: 1 },
+        ],
+    },
+    'cycle-archive-executor': {
+        id: 'cycle-archive-executor',
+        name: 'Cycle Archive Executor',
+        description: 'Heavy enforcement construct positioned at restricted terminal tier thresholds. Operates without deescalation under forced-access conditions.',
+        hp: 340,
+        attackMin: 45,
+        attackMax: 70,
+        defense: 26,
+        xpReward: 290,
+        creditDropMin: 180,
+        creditDropMax: 300,
+        lootPool: [
+            { itemId: 'archive-classification-core', chance: 0.30, qty: 1 },
+            { itemId: 'cycle-record-fragment',        chance: 0.50, qty: 1 },
+        ],
+    },
+    'cycle-archive-warden': {
+        id: 'cycle-archive-warden',
+        name: 'Cycle Archive Warden',
+        description: 'Primary enforcement construct of the Cycle Archive terminal chamber. The Architect\'s final resolution entity. No deescalation threshold exists.',
+        hp: 600,
+        attackMin: 55,
+        attackMax: 86,
+        defense: 32,
+        xpReward: 560,
+        creditDropMin: 440,
+        creditDropMax: 720,
+        lootPool: [
+            { itemId: 'cycle-terminal-record',       chance: 1.0, qty: 1 },
+            { itemId: 'archive-classification-core', chance: 0.9, qty: 1 },
+            { itemId: 'cycle-record-fragment',        chance: 0.8, qty: 2 },
+        ],
+    },
 };
 
 /** Roll loot from an enemy's loot pool. Returns InventoryItem-shaped objects. */
