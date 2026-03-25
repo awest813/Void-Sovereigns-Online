@@ -10,6 +10,7 @@ import { phase6Contracts } from '../../../content/contracts/phase6-contracts';
 import { phase7Contracts } from '../../../content/contracts/phase7-contracts';
 import { phase8Contracts } from '../../../content/contracts/phase8-contracts';
 import { phase9Contracts } from '../../../content/contracts/phase9-contracts';
+import { phase10Contracts } from '../../../content/contracts/phase10-contracts';
 import { meridianNPCs } from '../../../content/npcs/meridian-npcs';
 import { phase4NPCs } from '../../../content/npcs/phase4-npcs';
 import { phase5NPCs } from '../../../content/npcs/phase5-npcs';
@@ -17,11 +18,13 @@ import { phase6NPCs } from '../../../content/npcs/phase6-npcs';
 import { phase7NPCs } from '../../../content/npcs/phase7-npcs';
 import { phase8NPCs } from '../../../content/npcs/phase8-npcs';
 import { phase9NPCs } from '../../../content/npcs/phase9-npcs';
+import { phase10NPCs } from '../../../content/npcs/phase10-npcs';
 import { phase5Lore } from '../../../content/lore/phase5-lore';
 import { phase6Lore } from '../../../content/lore/phase6-lore';
 import { phase7Lore } from '../../../content/lore/phase7-lore';
 import { phase8Lore } from '../../../content/lore/phase8-lore';
 import { phase9Lore } from '../../../content/lore/phase9-lore';
+import { phase10Lore } from '../../../content/lore/phase10-lore';
 import { starterLore } from '../../../content/lore/starter-lore';
 import { phase4Lore } from '../../../content/lore/phase4-lore';
 import { factions } from '../../../content/factions/factions';
@@ -112,6 +115,14 @@ const BOARD_CONTRACT_IDS = [
     'aegis-cycle-archive-scout',
     'redline-cycle-archive-forced-access',
     'redline-cycle-record-terminal',
+    // Phase 10
+    'frontier-threshold-approach-survey',
+    'synod-threshold-resonance-map',
+    'covenant-threshold-witness-protocol',
+    'ica-threshold-sovereignty-filing',
+    'aegis-threshold-extraction-brief',
+    'redline-threshold-sovereignty-claim',
+    'redline-threshold-record-seal',
 ];
 
 // Contract IDs that require relay jump to be visible on the board
@@ -174,6 +185,14 @@ const POST_RELAY_CONTRACT_IDS = new Set([
     'aegis-cycle-archive-scout',
     'redline-cycle-archive-forced-access',
     'redline-cycle-record-terminal',
+    // Phase 10
+    'frontier-threshold-approach-survey',
+    'synod-threshold-resonance-map',
+    'covenant-threshold-witness-protocol',
+    'ica-threshold-sovereignty-filing',
+    'aegis-threshold-extraction-brief',
+    'redline-threshold-sovereignty-claim',
+    'redline-threshold-record-seal',
 ]);
 
 // NPCs shown in the main Station Contacts panel (Meridian hub)
@@ -208,6 +227,9 @@ const FARPOINT_HUB_NPC_IDS = [
     // Phase 9
     'commander-thess-dray',
     'null-archivist',
+    // Phase 10
+    'threshold-herald',
+    'elder-covenant-ren',
     // Phase 3/4 faction contacts accessible at Farpoint
     'ica-agent-vorren',
     'void-covenant-kestrel',
@@ -233,6 +255,8 @@ const FACTION_NPC_IDS = [
     'corvus-renn',
     // Phase 9
     'commander-thess-dray',
+    // Phase 10
+    'elder-covenant-ren',
 ];
 
 // ── HubScene ────────────────────────────────────────────────────────────────
@@ -295,6 +319,14 @@ const CONTRACT_LORE_UNLOCKS: Record<string, string[]> = {
     'aegis-cycle-archive-scout':            ['aegis-cycle-extraction-notes'],
     'redline-cycle-archive-forced-access':  ['null-architect-second-transmission', 'cycle-record-civilization-log'],
     'redline-cycle-record-terminal':        ['null-architect-archive-purpose'],
+    // Phase 10
+    'frontier-threshold-approach-survey':     ['threshold-approach-brief'],
+    'synod-threshold-resonance-map':          ['synod-threshold-resonance-notes'],
+    'covenant-threshold-witness-protocol':    ['covenant-threshold-witness-account'],
+    'ica-threshold-sovereignty-filing':       ['ica-sovereignty-status-filing'],
+    'aegis-threshold-extraction-brief':       ['aegis-threshold-extraction-final'],
+    'redline-threshold-sovereignty-claim':    ['null-architect-third-transmission', 'cycle-entry-resolution-log'],
+    'redline-threshold-record-seal':          ['null-architect-sovereignty-declaration'],
 };
 
 export class HubScene extends Scene {
@@ -676,7 +708,7 @@ export class HubScene extends Scene {
             : 'Meridian Station — Tamsin Vale, Dispatcher';
         this.panelHeader(c, 'CONTRACT BOARD', boardSubtitle);
 
-        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts, ...phase8Contracts, ...phase9Contracts];
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts, ...phase8Contracts, ...phase9Contracts, ...phase10Contracts];
         const relayJumped = GameState.getFlag('relay-jump-completed');
         const kaelStage2 = GameState.getFlag('kael-questline-stage-2');
 
@@ -989,7 +1021,7 @@ export class HubScene extends Scene {
         const existing = this.panels.get('contract-detail');
         if (existing) { existing.destroy(); this.panels.delete('contract-detail'); }
 
-        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts, ...phase8Contracts, ...phase9Contracts];
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts, ...phase8Contracts, ...phase9Contracts, ...phase10Contracts];
         const ct = allContracts.find(c => c.id === contractId);
         if (!ct) return;
 
@@ -1140,7 +1172,7 @@ export class HubScene extends Scene {
             : 'Meridian Station — talk to the locals';
         this.panelHeader(c, 'STATION CONTACTS', subtitle);
 
-        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs];
+        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs, ...phase10NPCs];
         const npcIds = isFarpoint ? FARPOINT_HUB_NPC_IDS : HUB_NPC_IDS;
         const npcs = allNPCs.filter(n => npcIds.includes(n.id));
         const colW = 290;
@@ -1295,7 +1327,7 @@ export class HubScene extends Scene {
 
     /** Searches all NPC arrays to find an NPC by ID. */
     private findNpc(npcId: string) {
-        return [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs].find(n => n.id === npcId) ?? null;
+        return [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs, ...phase10NPCs].find(n => n.id === npcId) ?? null;
     }
 
     // ── Codex panel ───────────────────────────────────────────────────────
@@ -1315,7 +1347,7 @@ export class HubScene extends Scene {
 
         this.panelHeader(c, 'CODEX', 'Unlocked field intelligence and personal records');
 
-        const unlockedEntries = [...starterLore, ...phase4Lore, ...phase5Lore, ...phase6Lore, ...phase7Lore, ...phase8Lore, ...phase9Lore]
+        const unlockedEntries = [...starterLore, ...phase4Lore, ...phase5Lore, ...phase6Lore, ...phase7Lore, ...phase8Lore, ...phase9Lore, ...phase10Lore]
             .filter(entry => GameState.isLoreUnlocked(entry.id));
 
         const CODEX_VIEWPORT_TOP    = 148;
@@ -1977,7 +2009,7 @@ export class HubScene extends Scene {
         c.removeAll(true);
         this.panelHeader(c, 'FACTION STANDINGS', 'Your reputation across the frontier');
 
-        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs];
+        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs, ...phase10NPCs];
 
         // Show all tracked factions in two columns
         const trackedFactionIds = Object.keys(GameState.get().reputation);
@@ -2044,7 +2076,7 @@ export class HubScene extends Scene {
                 fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
             }));
 
-            const contactNPCs = [...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs];
+            const contactNPCs = [...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs, ...phase10NPCs];
             const npcColW = 220;
             contactNPCs.forEach((npc, i) => {
                 const cx = 80 + i * npcColW;
@@ -2439,7 +2471,7 @@ export class HubScene extends Scene {
         }
 
         // Contracts updated — all phases
-        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts, ...phase8Contracts, ...phase9Contracts];
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts, ...phase8Contracts, ...phase9Contracts, ...phase10Contracts];
         const completedContracts = gs.contracts.filter(ct => ct.completed && !ct.turnedIn);
         if (completedContracts.length > 0) {
             c.add(this.add.text(175, lootBottom, 'CONTRACTS READY TO TURN IN:', {
