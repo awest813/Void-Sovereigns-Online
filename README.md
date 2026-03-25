@@ -2,7 +2,7 @@
 
 A browser-first space opera RPG. Frontier survival, contract work, and slow-burn cosmic horror — set in a universe of worn utility hardware, declining stations, and things humanity was not meant to find.
 
-> **Current Phase: 5** — Redline Protocol & The Helion Synod
+> **Current Phase: 7** — Ship Tier III & Deep Frontier
 
 ---
 
@@ -28,46 +28,50 @@ You start broke, on a dying station, with a ship that can barely hold vacuum. Yo
 | **3** | Relay Transit | Void Relay 7-9, Farpoint Waystation, relay jump milestone, ICA / Void Covenant factions, waveform mystery |
 | **4** | Frontier Expansion | Kalindra Drift & Orin's Crossing sectors, 10 new contracts, faction reputation thresholds, Frontier Compact / Sol Union / Aegis / Vanta factions |
 | **5** | Redline Protocol | High-stakes Redline runs, Vault of the Broken Signal & Ashveil Observation Post, Helion Synod faction, item insurance & secure-slot system |
+| **6** | Farpoint Hub | Farpoint second hub, Kael questline, Transit Node Zero ghost-site contracts, codex lore unlock system |
+| **7** | Ship Tier III & Deep Frontier | Ashveil Deep void-class dungeon, unknown entities, Tier III ship frame data, deep-frontier contract/lore expansion |
 
 ---
 
-## Current Phase: 5 — Redline Protocol
+## Current Phase: 7 — Ship Tier III & Deep Frontier
 
-### What Phase 5 Adds
+### What Phase 7 Adds
 
-**The risk layer escalates.** Redline runs are opt-in high-stakes contracts where losing a run means losing secured items — unless you pay for insurance or lock one item to your secure slot before departure.
+**The frontier gets stranger.** Ashveil Deep extends the post-relay arc with void-class operations, unknown entities, and escalating multi-faction conflict over deep-core records.
 
-#### Redline System
-- Any dungeon can be flagged as a **Redline run** — higher rewards, but death costs you your run loot
-- **Secure Slot** — lock one item before a run; it survives death regardless
-- **Insurance** — purchase pre-run coverage from the Services panel; protects the full run loot on death
-- Pre-run risk summary and enhanced death / completion UI in DungeonScene
-- `confirmRedlineLaunch` confirmation prompt on SectorMapScene before committing
+#### Deep Frontier Operations
+- **Ashveil Deep** unlocked after Transit Node Zero clear
+- **Void-class tier** dungeon contract mapping in `DUNGEON_REGISTRY`
+- **Unknown entities** added to enemy roster for deep-frontier combat pacing
+- **Cross-faction contract pressure** (Compact, Synod, Covenant, ICA, Aegis)
+- **Expanded codex unlocks** for deep-frontier intelligence records
 
-#### New Dungeons (2 Redline)
-- **Vault of the Broken Signal** — Redline-tier; 5-room instance deep in the Kalindra Drift anomaly zone
-- **Ashveil Observation Post** — Redline-tier; 5-room instance; post-Synod access
+#### New Dungeon (Void-class)
+- **Ashveil Deep** — Tier 5 Redline/void-class site beyond Ashveil Observation Post
 
-#### New Contracts (8)
-- 2 standard contracts
-- 4 Redline-flagged contracts (require faction standing to unlock)
-- 2 investigation contracts tied to Helion Synod intelligence
+#### New Contracts (7)
+- 5 high-tier deep-frontier operations
+- 2 Redline extractions at Ashveil Deep core layers
 
-#### New Factions (1)
-- **Helion Synod** — a corporate-theological faction with interests in Redline-adjacent relics; opaque agenda
+#### New Ship Data (Tier III)
+- **Deepfrontier Lancer III** ship frame added to ship content registry
+- Relay-capable Tier III hull classification in ship-state checks
 
-#### New NPCs (2)
-- **Aris Vel** — Synod field liaison; offers investigation contracts and hints at Synod doctrine
-- **The Broker** — anonymous; middleman for Redline contracts; identity unknown
+#### New NPCs (3)
+- **Lyra Kesh** — ICA hazard specialist at Farpoint
+- **Marek Thane** — Synod cognitive-drift field adept
+- **Iora Venn** — Free Transit shipwright for Tier III doctrine
 
 #### New Lore (8 entries)
-- Synod founding charter fragments
-- Vault of the Broken Signal site reports
-- Two entries that expand the waveform mystery
+- Ashveil Deep route and hazard briefs
+- Tier III hull doctrine memo
+- Synod cognitive drift and ICA quarantine records
+- Core encounter and lattice analysis debriefs
 
-#### GameState Additions
-- `redlineSecuredItemId` / `redlineInsuranceActive` / `lastRunRedlineLoss` / `sessionId`
-- `resolveRedlineDeath()` / `secureRunItem()` / `purchaseInsurance()` helpers
+#### Integration Fixes Included
+- Codex now aggregates unlocked lore across Phase 5/6/7 pools
+- Dungeon completion screen contract title lookup now includes Phase 6/7 contracts
+- Hub NPC aggregation now consistently includes Phase 5+ arrays across panels
 
 ---
 
@@ -153,4 +157,3 @@ Checks all content files for duplicate IDs and broken cross-references.
 ## License
 
 MIT
-

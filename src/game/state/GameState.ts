@@ -212,7 +212,7 @@ export const GameState = {
     },
     /** Returns true when the player owns a relay-capable ship. */
     isRelayCapable(): boolean {
-        if (state.activeShipId === 'meridian-hauler-ii') return true;
+        if (state.activeShipId === 'meridian-hauler-ii' || state.activeShipId === 'deepfrontier-lancer-iii') return true;
         return GameState.isCutterRelayCapable();
     },
 
