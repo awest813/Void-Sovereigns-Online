@@ -240,8 +240,8 @@ export class DungeonScene extends Scene {
 
         // Panel
         this.contentContainer.add(
-            this.add.rectangle(512, 330, 900, 380, isRedlineRun ? 0x0f0005 : C.panelBg)
-                .setStrokeStyle(1, isRedlineRun ? 0xaa2222 : C.border),
+            this.add.rectangle(512, 330, 900, 380, isRedlineRun ? C.redlinePanelBg : C.panelBg)
+                .setStrokeStyle(1, isRedlineRun ? C.redlineBorder : C.border),
         );
 
         const titleColor = isRedlineRun ? '#ff6644' : C.textWarn;
@@ -285,7 +285,7 @@ export class DungeonScene extends Scene {
         const gs = GameState.get();
 
         this.contentContainer.add(
-            this.add.rectangle(512, 340, 900, 440, 0x0b0808).setStrokeStyle(2, 0x702020),
+            this.add.rectangle(512, 340, 900, 440, C.redlinePanelBg).setStrokeStyle(2, C.redlineBorder),
         );
 
         this.addContentText(512, 130, '⚠  REDLINE RUN — RISK SUMMARY', {
@@ -315,7 +315,7 @@ export class DungeonScene extends Scene {
                 const label = isSecured
                     ? `  ◆ ${item.name}  ×${item.qty}   [ SECURED — PROTECTED ]`
                     : `  ◆ ${item.name}  ×${item.qty}   [ AT RISK ]`;
-                const color = isSecured ? '#44ff88' : '#ff8855';
+                const color = isSecured ? C.redlineSecured : C.redlineLoss;
                 this.addContentText(110, 234 + i * 22, label, {
                     fontFamily: 'Arial', fontSize: 12, color,
                 });
@@ -326,17 +326,17 @@ export class DungeonScene extends Scene {
         const insuranceY = 240 + atRiskItems.length * 22;
         if (insuranceActive) {
             this.addContentText(110, insuranceY, '✓ FIELD INSURANCE ACTIVE — One additional item protected on death', {
-                fontFamily: 'Arial Black', fontSize: 12, color: '#44ff88',
+                fontFamily: 'Arial Black', fontSize: 12, color: C.redlineSecured,
             });
         } else {
             this.addContentText(110, insuranceY, '✗ No insurance — Purchase at Meridian Services (250c) before launch', {
-                fontFamily: 'Arial', fontSize: 12, color: '#996644',
+                fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
             });
         }
 
         // What you gain on success
         this.addContentText(110, insuranceY + 36, 'ON SUCCESSFUL EXTRACTION:', {
-            fontFamily: 'Arial Black', fontSize: 13, color: '#ffaa44',
+            fontFamily: 'Arial Black', fontSize: 13, color: C.textAccent,
         });
         this.addContentText(110, insuranceY + 56, '  All run loot recovered  ·  Full contract reward claimed  ·  Faction reputation earned', {
             fontFamily: 'Arial', fontSize: 12, color: C.textPrimary,
@@ -344,20 +344,20 @@ export class DungeonScene extends Scene {
 
         // What you lose on death
         this.addContentText(110, insuranceY + 88, 'ON DEATH (emergency extract):', {
-            fontFamily: 'Arial Black', fontSize: 13, color: '#ff5533',
+            fontFamily: 'Arial Black', fontSize: 13, color: C.redlineLoss,
         });
         const lossLines = insuranceActive
             ? '  Run loot is lost  ·  1 field consumable lost (insurance reduces from 2 to 1)  ·  Secured item is safe'
             : '  Run loot is lost  ·  Up to 2 field consumables lost  ·  Secured item (if set) is safe';
         this.addContentText(110, insuranceY + 108, lossLines, {
-            fontFamily: 'Arial', fontSize: 12, color: '#cc6644',
+            fontFamily: 'Arial', fontSize: 12, color: C.textWarn,
         });
 
         this.addContentText(512, 576, '"Go prepared. Extract alive."', {
-            fontFamily: 'Arial', fontSize: 12, color: '#774433', align: 'center', fontStyle: 'italic',
+            fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center', fontStyle: 'italic',
         }).setOrigin(0.5);
 
-        this.addActionButton(340, 630, '[ ENTER SITE — ACCEPT RISK ]', () => this.enterRoom(0), '#ff4422');
+        this.addActionButton(340, 630, '[ ENTER SITE — ACCEPT RISK ]', () => this.enterRoom(0), C.redlineBtn);
         this.addActionButton(690, 630, '[ ABORT — RETURN ]', () => this.scene.start('SectorMap'), C.textSecond);
     }
 
@@ -777,8 +777,8 @@ export class DungeonScene extends Scene {
         GameState.setReturnFromDungeon(this.runLoot, this.runCredits, this.runXp, fullClear, completedContractIds, def.id);
         if (bossCleared && def.clearFlag) GameState.setFlag(def.clearFlag, true);
 
-        const panelBg = isRedline ? 0x0b0808 : C.panelBg;
-        const panelBorder = isRedline ? 0x7a5010 : C.border;
+        const panelBg = isRedline ? C.redlinePanelBg : C.panelBg;
+        const panelBorder = isRedline ? C.redlineBorder : C.border;
         this.contentContainer.add(
             this.add.rectangle(512, 330, 900, 420, panelBg).setStrokeStyle(2, panelBorder),
         );
@@ -788,10 +788,10 @@ export class DungeonScene extends Scene {
         let titleColor: string;
         if (isRedline && fullClear) {
             title = `⚠ REDLINE EXTRACTION — ${def.name.toUpperCase()}`;
-            titleColor = '#c89040';
+            titleColor = C.textAccent;
         } else if (isRedline) {
             title = '⚠ REDLINE — PARTIAL EXTRACTION';
-            titleColor = '#b07030';
+            titleColor = C.textWarn;
         } else if (fullClear) {
             title = `${def.name.toUpperCase()} — CLEARED`;
             titleColor = C.textSuccess;
@@ -806,7 +806,7 @@ export class DungeonScene extends Scene {
 
         if (isRedline) {
             this.addContentText(512, 144, 'You extracted alive. Gear is safe. Full contract reward secured.', {
-                fontFamily: 'Arial Black', fontSize: 13, color: '#b87838', align: 'center',
+                fontFamily: 'Arial Black', fontSize: 13, color: C.textAccent, align: 'center',
             }).setOrigin(0.5);
         } else {
             this.addContentText(512, 144, 'Returning to Meridian Station...', {
@@ -824,7 +824,7 @@ export class DungeonScene extends Scene {
 
         if (this.runLoot.length > 0) {
             const lootLabel = isRedline ? 'LOOT SECURED:' : 'SALVAGE:';
-            const lootColor = isRedline ? '#b87838' : C.textPrimary;
+            const lootColor = isRedline ? C.textAccent : C.textPrimary;
             this.addContentText(200, 234, lootLabel, {
                 fontFamily: 'Arial Black', fontSize: 13, color: lootColor,
             });
@@ -860,12 +860,12 @@ export class DungeonScene extends Scene {
         const isRedline = gs.activeRunIsRedline;
 
         this.contentContainer.add(
-            this.add.rectangle(512, 360, 900, 440, isRedline ? 0x0b0808 : 0x0b0a08)
-                .setStrokeStyle(2, isRedline ? 0x702020 : C.border),
+            this.add.rectangle(512, 360, 900, 440, isRedline ? C.redlinePanelBg : C.panelDark)
+                .setStrokeStyle(2, isRedline ? C.redlineBorder : C.border),
         );
 
         const titleText = isRedline ? '⚠ REDLINE FAILURE' : 'SYSTEMS CRITICAL';
-        const titleColor = isRedline ? '#c03028' : C.textDanger;
+        const titleColor = isRedline ? C.redlineText : C.textDanger;
         this.addContentText(512, 160, titleText, {
             fontFamily: 'Arial Black', fontSize: 28, color: titleColor, align: 'center',
             stroke: '#000000', strokeThickness: 4,
@@ -886,12 +886,12 @@ export class DungeonScene extends Scene {
             const securedId = gs.redlineSecuredItemId;
 
             this.addContentText(512, 246, 'Redline failure. Run loot is lost. Field gear loss calculated.', {
-                fontFamily: 'Arial', fontSize: 13, color: '#cc4422', align: 'center',
+                fontFamily: 'Arial', fontSize: 13, color: C.redlineTextDim, align: 'center',
             }).setOrigin(0.5);
 
             // Loss summary
             this.addContentText(200, 284, 'ITEMS LOST:', {
-                fontFamily: 'Arial Black', fontSize: 13, color: '#ff5533',
+                fontFamily: 'Arial Black', fontSize: 13, color: C.redlineLoss,
             });
             if (lossItems.length === 0) {
                 this.addContentText(200, 306, '  None. (No field consumables to lose)', {
@@ -900,7 +900,7 @@ export class DungeonScene extends Scene {
             } else {
                 lossItems.forEach((item, i) => {
                     this.addContentText(200, 306 + i * 20, `  ◆ ${item.name}  ×${item.qty}  — LOST`, {
-                        fontFamily: 'Arial', fontSize: 12, color: '#ff5533',
+                        fontFamily: 'Arial', fontSize: 12, color: C.redlineLoss,
                     });
                 });
             }
@@ -910,7 +910,7 @@ export class DungeonScene extends Scene {
                 const securedItem = gs.inventory.find(i => i.id === securedId);
                 if (securedItem) {
                     this.addContentText(200, 290 + lossItems.length * 20 + 20, `✓ SECURED: ${securedItem.name} — PROTECTED`, {
-                        fontFamily: 'Arial Black', fontSize: 12, color: '#44ff88',
+                        fontFamily: 'Arial Black', fontSize: 12, color: C.redlineSecured,
                     });
                 }
             }
@@ -918,7 +918,7 @@ export class DungeonScene extends Scene {
             const insuranceWasUsed = insuranceWasActive && lossItems.length <= 1;
             if (insuranceWasUsed) {
                 this.addContentText(200, 320 + lossItems.length * 20 + 20, '✓ INSURANCE APPLIED — Loss reduced.', {
-                    fontFamily: 'Arial Black', fontSize: 12, color: '#44ffaa',
+                    fontFamily: 'Arial Black', fontSize: 12, color: C.redlineInsure,
                 });
             }
 
