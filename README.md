@@ -2,7 +2,7 @@
 
 A browser-first space opera RPG. Frontier survival, contract work, and slow-burn cosmic horror — set in a universe of worn utility hardware, declining stations, and things humanity was not meant to find.
 
-> **Current Phase: 7** — Ship Tier III & Deep Frontier
+> **Current Phase: 9** — The Cycle Archive
 
 ---
 
@@ -30,48 +30,70 @@ You start broke, on a dying station, with a ship that can barely hold vacuum. Yo
 | **5** | Redline Protocol | High-stakes Redline runs, Vault of the Broken Signal & Ashveil Observation Post, Helion Synod faction, item insurance & secure-slot system |
 | **6** | Farpoint Hub | Farpoint second hub, Kael questline, Transit Node Zero ghost-site contracts, codex lore unlock system |
 | **7** | Ship Tier III & Deep Frontier | Ashveil Deep void-class dungeon, unknown entities, Tier III ship frame data, deep-frontier contract/lore expansion |
+| **8** | The Index Chamber | The Null Architect broadcasts coordinates to every faction simultaneously; Index Chamber void-class dungeon, multi-faction first-contact arc, Null Voice echo interface |
+| **9** | The Cycle Archive | Second transmission arrives after Index Chamber cleared; Cycle Archive sanctum dungeon, Architect purpose revealed, terminal witness arc |
 
 ---
 
-## Current Phase: 7 — Ship Tier III & Deep Frontier
+## Current Phase: 9 — The Cycle Archive
 
-### What Phase 7 Adds
+### What Phase 9 Adds
 
-**The frontier gets stranger.** Ashveil Deep extends the post-relay arc with void-class operations, unknown entities, and escalating multi-faction conflict over deep-core records.
+**The Architect reveals its purpose.** A second transmission arrives forty-eight hours after the Index Chamber is cleared — coordinates to a site one layer deeper, accompanied by a single phrase: *"CYCLE RECORD REQUIRES TERMINAL WITNESS."* Every faction that reached the Index Chamber receives the same message.
 
-#### Deep Frontier Operations
-- **Ashveil Deep** unlocked after Transit Node Zero clear
-- **Void-class tier** dungeon contract mapping in `DUNGEON_REGISTRY`
-- **Unknown entities** added to enemy roster for deep-frontier combat pacing
-- **Cross-faction contract pressure** (Compact, Synod, Covenant, ICA, Aegis)
-- **Expanded codex unlocks** for deep-frontier intelligence records
-
-#### New Dungeon (Void-class)
-- **Ashveil Deep** — Tier 5 Redline/void-class site beyond Ashveil Observation Post
+#### The Cycle Archive
+- **Cycle Archive Sanctum** — void-class dungeon, unlocked after Index Chamber cleared
+- **5-room layout**: Threshold → Outer Hall → Record Annex → Restricted Tier → Terminal
+- **New enemies**: `cycle-archive-seraph`, `cycle-archive-arbiter`, `cycle-archive-executor`, `cycle-archive-warden` (boss)
+- **`cycle-archive-cleared`** flag gates next content
 
 #### New Contracts (7)
-- 5 high-tier deep-frontier operations
-- 2 Redline extractions at Ashveil Deep core layers
+- 1 Frontier Compact approach survey
+- 1 Helion Synod cognitive record protocol
+- 1 Void Covenant recovery operation
+- 1 ICA access-control brief
+- 1 Aegis scout extraction
+- 2 Redline forced-access runs
 
-#### New Ship Data (Tier III)
-- **Deepfrontier Lancer III** ship frame added to ship content registry
-- Relay-capable Tier III hull classification in ship-state checks
-
-#### New NPCs (3)
-- **Lyra Kesh** — ICA hazard specialist at Farpoint
-- **Marek Thane** — Synod cognitive-drift field adept
-- **Iora Venn** — Free Transit shipwright for Tier III doctrine
+#### New NPCs (2)
+- **Commander Thess Dray** — Aegis Division field commander, skeptical of anything the Architect volunteers willingly
+- **Null Archivist Interface** — the Architect's direct output terminal; communicates in structured record notation
 
 #### New Lore (8 entries)
-- Ashveil Deep route and hazard briefs
-- Tier III hull doctrine memo
-- Synod cognitive drift and ICA quarantine records
-- Core encounter and lattice analysis debriefs
+- Cycle Archive approach brief
+- Archivist transmission record and faction response briefs
+- Cognitive imprint analysis and psi-resonance telemetry debriefs
+- Terminal witness debrief and Architect purpose records
 
-#### Integration Fixes Included
-- Codex now aggregates unlocked lore across Phase 5/6/7 pools
-- Dungeon completion screen contract title lookup now includes Phase 6/7 contracts
-- Hub NPC aggregation now consistently includes Phase 5+ arrays across panels
+---
+
+### What Phase 8 Added
+
+**The Index Chamber.** The Null Architect transmitted a single coordinate set to every active comm relay in the frontier corridor simultaneously. The site does not appear in any route registry. Every faction received the same message. Every faction sent someone to look.
+
+#### The Index Chamber
+- **Index Chamber Null-Prime** — void-class dungeon, unlocked after Ashveil Deep cleared
+- **4-room layout**: Approach Corridor → Signal Hall → Archive Ring → Core
+- **New enemies**: `index-warden-sentry`, `index-warden-herald`, `index-warden-guardian`, `index-chamber-warden` (boss)
+- **`index-chamber-cleared`** flag gates Phase 9
+
+#### New Contracts (7)
+- 1 Frontier Compact approach survey
+- 1 Helion Synod interaction protocol
+- 1 Void Covenant cycle-witness brief
+- 1 ICA access-control operation
+- 1 Aegis extraction prep
+- 2 Redline deep-access runs
+
+#### New NPCs (3)
+- **Corvus Renn** — veteran Free Transit navigator; first person at Farpoint to triangulate the Index Chamber coordinates
+- **Director Senne Vael** — ICA authority who arrived the same hour the transmission did
+- **Echo Terminal — Null Voice** — passive relay interface for the Architect's pre-transmission output logs
+
+#### New Lore (8 entries)
+- Index Chamber approach brief and faction arrival summaries
+- Null Voice echo logs and ICA quarantine field notes
+- Warden entity behavioral analysis and first-contact debrief records
 
 ---
 
@@ -117,11 +139,11 @@ npm run build      # Production build → dist/
 │           └── DebugPanel.ts     F1 toggle debug overlay
 │
 ├── content/                      Game data modules (TypeScript)
-│   ├── contracts/                starter · phase2 · phase3 · phase4 · phase5
+│   ├── contracts/                starter · phase2–phase9
 │   ├── factions/                 factions.ts — all factions, all phases
-│   ├── lore/                     starter · phase4 · phase5
-│   ├── npcs/                     meridian-npcs · phase4-npcs · phase5-npcs
-│   └── sectors/                  meridian-station · ashwake-belt · phase4 · phase5
+│   ├── lore/                     starter · phase4–phase9
+│   ├── npcs/                     meridian-npcs · phase4–phase9
+│   └── sectors/                  meridian-station · ashwake-belt · phase4–phase9
 │
 ├── shared/                       Types shared across all layers
 ├── docs/
