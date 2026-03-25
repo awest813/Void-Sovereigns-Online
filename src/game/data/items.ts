@@ -368,4 +368,130 @@ export const ITEMS: Record<string, ItemDef> = {
         value: 500,
         description: 'A structured lattice shard carrying non-linear transit indexing data from deep frontier systems.',
     },
+
+    // ── Phase 8 items ─────────────────────────────────────────────────────
+
+    'index-cycle-fragment': {
+        id: 'index-cycle-fragment',
+        name: 'Index Cycle Fragment',
+        type: 'key',
+        value: 480,
+        description: 'A data shard recovered from the Index Chamber annex racks. ' +
+            'Its classification timestamp predates the Chamber\'s construction by four hundred years. ' +
+            'The ICA wants this flagged as priority material. The Covenant disagrees about what it means.',
+    },
+    'architect-response-record': {
+        id: 'architect-response-record',
+        name: 'Architect Response Record',
+        type: 'key',
+        value: 560,
+        description: 'A direct-response log from the Null Architect — formatted as a reply to a query ' +
+            'that was never logged in the Chamber\'s intake records. ' +
+            'Whatever prompted this response, the Architect answered it. The question is not here.',
+    },
+    'index-access-token': {
+        id: 'index-access-token',
+        name: 'Index Access Token',
+        type: 'key',
+        value: 420,
+        description: 'A credential token recovered from the Index Chamber annex. ' +
+            'It does not match any known authorization format, but every sealed door in the facility reads it without hesitation. ' +
+            'Aegis will pay well to understand how.',
+    },
+
+    // ── Phase 9 items ─────────────────────────────────────────────────────
+
+    'cycle-record-fragment': {
+        id: 'cycle-record-fragment',
+        name: 'Cycle Record Fragment',
+        type: 'key',
+        value: 520,
+        description: 'A partial record extracted from the Cycle Archive annex racks. ' +
+            'The entry classification reads RESOLVED — VOID SOVEREIGN. ' +
+            'The civilization it describes does not appear anywhere in the ICA historical index.',
+    },
+    'archive-classification-core': {
+        id: 'archive-classification-core',
+        name: 'Archive Classification Core',
+        type: 'key',
+        value: 640,
+        description: 'The indexing core for a completed cycle classification. ' +
+            'It contains the Null Architect\'s complete evaluation criteria for forty-one civilizations. ' +
+            'What distinguishes a Void Sovereign from an ENFORCEMENT TERMINAL outcome is written here, plainly. ' +
+            'It is not what the factions have theorized.',
+    },
+    'cycle-terminal-record': {
+        id: 'cycle-terminal-record',
+        name: 'Cycle Terminal Record',
+        type: 'key',
+        value: 580,
+        description: 'A terminal-state record from a closed cycle. ' +
+            'The final classification notation reads ENFORCEMENT TERMINAL — SELF-DIRECTED. ' +
+            'The Covenant will not share what that means. The Archivist said it is the second most common outcome.',
+    },
+
+    // ── Phase 10 items ────────────────────────────────────────────────────
+
+    'threshold-resonance-record': {
+        id: 'threshold-resonance-record',
+        name: 'Threshold Resonance Record',
+        type: 'key',
+        value: 680,
+        description: 'A resonance trace record from the Sovereign Threshold annex. ' +
+            'The pattern is identical to the signal first detected at Ashveil — amplified by a factor ' +
+            'that should require a facility ten times this size to produce. ' +
+            'The Helion Synod has been looking for this for twelve years.',
+    },
+    'forced-sovereignty-record': {
+        id: 'forced-sovereignty-record',
+        name: 'Forced Sovereignty Record',
+        type: 'key',
+        value: 720,
+        description: 'A classification record from one of the two enforcement-terminal cycles. ' +
+            'The notation reads VOID SOVEREIGN — ENFORCEMENT OVERRIDE. ' +
+            'The override was filed by the civilization itself, on the final day of their cycle. ' +
+            'The Architect accepted it.',
+    },
+    'sealed-cycle-record': {
+        id: 'sealed-cycle-record',
+        name: 'Sealed Cycle Record',
+        type: 'key',
+        value: 760,
+        description: 'A sealed classification record from the Threshold annex. ' +
+            'The seal format is the Architect\'s own — unbreakable without the Sovereign key. ' +
+            'Inside, according to the manifest header, is the complete resolution protocol ' +
+            'for the forty-second cycle. Your cycle.',
+    },
+
+    // ── Phase 11 items ────────────────────────────────────────────────────
+
+    'origin-cycle-fragment': {
+        id: 'origin-cycle-fragment',
+        name: 'Origin Cycle Fragment',
+        type: 'key',
+        value: 800,
+        description: 'A fragment from the first record — the Architect\'s original cycle-zero entry. ' +
+            'The resonance density is orders of magnitude above anything recovered from later-phase sites. ' +
+            'It reads as actively transmitting on every scanner protocol tested against it.',
+    },
+    'first-record-extract': {
+        id: 'first-record-extract',
+        name: 'First Record Extract',
+        type: 'key',
+        value: 960,
+        description: 'A direct data extract from the Origin Node\'s cycle-zero record. ' +
+            'The Architect\'s first decision, unredacted. ' +
+            'The first civilization classified. What they chose. What the Architect recorded. ' +
+            'Every faction in the frontier has been looking for this for different reasons. ' +
+            'None of them will be satisfied with the same answer.',
+    },
+    'origin-node-access-token': {
+        id: 'origin-node-access-token',
+        name: 'Origin Node Access Token',
+        type: 'key',
+        value: 880,
+        description: 'A credential token recovered from the Origin Node gallery. ' +
+            'It is the oldest artifact you have encountered — the authorization format is the Architect\'s original, ' +
+            'before any revision or update. It opens doors that should not exist in any facility built after it.',
+    },
 };

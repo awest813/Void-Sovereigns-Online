@@ -7,6 +7,7 @@ import { DebugPanel } from '../ui/DebugPanel';
 export class MainMenu extends Scene
 {
     private debugPanel?: DebugPanel;
+    private sceneChanging = false;
 
     constructor ()
     {
@@ -64,6 +65,8 @@ export class MainMenu extends Scene
 
     changeScene ()
     {
+        if (this.sceneChanging) return;
+        this.sceneChanging = true;
         this.scene.start('Hub');
     }
 }
