@@ -12,18 +12,30 @@ export class MainMenu extends Scene
     create ()
     {
         this.add.image(512, 384, 'background').setAlpha(0.6);
-        this.add.image(512, 260, 'logo').setDepth(100);
 
-        this.add.text(512, 420, 'VOID SOVEREIGNS ONLINE', {
+        // Game title treatment
+        const gfx = this.add.graphics().setDepth(100);
+        gfx.lineStyle(1, 0x5599ee, 0.45);
+        gfx.lineBetween(292, 248, 732, 248);
+        gfx.lineBetween(292, 340, 732, 340);
+
+        this.add.text(512, 294, 'VOID SOVEREIGNS', {
             fontFamily: 'Arial Black',
-            fontSize: 32,
-            color: '#e8e0cc',
-            stroke: '#000000',
-            strokeThickness: 6,
+            fontSize: 52,
+            color: '#c8e0f8',
+            stroke: '#000820',
+            strokeThickness: 8,
             align: 'center',
         }).setOrigin(0.5).setDepth(100);
 
-        this.add.text(512, 470, 'Press any key to dock at Meridian Station', {
+        this.add.text(512, 346, 'O  N  L  I  N  E', {
+            fontFamily: 'Arial',
+            fontSize: 18,
+            color: '#5599ee',
+            align: 'center',
+        }).setOrigin(0.5).setDepth(100);
+
+        this.add.text(512, 430, 'Press any key to dock at Meridian Station', {
             fontFamily: 'Arial',
             fontSize: 16,
             color: '#aaaaaa',
