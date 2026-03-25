@@ -249,6 +249,9 @@ const FARPOINT_HUB_NPC_IDS = [
     // Phase 10
     'threshold-herald',
     'elder-covenant-ren',
+    // Phase 11
+    'herald-echo',
+    'frontier-archivist-sol',
     // Phase 3/4 faction contacts accessible at Farpoint
     'ica-agent-vorren',
     'void-covenant-kestrel',
@@ -2432,6 +2435,11 @@ export class HubScene extends Scene {
             'vault-of-the-broken-signal':     'Vault of the Broken Signal',
             'ashveil-observation-post':       'Ashveil Observation Post',
             'transit-node-zero':              'Transit Node Zero',
+            'ashveil-deep-void-class':        'Ashveil Deep',
+            'index-chamber-null-prime':       'The Index Chamber',
+            'cycle-archive-sanctum':          'The Cycle Archive',
+            'sovereign-threshold-main':       'The Sovereign Threshold',
+            'origin-node-prime':              'The Origin Node',
         };
         const siteName = dungeonNames[gs.lastDungeonId ?? ''] ?? 'Unknown Site';
         c.add(this.add.text(512, 132, `${siteName} — Run Complete`, {
