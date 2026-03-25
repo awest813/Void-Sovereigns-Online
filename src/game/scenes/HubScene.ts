@@ -506,12 +506,24 @@ export class HubScene extends Scene {
     private refreshShipBar() {
         const gs = GameState.get();
         if (!this.shipHullBar || !this.shipFuelBar) return;
-        const hullPct = gs.shipHull / gs.shipMaxHull;
-        this.shipHullBar.setSize(hullPct * 100, 10);
+        // Hull bar: drawBar(null, 240, y+10, 100, 10, ...) — center=240, width=100, leftEdge=190.
+        const HULL_BAR_CENTER   = 240;
+        const HULL_BAR_WIDTH    = 100;
+        const HULL_BAR_LEFT     = HULL_BAR_CENTER - HULL_BAR_WIDTH / 2;  // 190
+        const hullPct  = gs.shipHull / gs.shipMaxHull;
+        const hullFillW = Math.max(0, hullPct * HULL_BAR_WIDTH);
+        this.shipHullBar.setSize(hullFillW, 10);
+        this.shipHullBar.setX(hullFillW > 0 ? HULL_BAR_LEFT + hullFillW / 2 : HULL_BAR_CENTER);
         this.shipHullBar.setFillStyle(hullPct > 0.5 ? C.barFull : C.barDamaged);
         this.shipHullText?.setText(`${gs.shipHull}/${gs.shipMaxHull}`);
-        const fuelPct = gs.shipFuel / gs.shipMaxFuel;
-        this.shipFuelBar.setSize(fuelPct * 80, 10);
+        // Fuel bar: drawBar(null, 415, y+10, 80, 10, ...) — center=415, width=80, leftEdge=375.
+        const FUEL_BAR_CENTER   = 415;
+        const FUEL_BAR_WIDTH    = 80;
+        const FUEL_BAR_LEFT     = FUEL_BAR_CENTER - FUEL_BAR_WIDTH / 2;  // 375
+        const fuelPct  = gs.shipFuel / gs.shipMaxFuel;
+        const fuelFillW = Math.max(0, fuelPct * FUEL_BAR_WIDTH);
+        this.shipFuelBar.setSize(fuelFillW, 10);
+        this.shipFuelBar.setX(fuelFillW > 0 ? FUEL_BAR_LEFT + fuelFillW / 2 : FUEL_BAR_CENTER);
         this.shipFuelText?.setText(`${gs.shipFuel}/${gs.shipMaxFuel}`);
     }
 
@@ -972,7 +984,7 @@ export class HubScene extends Scene {
             this.input.on('wheel', this._contractScrollHandler);
         }
 
-        this.makeButton(c, 512, 700, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
+        this.makeButton(c, 512, 730, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
     }
 
     /** Show a Redline contract acceptance confirmation dialog. */
@@ -1453,7 +1465,7 @@ export class HubScene extends Scene {
             this.input.on('wheel', this._codexScrollHandler);
         }
 
-        this.makeButton(c, 512, 700, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
+        this.makeButton(c, 512, 730, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
     }
 
     // ── Services panel ────────────────────────────────────────────────────
@@ -2095,44 +2107,17 @@ export class HubScene extends Scene {
             }
         });
 
-        // Phase 4+5 contacts section header (only post-relay)
+        // Post-relay: show a note directing players to contact buttons in the rows above.
         const relayJumped = GameState.getFlag('relay-jump-completed');
+        const sectionY = startY + Math.ceil(displayFactions.length / 2) * rowH + 16;
         if (relayJumped) {
-            const sectionY = startY + Math.ceil(displayFactions.length / 2) * rowH + 16;
-            c.add(this.add.text(80, sectionY, 'FRONTIER CONTACTS', {
-                fontFamily: 'Arial Black', fontSize: 14, color: C.textWarn,
-            }));
-            c.add(this.add.text(80, sectionY + 18, 'New operators encountered in the post-relay frontier', {
-                fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
-            }));
-
-            const contactNPCs = [...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs, ...phase10NPCs, ...phase11NPCs];
-            const npcColW = 220;
-            contactNPCs.forEach((npc, i) => {
-                const cx = 80 + i * npcColW;
-                const cy = sectionY + 50;
-                c.add(this.add.rectangle(cx + 100, cy + 38, 200, 70, C.panelBg).setStrokeStyle(1, C.border));
-                c.add(this.add.text(cx + 100, cy + 12, npc.name, {
-                    fontFamily: 'Arial Black', fontSize: 11, color: C.textPrimary, align: 'center',
-                }).setOrigin(0.5));
-
-                const factionOfNPC = factions.find(f => f.id === npc.faction);
-                const fRep = npc.faction ? GameState.getReputation(npc.faction) : 0;
-                const fRepColor = npc.faction ? GameState.getReputationColor(fRep) : C.textSecond;
-                c.add(this.add.text(cx + 100, cy + 28, factionOfNPC?.shortName ?? npc.faction ?? '', {
-                    fontFamily: 'Arial', fontSize: 10, color: fRepColor, align: 'center',
-                }).setOrigin(0.5));
-
-                const talkBtn = this.add.text(cx + 100, cy + 56, '[ TALK ]', {
-                    fontFamily: 'Arial Black', fontSize: 12, color: C.btnNormal, align: 'center',
-                }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-                talkBtn.on('pointerover', () => talkBtn.setColor(C.btnHover));
-                talkBtn.on('pointerout', () => talkBtn.setColor(C.btnNormal));
-                talkBtn.on('pointerdown', () => this.showFactionNpcDialogue(npc.id));
-                c.add(talkBtn);
-            });
+            c.add(this.add.text(512, sectionY, '▶ Use the [ CONTACT ] buttons in each row to speak with faction operators.', {
+                fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+            }).setOrigin(0.5));
+            c.add(this.add.text(512, sectionY + 18, 'All frontier contacts are also available via STATION CONTACTS.', {
+                fontFamily: 'Arial', fontSize: 11, color: C.textMuted, align: 'center',
+            }).setOrigin(0.5));
         } else {
-            const sectionY = startY + Math.ceil(displayFactions.length / 2) * rowH + 16;
             c.add(this.add.text(512, sectionY, '▶ Reach the Void Relay to access frontier faction contacts', {
                 fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
             }).setOrigin(0.5));
@@ -2390,7 +2375,7 @@ export class HubScene extends Scene {
             this.input.on('wheel', this._inventoryScrollHandler);
         }
 
-        this.makeButton(c, 512, 700, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
+        this.makeButton(c, 512, 730, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
     }
 
     // ── Debrief panel (post-dungeon) ──────────────────────────────────────
