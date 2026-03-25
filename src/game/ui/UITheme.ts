@@ -106,4 +106,14 @@ export const T = {
     ashveilText:    '#904060',
     /** Ashveil dim text — dark rose-purple. */
     ashveilTextDim: '#783050',
+
+    // ── Index Chamber — Null Architect contact site (Phase 8) ─────────────
+    /** Index Chamber panel background — deep void-teal black. */
+    indexPanelBg:  0x040b0a,
+    /** Index Chamber border — cold dark teal. */
+    indexBorder:   0x1a4838,
+    /** Index Chamber label text — cool teal. */
+    indexText:     '#3a9878',
+    /** Index Chamber dim text — muted dark teal. */
+    indexTextDim:  '#2a7058',
 } as const;

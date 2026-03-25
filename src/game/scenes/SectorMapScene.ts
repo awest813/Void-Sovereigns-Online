@@ -266,6 +266,25 @@ export class SectorMapScene extends Scene {
                 deepBtn.on('pointerout',  () => deepBtn.setColor(deepCleared ? C.textSecond : C.ashveilTextDim));
                 deepBtn.on('pointerdown', () => this.confirmRedlineLaunch('ashveil-deep-void-class', 'Ashveil Deep'));
             }
+
+            // ── Phase 8: Index Chamber — Null Architect contact site ─────
+            if (GameState.getFlag('ashveil-deep-cleared')) {
+                const indexCleared = GameState.getFlag('index-chamber-cleared');
+                this.add.rectangle(490, 82, 680, 26, C.indexPanelBg).setStrokeStyle(1, C.indexBorder);
+                const indexLabel = indexCleared
+                    ? '◆ The Index Chamber  ·  Tier 5  ·  REDLINE  ·  Null Architect  [CLEARED]'
+                    : '◆ The Index Chamber  ·  Tier 5  ·  ⚠ REDLINE  ·  Null Architect  ★ TRANSMISSION RECEIVED';
+                this.add.text(350, 74, indexLabel, {
+                    fontFamily: 'Arial', fontSize: 12, color: indexCleared ? C.textSecond : C.indexText,
+                });
+                const indexBtn = this.add.text(500, 88, '[ LAUNCH TO INDEX CHAMBER — REDLINE ]', {
+                    fontFamily: 'Arial Black', fontSize: 13,
+                    color: indexCleared ? C.textSecond : C.indexTextDim,
+                }).setInteractive({ useHandCursor: true });
+                indexBtn.on('pointerover', () => indexBtn.setColor(C.btnHover));
+                indexBtn.on('pointerout',  () => indexBtn.setColor(indexCleared ? C.textSecond : C.indexTextDim));
+                indexBtn.on('pointerdown', () => this.confirmRedlineLaunch('index-chamber-null-prime', 'The Index Chamber'));
+            }
         }
 
         // ── Relay goal strip

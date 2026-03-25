@@ -942,6 +942,86 @@ export const DUNGEON_REGISTRY: Record<string, DungeonDef> = {
         ],
         clearFlag: 'ashveil-deep-cleared',
     },
+
+    // ── Phase 8 ──────────────────────────────────────────────────────────────
+    'index-chamber-null-prime': {
+        id: 'index-chamber-null-prime',
+        name: 'The Index Chamber',
+        tier: 5,
+        description:
+            'The Null Architect transmitted these coordinates. ' +
+            'The site has been prepared. The entities inside are not deterrence units.',
+        isRedline: true,
+        introText:
+            'The approach corridor is clean — almost too clean for deep frontier space. ' +
+            'Transit markers align perfectly with the ingress vectors the Architect sent.\n\n' +
+            'The site knew you were coming before you filed a docking pass.\n\n' +
+            'Your objectives: enter, observe, extract actionable data from the chamber record, and return alive. ' +
+            'The entities inside have not been classified. Proceed accordingly.',
+        rooms: [
+            {
+                id: 'index-approach-threshold',
+                name: 'Approach Threshold',
+                type: 'entrance',
+                description:
+                    'The threshold self-aligns as your ship approaches. ' +
+                    'The docking log already contains an entry for your vessel before you file the request.',
+                enemies: [],
+                cleared: false,
+            },
+            {
+                id: 'index-warden-corridor',
+                name: 'Warden Corridor',
+                type: 'combat',
+                description:
+                    'Outer corridor access management units occupy the junction. ' +
+                    'They moved into position when you entered, not when you advanced.',
+                enemies: ['index-warden-sentry', 'index-warden-sentry'],
+                cleared: false,
+            },
+            {
+                id: 'index-archive-annex',
+                name: 'Archive Annex',
+                type: 'loot',
+                description:
+                    'A side annex of active index racks. Records are organized by response state, not date. ' +
+                    'Several entries reference the current cycle as still open.',
+                enemies: [],
+                lootItems: ['index-cycle-fragment', 'architect-response-record', 'index-access-token'],
+                cleared: false,
+            },
+            {
+                id: 'index-warden-sanctum',
+                name: 'Warden Sanctum',
+                type: 'combat',
+                description:
+                    'The inner sanctum before the core. A Herald coordinates the Guardian\'s positioning. ' +
+                    'The archive threshold corridor is sealed behind them.',
+                enemies: ['index-warden-herald', 'index-warden-guardian'],
+                cleared: false,
+            },
+            {
+                id: 'index-chamber-core',
+                name: 'Index Chamber Core — Warden',
+                type: 'boss',
+                description:
+                    'The core record chamber. The Warden does not escalate in sequence here. ' +
+                    'It operates without a deescalation threshold. The cycle record is behind it.',
+                enemies: ['index-chamber-warden'],
+                cleared: false,
+            },
+        ],
+        contractCompletions: [
+            { contractId: 'frontier-index-approach-survey',    requireAnyProgress: true },
+            { contractId: 'synod-index-interaction-protocol',  requireLootCleared: true },
+            { contractId: 'covenant-index-cycle-witness',      requireAnyProgress: true },
+            { contractId: 'ica-index-access-control',          requireAnyProgress: true },
+            { contractId: 'aegis-index-extraction-prep',       requireAnyProgress: true },
+            { contractId: 'redline-index-archive-breach',      requireBossCleared: true },
+            { contractId: 'redline-index-cycle-record',        requireBossCleared: true },
+        ],
+        clearFlag: 'index-chamber-cleared',
+    },
 };
 
 /** Returns a fresh copy of a dungeon (rooms reset to uncleared). */
