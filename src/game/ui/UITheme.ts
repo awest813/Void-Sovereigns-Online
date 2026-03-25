@@ -126,4 +126,13 @@ export const T = {
     cycleText:     '#7048a8',
     /** Cycle Archive dim text — dark violet. */
     cycleTextDim:  '#583890',
+// ── Sovereign Threshold — Null Architect final resolution site (Phase 10) ──
+    /** Sovereign Threshold panel background — near-black with gold undertone. */
+    sovereignPanelBg:  0x080700,
+    /** Sovereign Threshold border — deep amber-gold. */
+    sovereignBorder:   0x5a3c00,
+    /** Sovereign Threshold label text — warm gold. */
+    sovereignText:     '#c8960a',
+    /** Sovereign Threshold dim text — muted amber. */
+    sovereignTextDim:  '#906800',
 } as const;

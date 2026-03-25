@@ -780,6 +780,73 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'cycle-record-fragment',        chance: 0.8, qty: 2 },
         ],
     },
+
+    // ── Phase 10: Sovereign Threshold ─────────────────────────────────────
+    'sovereign-threshold-sentinel': {
+        id: 'sovereign-threshold-sentinel',
+        name: 'Threshold Sentinel',
+        description: 'Outer-corridor patrol unit of the Sovereign Threshold. Faster and more coordinated than Cycle Archive Seraphs — the Architect prepared this site for a different class of entry.',
+        hp: 200,
+        attackMin: 42,
+        attackMax: 64,
+        defense: 16,
+        xpReward: 175,
+        creditDropMin: 110,
+        creditDropMax: 185,
+        lootPool: [
+            { itemId: 'threshold-resonance-record', chance: 0.40, qty: 1 },
+            { itemId: 'signal-fragment',             chance: 0.30, qty: 1 },
+        ],
+    },
+    'sovereign-threshold-arbiter': {
+        id: 'sovereign-threshold-arbiter',
+        name: 'Threshold Arbiter',
+        description: 'Mid-tier enforcement construct of the Sovereign Threshold. Deploys cycle-lock fields that slow operative response near restricted resolution chambers.',
+        hp: 300,
+        attackMin: 48,
+        attackMax: 74,
+        defense: 24,
+        xpReward: 245,
+        creditDropMin: 155,
+        creditDropMax: 245,
+        lootPool: [
+            { itemId: 'threshold-resonance-record', chance: 0.35, qty: 1 },
+            { itemId: 'forced-sovereignty-record',  chance: 0.15, qty: 1 },
+        ],
+    },
+    'sovereign-threshold-guardian': {
+        id: 'sovereign-threshold-guardian',
+        name: 'Threshold Guardian',
+        description: 'Heavy corridor enforcement construct positioned at the restricted terminal approach. Coordinates with Arbiter units to hold the resolution chamber sealed against forced entry.',
+        hp: 390,
+        attackMin: 54,
+        attackMax: 82,
+        defense: 30,
+        xpReward: 320,
+        creditDropMin: 200,
+        creditDropMax: 340,
+        lootPool: [
+            { itemId: 'forced-sovereignty-record', chance: 0.25, qty: 1 },
+            { itemId: 'threshold-resonance-record', chance: 0.45, qty: 1 },
+        ],
+    },
+    'sovereign-threshold-sovereign': {
+        id: 'sovereign-threshold-sovereign',
+        name: 'Threshold Sovereign',
+        description: 'The Null Architect\'s terminal resolution construct. It does not escalate — entering the resolution chamber is the trigger. The Threshold Sovereign is the final enforcement entity in the archive sequence. No deescalation threshold exists.',
+        hp: 720,
+        attackMin: 65,
+        attackMax: 100,
+        defense: 38,
+        xpReward: 680,
+        creditDropMin: 540,
+        creditDropMax: 880,
+        lootPool: [
+            { itemId: 'sealed-cycle-record',         chance: 1.0, qty: 1 },
+            { itemId: 'forced-sovereignty-record',   chance: 0.9, qty: 1 },
+            { itemId: 'threshold-resonance-record',  chance: 0.8, qty: 2 },
+        ],
+    },
 };
 
 /** Roll loot from an enemy's loot pool. Returns InventoryItem-shaped objects. */
@@ -833,6 +900,10 @@ export function rollLoot(enemyId: string): Array<{ id: string; name: string; qty
         'architect-response-record':{ name: 'Architect Response Record',type: 'key',     value: 600 },
         'index-access-token':       { name: 'Index Access Token',       type: 'key',     value: 480 },
         'warden-core-extract':      { name: 'Warden Core Extract',      type: 'key',     value: 700 },
+        // Phase 10 items
+        'threshold-resonance-record': { name: 'Threshold Resonance Record', type: 'key',     value: 620 },
+        'forced-sovereignty-record':  { name: 'Forced Sovereignty Record',  type: 'key',     value: 780 },
+        'sealed-cycle-record':        { name: 'Sealed Cycle Record',        type: 'key',     value: 900 },
     };
 
     for (const entry of enemy.lootPool) {

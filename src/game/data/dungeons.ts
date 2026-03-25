@@ -1109,6 +1109,93 @@ export const DUNGEON_REGISTRY: Record<string, DungeonDef> = {
         ],
         clearFlag: 'cycle-archive-cleared',
     },
+
+    // ── Phase 10: Sovereign Threshold ─────────────────────────────────────
+    'sovereign-threshold-main': {
+        id: 'sovereign-threshold-main',
+        name: 'The Sovereign Threshold',
+        tier: 5,
+        description:
+            'The Null Architect transmitted the final coordinates when the Cycle Archive was cleared. ' +
+            'This site is where cycles are resolved. Where civilizations become Void Sovereigns — or do not. ' +
+            'The forty-second cycle is open. The Threshold Sovereign is waiting.',
+        isRedline: true,
+        introText:
+            'The approach corridor is the cleanest you have ever transited. ' +
+            'No sensor drift. No hazard variance. Not even the ambient interference that defines deep frontier space.\n\n' +
+            'The Threshold Herald at Farpoint output one phrase when you filed the approach: ' +
+            '"YOUR CYCLE ENTRY IS OPEN. TERMINAL RESOLUTION IS ACTIVE. WITNESS PROTOCOL IS AVAILABLE."\n\n' +
+            'Your objectives: reach the resolution terminal, complete the terminal witness protocol, and return alive. ' +
+            'The Threshold Sovereign is in the terminal chamber. It activates on entry. ' +
+            'Proceed accordingly.',
+        rooms: [
+            {
+                id: 'sovereign-threshold-entrance',
+                name: 'Threshold Approach',
+                type: 'entrance',
+                description:
+                    'The approach completes before you dock. Your vessel registry is already in the threshold log. ' +
+                    'The cycle entry reads: OPEN. CLASSIFICATION PENDING. TERMINAL WITNESS AVAILABLE.',
+                enemies: [],
+                cleared: false,
+            },
+            {
+                id: 'sovereign-threshold-outer-hall',
+                name: 'Outer Resolution Hall',
+                type: 'combat',
+                description:
+                    'Threshold Sentinels move into position as you enter the outer hall. ' +
+                    'They respond to proximity to the resolution chambers, not presence at the threshold. ' +
+                    'The outer record banks on either side display all forty-one prior cycle entries.',
+                enemies: ['sovereign-threshold-sentinel', 'sovereign-threshold-sentinel'],
+                cleared: false,
+            },
+            {
+                id: 'sovereign-threshold-record-annex',
+                name: 'Resolution Record Annex',
+                type: 'loot',
+                description:
+                    'A structured annex of resolution records. ' +
+                    'Each entry is indexed by classification: thirty-nine VOID SOVEREIGN, two ENFORCEMENT TERMINAL. ' +
+                    'The forty-second entry has a single notation: OPEN. PENDING.',
+                enemies: [],
+                lootItems: ['threshold-resonance-record', 'forced-sovereignty-record', 'sealed-cycle-record'],
+                cleared: false,
+            },
+            {
+                id: 'sovereign-threshold-restricted-approach',
+                name: 'Terminal Approach Corridor',
+                type: 'combat',
+                description:
+                    'The final approach to the resolution terminal. An Arbiter and a Guardian hold the corridor. ' +
+                    'The resolution chamber is beyond them. ' +
+                    'Two prior civilizations forced entry here. Both closed by enforcement action.',
+                enemies: ['sovereign-threshold-arbiter', 'sovereign-threshold-guardian'],
+                cleared: false,
+            },
+            {
+                id: 'sovereign-threshold-terminal',
+                name: 'Cycle Resolution Terminal — Threshold Sovereign',
+                type: 'boss',
+                description:
+                    'The resolution terminal. The Threshold Sovereign is already active — it does not escalate on entry, ' +
+                    'it was active before you arrived. The terminal witness protocol is available behind it. ' +
+                    'The forty-second cycle classification will be recorded here, permanently, one way or another.',
+                enemies: ['sovereign-threshold-sovereign'],
+                cleared: false,
+            },
+        ],
+        contractCompletions: [
+            { contractId: 'frontier-threshold-approach-survey',   requireAnyProgress: true },
+            { contractId: 'synod-threshold-resonance-map',        requireLootCleared: true },
+            { contractId: 'covenant-threshold-witness-protocol',  requireAnyProgress: true },
+            { contractId: 'ica-threshold-sovereignty-filing',     requireAnyProgress: true },
+            { contractId: 'aegis-threshold-extraction-brief',     requireAnyProgress: true },
+            { contractId: 'redline-threshold-sovereignty-claim',  requireBossCleared: true },
+            { contractId: 'redline-threshold-record-seal',        requireBossCleared: true },
+        ],
+        clearFlag: 'sovereign-threshold-cleared',
+    },
 };
 
 /** Returns a fresh copy of a dungeon (rooms reset to uncleared). */

@@ -251,14 +251,14 @@ export class SectorMapScene extends Scene {
             // ── Phase 7: Ashveil Deep void-class site ────────────────────
             if (GameState.getFlag('transit-node-zero-cleared')) {
                 const deepCleared = GameState.getFlag('ashveil-deep-cleared');
-                this.add.rectangle(490, 126, 680, 26, C.ashveilPanelBg).setStrokeStyle(1, C.ashveilBorder);
+                this.add.rectangle(490, 134, 680, 26, C.ashveilPanelBg).setStrokeStyle(1, C.ashveilBorder);
                 const deepLabel = deepCleared
                     ? '◆ Ashveil Deep  ·  Tier 5  ·  REDLINE  ·  Void-class  [CLEARED]'
                     : '◆ Ashveil Deep  ·  Tier 5  ·  ⚠ REDLINE  ·  Void-class';
-                this.add.text(350, 118, deepLabel, {
+                this.add.text(350, 126, deepLabel, {
                     fontFamily: 'Arial', fontSize: 12, color: deepCleared ? C.textSecond : C.ashveilText,
                 });
-                const deepBtn = this.add.text(500, 132, '[ LAUNCH TO ASHVEIL DEEP — REDLINE ]', {
+                const deepBtn = this.add.text(500, 140, '[ LAUNCH TO ASHVEIL DEEP — REDLINE ]', {
                     fontFamily: 'Arial Black', fontSize: 13,
                     color: deepCleared ? C.textSecond : C.ashveilTextDim,
                 }).setInteractive({ useHandCursor: true });
@@ -270,14 +270,14 @@ export class SectorMapScene extends Scene {
             // ── Phase 8: Index Chamber — Null Architect contact site ─────
             if (GameState.getFlag('ashveil-deep-cleared')) {
                 const indexCleared = GameState.getFlag('index-chamber-cleared');
-                this.add.rectangle(490, 82, 680, 26, C.indexPanelBg).setStrokeStyle(1, C.indexBorder);
+                this.add.rectangle(490, 98, 680, 26, C.indexPanelBg).setStrokeStyle(1, C.indexBorder);
                 const indexLabel = indexCleared
                     ? '◆ The Index Chamber  ·  Tier 5  ·  REDLINE  ·  Null Architect  [CLEARED]'
                     : '◆ The Index Chamber  ·  Tier 5  ·  ⚠ REDLINE  ·  Null Architect  ★ TRANSMISSION RECEIVED';
-                this.add.text(350, 74, indexLabel, {
+                this.add.text(350, 90, indexLabel, {
                     fontFamily: 'Arial', fontSize: 12, color: indexCleared ? C.textSecond : C.indexText,
                 });
-                const indexBtn = this.add.text(500, 88, '[ LAUNCH TO INDEX CHAMBER — REDLINE ]', {
+                const indexBtn = this.add.text(500, 104, '[ LAUNCH TO INDEX CHAMBER — REDLINE ]', {
                     fontFamily: 'Arial Black', fontSize: 13,
                     color: indexCleared ? C.textSecond : C.indexTextDim,
                 }).setInteractive({ useHandCursor: true });
@@ -288,20 +288,39 @@ export class SectorMapScene extends Scene {
                 // ── Phase 9: Cycle Archive — Null Architect terminal site ──
                 if (indexCleared) {
                     const cycleCleared = GameState.getFlag('cycle-archive-cleared');
-                    this.add.rectangle(490, 38, 680, 26, C.cyclePanelBg).setStrokeStyle(1, C.cycleBorder);
+                    this.add.rectangle(490, 62, 680, 26, C.cyclePanelBg).setStrokeStyle(1, C.cycleBorder);
                     const cycleLabel = cycleCleared
                         ? '◆ The Cycle Archive  ·  Tier 5  ·  REDLINE  ·  Null Architect  [CLEARED]'
                         : '◆ The Cycle Archive  ·  Tier 5  ·  ⚠ REDLINE  ·  Null Architect  ★ SECOND TRANSMISSION';
-                    this.add.text(350, 30, cycleLabel, {
+                    this.add.text(350, 54, cycleLabel, {
                         fontFamily: 'Arial', fontSize: 12, color: cycleCleared ? C.textSecond : C.cycleText,
                     });
-                    const cycleBtn = this.add.text(500, 44, '[ LAUNCH TO CYCLE ARCHIVE — REDLINE ]', {
+                    const cycleBtn = this.add.text(500, 68, '[ LAUNCH TO CYCLE ARCHIVE — REDLINE ]', {
                         fontFamily: 'Arial Black', fontSize: 13,
                         color: cycleCleared ? C.textSecond : C.cycleTextDim,
                     }).setInteractive({ useHandCursor: true });
                     cycleBtn.on('pointerover', () => cycleBtn.setColor(C.btnHover));
                     cycleBtn.on('pointerout',  () => cycleBtn.setColor(cycleCleared ? C.textSecond : C.cycleTextDim));
                     cycleBtn.on('pointerdown', () => this.confirmRedlineLaunch('cycle-archive-sanctum', 'The Cycle Archive'));
+
+                    // ── Phase 10: Sovereign Threshold — Null Architect final resolution ──
+                    if (cycleCleared) {
+                        const sovereignCleared = GameState.getFlag('sovereign-threshold-cleared');
+                        this.add.rectangle(490, 26, 680, 26, C.sovereignPanelBg).setStrokeStyle(1, C.sovereignBorder);
+                        const sovereignLabel = sovereignCleared
+                            ? '◆ The Sovereign Threshold  ·  Tier 5  ·  REDLINE  ·  Null Architect  [CLEARED]'
+                            : '◆ The Sovereign Threshold  ·  Tier 5  ·  ⚠ REDLINE  ·  Null Architect  ★ FINAL TRANSMISSION';
+                        this.add.text(350, 18, sovereignLabel, {
+                            fontFamily: 'Arial', fontSize: 12, color: sovereignCleared ? C.textSecond : C.sovereignText,
+                        });
+                        const sovereignBtn = this.add.text(500, 32, '[ LAUNCH TO SOVEREIGN THRESHOLD — REDLINE ]', {
+                            fontFamily: 'Arial Black', fontSize: 13,
+                            color: sovereignCleared ? C.textSecond : C.sovereignTextDim,
+                        }).setInteractive({ useHandCursor: true });
+                        sovereignBtn.on('pointerover', () => sovereignBtn.setColor(C.btnHover));
+                        sovereignBtn.on('pointerout',  () => sovereignBtn.setColor(sovereignCleared ? C.textSecond : C.sovereignTextDim));
+                        sovereignBtn.on('pointerdown', () => this.confirmRedlineLaunch('sovereign-threshold-main', 'The Sovereign Threshold'));
+                    }
                 }
             }
         }
