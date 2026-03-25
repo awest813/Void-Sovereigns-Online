@@ -105,7 +105,7 @@ The risk layer escalates. High-stakes runs, corporate theology, and insurance br
 ## Upcoming Phases
 
 ### Phase 6 — The Farpoint Hub
-**Status: 🔄 In Progress**
+**Status: ✅ Complete**
 
 Farpoint Waystation becomes a second fully operational hub, competing with Meridian.
 
@@ -126,7 +126,7 @@ Farpoint Waystation becomes a second fully operational hub, competing with Merid
 ---
 
 ### Phase 7 — Ship Tier III & Deep Frontier
-**Status: 🔲 Planned**
+**Status: 🔄 In Progress**
 
 Ship progression reaches its third tier; the frontier gets genuinely strange.
 

@@ -870,6 +870,78 @@ export const DUNGEON_REGISTRY: Record<string, DungeonDef> = {
         ],
         clearFlag: 'transit-node-zero-cleared',
     },
+    // ── Phase 7 — Ashveil Deep (Void-class) ───────────────────────────────
+    'ashveil-deep-void-class': {
+        id: 'ashveil-deep-void-class',
+        name: 'Ashveil Deep',
+        location: 'Post-Ashveil Corridor — Deep Frontier',
+        tier: 5,
+        tagline: 'Void-class  ·  Tier 5  ·  Extreme Hazard',
+        introText:
+            'The corridor beyond Ashveil Observation Post does not hold stable geometry under normal instrumentation. ' +
+            'Hull breach zones phase in and out with the same cadence as the deep signal.\n\n' +
+            'This site is classified void-class. Environmental hazards and unknown entities are both expected.\n\n' +
+            'Your objectives: survive ingress, secure actionable deep-core records, and extract alive.',
+        rooms: [
+            {
+                id: 'ashveil-deep-ingress',
+                name: 'Ingress Fracture',
+                type: 'entrance',
+                description:
+                    'The docking pass resolves late. Hull telemetry flickers through two possible corridor paths before settling.',
+                enemies: [],
+                cleared: false,
+            },
+            {
+                id: 'ashveil-deep-shear',
+                name: 'Shear Corridor',
+                type: 'combat',
+                description:
+                    'A compressed transit channel where structural seams open and reseal on a repeating signal phase.',
+                enemies: ['deepfrontier-scout', 'deepfrontier-reaver'],
+                cleared: false,
+            },
+            {
+                id: 'ashveil-deep-lattice',
+                name: 'Lattice Annex',
+                type: 'loot',
+                description:
+                    'A side chamber of active lattice racks. Data caches are still indexed and available to pull.',
+                enemies: [],
+                lootItems: ['psi-lattice-sample', 'null-lattice-segment', 'signal-fragment'],
+                cleared: false,
+            },
+            {
+                id: 'ashveil-deep-vent',
+                name: 'Pressure Vent Spine',
+                type: 'hazard',
+                description:
+                    'Intermittent decompression vents along a narrow spine corridor. Movement windows are brief.',
+                enemies: ['voidclass-shepherd'],
+                lootItems: ['transit-key-fragment'],
+                cleared: false,
+            },
+            {
+                id: 'ashveil-deep-core',
+                name: 'Deep Core — Architect Prime',
+                type: 'boss',
+                description:
+                    'Core control volume with full-spectrum deterrence cycling. The chamber logs your entry before combat begins.',
+                enemies: ['deepfrontier-architect-prime'],
+                cleared: false,
+            },
+        ],
+        contractCompletions: [
+            { contractId: 'ashveil-deep-recon',          requireAnyProgress: true },
+            { contractId: 'synod-psi-calibration',       requireLootCleared: true },
+            { contractId: 'covenant-deep-echo',          requireAnyProgress: true },
+            { contractId: 'ica-deepfrontier-quarantine', requireAnyProgress: true },
+            { contractId: 'aegis-hull-breach-mapping',   requireAnyProgress: true },
+            { contractId: 'redline-ashveil-deep-core',   requireBossCleared: true },
+            { contractId: 'redline-null-lattice-extract',requireBossCleared: true },
+        ],
+        clearFlag: 'ashveil-deep-cleared',
+    },
 };
 
 /** Returns a fresh copy of a dungeon (rooms reset to uncleared). */

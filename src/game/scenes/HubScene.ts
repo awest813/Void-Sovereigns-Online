@@ -7,11 +7,15 @@ import { phase3Contracts } from '../../../content/contracts/phase3-contracts';
 import { phase4Contracts } from '../../../content/contracts/phase4-contracts';
 import { phase5Contracts } from '../../../content/contracts/phase5-contracts';
 import { phase6Contracts } from '../../../content/contracts/phase6-contracts';
+import { phase7Contracts } from '../../../content/contracts/phase7-contracts';
 import { meridianNPCs } from '../../../content/npcs/meridian-npcs';
 import { phase4NPCs } from '../../../content/npcs/phase4-npcs';
 import { phase5NPCs } from '../../../content/npcs/phase5-npcs';
 import { phase6NPCs } from '../../../content/npcs/phase6-npcs';
+import { phase7NPCs } from '../../../content/npcs/phase7-npcs';
+import { phase5Lore } from '../../../content/lore/phase5-lore';
 import { phase6Lore } from '../../../content/lore/phase6-lore';
+import { phase7Lore } from '../../../content/lore/phase7-lore';
 import { factions } from '../../../content/factions/factions';
 import { SHIP_UPGRADES, HAULER_PURCHASE_COST } from '../data/shipUpgrades';
 import { ITEMS } from '../data/items';
@@ -76,6 +80,14 @@ const BOARD_CONTRACT_IDS = [
     'ghost-site-ica-recovery',
     'ghost-site-covenant-witness',
     'farpoint-archive-lore-pull',
+    // Phase 7
+    'ashveil-deep-recon',
+    'synod-psi-calibration',
+    'covenant-deep-echo',
+    'ica-deepfrontier-quarantine',
+    'aegis-hull-breach-mapping',
+    'redline-ashveil-deep-core',
+    'redline-null-lattice-extract',
 ];
 
 // Contract IDs that require relay jump to be visible on the board
@@ -114,6 +126,14 @@ const POST_RELAY_CONTRACT_IDS = new Set([
     'ghost-site-ica-recovery',
     'ghost-site-covenant-witness',
     'farpoint-archive-lore-pull',
+    // Phase 7
+    'ashveil-deep-recon',
+    'synod-psi-calibration',
+    'covenant-deep-echo',
+    'ica-deepfrontier-quarantine',
+    'aegis-hull-breach-mapping',
+    'redline-ashveil-deep-core',
+    'redline-null-lattice-extract',
 ]);
 
 // NPCs shown in the main Station Contacts panel (Meridian hub)
@@ -137,6 +157,10 @@ const FARPOINT_HUB_NPC_IDS = [
     'farpoint-kael-expanded',
     'tovan-vex',
     'aryn-voss',
+    // Phase 7
+    'ica-specialist-lyra',
+    'synod-adept-marek',
+    'free-transit-shipwright-iora',
     // Phase 3/4 faction contacts accessible at Farpoint
     'ica-agent-vorren',
     'void-covenant-kestrel',
@@ -154,6 +178,9 @@ const FACTION_NPC_IDS = [
     // Phase 5
     'aris-vel',
     'the-broker',
+    // Phase 7
+    'ica-specialist-lyra',
+    'synod-adept-marek',
 ];
 
 // ── HubScene ────────────────────────────────────────────────────────────────
@@ -179,6 +206,14 @@ const CONTRACT_LORE_UNLOCKS: Record<string, string[]> = {
     'aegis-farpoint-audit':         ['vorren-zero-second-analysis'],
     'void-covenant-signal-trace':   ['covenant-field-report-tovan'],
     'ica-relay-lockdown':           ['ica-relay-archive-fragment'],
+    // Phase 7
+    'ashveil-deep-recon':           ['ashveil-deep-approach-brief'],
+    'synod-psi-calibration':        ['synod-cognitive-drift-log', 'tier-iii-hull-design-note'],
+    'covenant-deep-echo':           ['null-lattice-fragment-note'],
+    'ica-deepfrontier-quarantine':  ['ica-quarantine-order-ashveil'],
+    'aegis-hull-breach-mapping':    ['aegis-breach-topology-report'],
+    'redline-ashveil-deep-core':    ['deepfrontier-core-encounter'],
+    'redline-null-lattice-extract': ['farpoint-tier-iii-requisition'],
 };
 
 export class HubScene extends Scene {
@@ -279,7 +314,11 @@ export class HubScene extends Scene {
         this.add.rectangle(512, y, 1024, 1, C.border);
         this.add.rectangle(512, y + 10, 1024, 20, C.panelBg);
 
-        const shipDisplayName = gs.activeShipId === 'meridian-hauler-ii' ? 'Meridian Hauler II' : 'Cutter Mk.I';
+        const shipDisplayName = gs.activeShipId === 'deepfrontier-lancer-iii'
+            ? 'Deepfrontier Lancer III'
+            : gs.activeShipId === 'meridian-hauler-ii'
+                ? 'Meridian Hauler II'
+                : 'Cutter Mk.I';
         this.add.text(16, y + 3, `SHIP: ${shipDisplayName}`, {
             fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
         });
@@ -547,7 +586,7 @@ export class HubScene extends Scene {
             : 'Meridian Station — Tamsin Vale, Dispatcher';
         this.panelHeader(c, 'CONTRACT BOARD', boardSubtitle);
 
-        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts];
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts];
         const relayJumped = GameState.getFlag('relay-jump-completed');
         const kaelStage2 = GameState.getFlag('kael-questline-stage-2');
 
@@ -854,7 +893,7 @@ export class HubScene extends Scene {
             : 'Meridian Station — talk to the locals';
         this.panelHeader(c, 'STATION CONTACTS', subtitle);
 
-        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase6NPCs];
+        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs];
         const npcIds = isFarpoint ? FARPOINT_HUB_NPC_IDS : HUB_NPC_IDS;
         const npcs = allNPCs.filter(n => npcIds.includes(n.id));
         const colW = 290;
@@ -1009,7 +1048,7 @@ export class HubScene extends Scene {
 
     /** Searches all NPC arrays to find an NPC by ID. */
     private findNpc(npcId: string) {
-        return [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs].find(n => n.id === npcId) ?? null;
+        return [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs].find(n => n.id === npcId) ?? null;
     }
 
     // ── Codex panel ───────────────────────────────────────────────────────
@@ -1029,7 +1068,8 @@ export class HubScene extends Scene {
 
         this.panelHeader(c, 'CODEX', 'Unlocked field intelligence and personal records');
 
-        const unlockedEntries = phase6Lore.filter(entry => GameState.isLoreUnlocked(entry.id));
+        const unlockedEntries = [...phase5Lore, ...phase6Lore, ...phase7Lore]
+            .filter(entry => GameState.isLoreUnlocked(entry.id));
 
         const CODEX_VIEWPORT_TOP    = 148;
         const CODEX_VIEWPORT_HEIGHT = 552;
@@ -1362,8 +1402,16 @@ export class HubScene extends Scene {
         c.add(this.add.rectangle(512, 270, 800, 240, C.panelBg).setStrokeStyle(1, C.border));
 
         // Current ship
-        const shipName = gs.activeShipId === 'meridian-hauler-ii' ? 'Meridian Hauler II' : 'Cutter Mk.I';
-        const shipClass = gs.activeShipId === 'meridian-hauler-ii' ? 'Hauler' : 'Shuttle';
+        const shipName = gs.activeShipId === 'deepfrontier-lancer-iii'
+            ? 'Deepfrontier Lancer III'
+            : gs.activeShipId === 'meridian-hauler-ii'
+                ? 'Meridian Hauler II'
+                : 'Cutter Mk.I';
+        const shipClass = gs.activeShipId === 'deepfrontier-lancer-iii'
+            ? 'Corvette'
+            : gs.activeShipId === 'meridian-hauler-ii'
+                ? 'Hauler'
+                : 'Shuttle';
         c.add(this.add.text(150, 168, 'CURRENT SHIP', {
             fontFamily: 'Arial Black', fontSize: 14, color: C.textAccent,
         }));
@@ -1589,7 +1637,7 @@ export class HubScene extends Scene {
         c.removeAll(true);
         this.panelHeader(c, 'FACTION STANDINGS', 'Your reputation across the frontier');
 
-        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs];
+        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs];
 
         // Show all tracked factions in two columns
         const trackedFactionIds = Object.keys(GameState.get().reputation);
@@ -1656,7 +1704,7 @@ export class HubScene extends Scene {
                 fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
             }));
 
-            const contactNPCs = [...phase4NPCs, ...phase5NPCs, ...phase6NPCs];
+            const contactNPCs = [...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs];
             const npcColW = 220;
             contactNPCs.forEach((npc, i) => {
                 const cx = 80 + i * npcColW;
@@ -1872,7 +1920,7 @@ export class HubScene extends Scene {
         }
 
         // Contracts updated — all phases
-        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts];
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts];
         const completedContracts = gs.contracts.filter(ct => ct.completed && !ct.turnedIn);
         if (completedContracts.length > 0) {
             c.add(this.add.text(175, lootBottom, 'CONTRACTS READY TO TURN IN:', {
@@ -1893,4 +1941,3 @@ export class HubScene extends Scene {
         this.makeButton(c, 512, 640, '[ ← RETURN TO STATION ]', () => this.showPanel('main'), C.textPrimary);
     }
 }
-

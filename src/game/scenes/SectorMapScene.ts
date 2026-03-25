@@ -247,6 +247,25 @@ export class SectorMapScene extends Scene {
                 ghostBtn.on('pointerout',  () => ghostBtn.setColor(ghostSiteCleared ? C.textSecond : C.ghostTextDim));
                 ghostBtn.on('pointerdown', () => this.confirmRedlineLaunch('transit-node-zero', 'Transit Node Zero'));
             }
+
+            // ── Phase 7: Ashveil Deep void-class site ────────────────────
+            if (GameState.getFlag('transit-node-zero-cleared')) {
+                const deepCleared = GameState.getFlag('ashveil-deep-cleared');
+                this.add.rectangle(490, 126, 680, 26, C.ashveilPanelBg).setStrokeStyle(1, C.ashveilBorder);
+                const deepLabel = deepCleared
+                    ? '◆ Ashveil Deep  ·  Tier 5  ·  REDLINE  ·  Void-class  [CLEARED]'
+                    : '◆ Ashveil Deep  ·  Tier 5  ·  ⚠ REDLINE  ·  Void-class';
+                this.add.text(350, 118, deepLabel, {
+                    fontFamily: 'Arial', fontSize: 12, color: deepCleared ? C.textSecond : C.ashveilText,
+                });
+                const deepBtn = this.add.text(500, 132, '[ LAUNCH TO ASHVEIL DEEP — REDLINE ]', {
+                    fontFamily: 'Arial Black', fontSize: 13,
+                    color: deepCleared ? C.textSecond : C.ashveilTextDim,
+                }).setInteractive({ useHandCursor: true });
+                deepBtn.on('pointerover', () => deepBtn.setColor(C.btnHover));
+                deepBtn.on('pointerout',  () => deepBtn.setColor(deepCleared ? C.textSecond : C.ashveilTextDim));
+                deepBtn.on('pointerdown', () => this.confirmRedlineLaunch('ashveil-deep-void-class', 'Ashveil Deep'));
+            }
         }
 
         // ── Relay goal strip
@@ -257,7 +276,11 @@ export class SectorMapScene extends Scene {
         this.add.rectangle(512, 758, 1024, 20, C.panelBg);
         const hullPct = gs.shipHull / gs.shipMaxHull;
         const fuelPct = gs.shipFuel / gs.shipMaxFuel;
-        const shipLabel = gs.activeShipId === 'meridian-hauler-ii' ? 'MERIDIAN HAULER II' : 'CUTTER Mk.I';
+        const shipLabel = gs.activeShipId === 'deepfrontier-lancer-iii'
+            ? 'DEEPFRONTIER LANCER III'
+            : gs.activeShipId === 'meridian-hauler-ii'
+                ? 'MERIDIAN HAULER II'
+                : 'CUTTER Mk.I';
         const relayTag = GameState.isRelayCapable() ? '  [RELAY-CAPABLE]' : '';
         this.add.text(20, 750, `${shipLabel}${relayTag}   HULL: ${gs.shipHull}/${gs.shipMaxHull}  FUEL: ${gs.shipFuel}/${gs.shipMaxFuel}   CREDITS: ${gs.credits}c`, {
             fontFamily: 'Arial', fontSize: 12,

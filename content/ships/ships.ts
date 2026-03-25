@@ -73,4 +73,28 @@ export const ships: Ship[] = [
         relayCapable: false,
         tags: ['combat', 'fast', 'belt-runner', 'mid-tier'],
     },
+    {
+        id: 'deepfrontier-lancer-iii',
+        name: 'Deepfrontier Lancer III',
+        class: 'corvette',
+        description:
+            'A Tier III deep-frontier hull tuned for post-relay anomaly corridors. ' +
+            'Built around reinforced frame geometry, redundant control buses, and ' +
+            'high-stability jump systems intended for hostile signal environments.',
+        stats: {
+            hull: 210,
+            shielding: 55,
+            cargoCapacity: 14,
+            fuelCapacity: 90,
+            speed: 7,
+            jumpRange: 4,
+        },
+        slots: {
+            weapons: 3,
+            modules: 4,
+            implantBays: 2,
+        },
+        relayCapable: true,
+        tags: ['tier-iii', 'deep-frontier', 'post-relay', 'corvette'],
+    },
 ];

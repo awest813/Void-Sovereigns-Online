@@ -577,6 +577,75 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'power-cell',           chance: 0.80, qty: 2 },
         ],
     },
+
+    // ── Phase 7 — Ashveil Deep enemies ───────────────────────────────────
+    'deepfrontier-scout': {
+        id: 'deepfrontier-scout',
+        name: 'Deepfrontier Scout',
+        description: 'A fast-response unknown entity operating in Ashveil Deep corridor layers.',
+        hp: 145,
+        attackMin: 30,
+        attackMax: 46,
+        defense: 12,
+        xpReward: 130,
+        creditDropMin: 80,
+        creditDropMax: 140,
+        lootPool: [
+            { itemId: 'signal-fragment', chance: 0.45, qty: 1 },
+            { itemId: 'power-cell', chance: 0.50, qty: 1 },
+        ],
+    },
+    'deepfrontier-reaver': {
+        id: 'deepfrontier-reaver',
+        name: 'Deepfrontier Reaver',
+        description: 'A heavier deterrence frame with synchronized strike cadence.',
+        hp: 190,
+        attackMin: 34,
+        attackMax: 52,
+        defense: 15,
+        xpReward: 165,
+        creditDropMin: 100,
+        creditDropMax: 170,
+        lootPool: [
+            { itemId: 'control-module', chance: 0.35, qty: 1 },
+            { itemId: 'void-pattern-record', chance: 0.30, qty: 1 },
+            { itemId: 'psi-lattice-sample', chance: 0.15, qty: 1 },
+        ],
+    },
+    'voidclass-shepherd': {
+        id: 'voidclass-shepherd',
+        name: 'Voidclass Shepherd',
+        description: 'A chamber-management entity prioritizing containment over direct elimination.',
+        hp: 230,
+        attackMin: 36,
+        attackMax: 56,
+        defense: 18,
+        xpReward: 210,
+        creditDropMin: 130,
+        creditDropMax: 210,
+        lootPool: [
+            { itemId: 'psi-lattice-sample', chance: 0.35, qty: 1 },
+            { itemId: 'transit-key-fragment', chance: 0.25, qty: 1 },
+            { itemId: 'signal-fragment', chance: 0.60, qty: 1 },
+        ],
+    },
+    'deepfrontier-architect-prime': {
+        id: 'deepfrontier-architect-prime',
+        name: 'Deepfrontier Architect Prime',
+        description: 'Core deterrence entity of Ashveil Deep. Escalates in strict sequence.',
+        hp: 460,
+        attackMin: 44,
+        attackMax: 70,
+        defense: 24,
+        xpReward: 420,
+        creditDropMin: 300,
+        creditDropMax: 520,
+        lootPool: [
+            { itemId: 'deepfrontier-core-signature', chance: 1.0, qty: 1 },
+            { itemId: 'null-lattice-segment', chance: 0.7, qty: 1 },
+            { itemId: 'psi-lattice-sample', chance: 0.8, qty: 2 },
+        ],
+    },
 };
 
 /** Roll loot from an enemy's loot pool. Returns InventoryItem-shaped objects. */
@@ -621,6 +690,10 @@ export function rollLoot(enemyId: string): Array<{ id: string; name: string; qty
         // Phase 6 items
         'transit-key-fragment':     { name: 'Transit Key Fragment',     type: 'key',     value: 175 },
         'null-archive-data':        { name: 'Null Archive Data',        type: 'key',     value: 420 },
+        // Phase 7 items
+        'psi-lattice-sample':       { name: 'Psi Lattice Sample',       type: 'key',     value: 360 },
+        'deepfrontier-core-signature': { name: 'Deepfrontier Core Signature', type: 'key', value: 520 },
+        'null-lattice-segment':     { name: 'Null Lattice Segment',     type: 'key',     value: 500 },
     };
 
     for (const entry of enemy.lootPool) {

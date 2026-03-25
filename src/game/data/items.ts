@@ -344,4 +344,28 @@ export const ITEMS: Record<string, ItemDef> = {
             'The Void Covenant and ICA both want this. ' +
             'They have different reasons.',
     },
+    // ── Phase 7 items ─────────────────────────────────────────────────────
+    'psi-lattice-sample': {
+        id: 'psi-lattice-sample',
+        name: 'Psi Lattice Sample',
+        type: 'key',
+        value: 360,
+        description: 'A synod-tagged lattice sample recovered from Ashveil Deep. ' +
+            'Its harmonic profile changes under direct observation.',
+    },
+    'deepfrontier-core-signature': {
+        id: 'deepfrontier-core-signature',
+        name: 'Deepfrontier Core Signature',
+        type: 'key',
+        value: 520,
+        description: 'A compressed core-signature record extracted from the Ashveil Deep core array. ' +
+            'Aegis, Synod, and ICA all classify this as priority material.',
+    },
+    'null-lattice-segment': {
+        id: 'null-lattice-segment',
+        name: 'Null Lattice Segment',
+        type: 'key',
+        value: 500,
+        description: 'A structured lattice shard carrying non-linear transit indexing data from deep frontier systems.',
+    },
 };

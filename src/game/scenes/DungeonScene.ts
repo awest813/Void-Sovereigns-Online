@@ -9,6 +9,8 @@ import { phase2Contracts } from '../../../content/contracts/phase2-contracts';
 import { phase3Contracts } from '../../../content/contracts/phase3-contracts';
 import { phase4Contracts } from '../../../content/contracts/phase4-contracts';
 import { phase5Contracts } from '../../../content/contracts/phase5-contracts';
+import { phase6Contracts } from '../../../content/contracts/phase6-contracts';
+import { phase7Contracts } from '../../../content/contracts/phase7-contracts';
 import { T } from '../ui/UITheme';
 import { DebugPanel } from '../ui/DebugPanel';
 
@@ -25,7 +27,7 @@ const C = {
 };
 
 // All contracts from all phases — used for ID→title lookups in completion screen.
-const ALL_CONTRACTS = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts];
+const ALL_CONTRACTS = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts];
 
 // ── Combat balance constants ─────────────────────────────────────────────────
 /** Player base damage range (min/max). Scales up by PLAYER_LEVEL_DAMAGE_BONUS per level. */
@@ -943,4 +945,3 @@ export class DungeonScene extends Scene {
         this.scene.start('Hub');
     }
 }
-
