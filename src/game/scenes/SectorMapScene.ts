@@ -79,273 +79,280 @@ export class SectorMapScene extends Scene {
             color: relayJumped ? C.textAccent : (isRelayCapable ? C.textSuccess : C.textDanger), align: 'center',
         }).setOrigin(0.5);
 
-        // ── Farpoint node (post-relay) ─────────────────────────────────────
+        // ── Farpoint node indicator (post-relay — shown as a label near the relay) ─
         if (relayJumped) {
-            // Connection line from relay
+            // Connection line from relay toward Farpoint
             for (let x = 920; x < 1010; x += 14) {
                 this.add.rectangle(x, 340, 9, 2, 0x2a3018);
             }
-            this.drawSectorNode(880, 500, 'FARPOINT WAYSTATION',
-                'Post-Relay Frontier Hub', C.textWarn, true, () => {
-                    this.enterFarpointHub();
-                });
-            this.add.text(880, 560, '▶ ENTER HUB', {
+            this.add.text(870, 416, '▶ FARPOINT — see sites list', {
                 fontFamily: 'Arial', fontSize: 11, color: C.textWarn, align: 'center',
             }).setOrigin(0.5);
         }
 
-        // ── Dungeon sites area
-        this.add.rectangle(490, 550, 680, 130, C.panelBg).setStrokeStyle(1, C.border);
-        this.add.text(490, 498, 'ASHWAKE BELT — AVAILABLE SITES', {
-            fontFamily: 'Arial Black', fontSize: 14, color: C.textWarn, align: 'center',
-        }).setOrigin(0.5);
+        // ── Unified scrollable dungeon sites list ─────────────────────────────
+        // All available sites are ordered by progression (earliest first) and
+        // rendered inside a scroll container so late-game additions never clip
+        // outside the viewport.
+        interface SiteEntry {
+            label: string;
+            btnLabel: string;
+            cleared: boolean;
+            rowBg: number;
+            rowBorder: number;
+            labelColor: string;
+            btnColor: string;
+            onLaunch: () => void;
+        }
+        const sites: SiteEntry[] = [];
 
-        this.add.text(350, 520, '◆ Shalehook Dig Site  ·  Tier 1  ·  Rogue Automation', {
-            fontFamily: 'Arial', fontSize: 12, color: C.textPrimary,
+        // ── Tier 1 base sites (always available) ─────────────────────────────
+        const shalehookCleared = GameState.getFlag('completed-first-run');
+        sites.push({
+            label:      `◆ Shalehook Dig Site  ·  Tier 1  ·  Rogue Automation${shalehookCleared ? '  [CLEARED]' : '  ★ AVAILABLE'}`,
+            btnLabel:   '[ LAUNCH ]',
+            cleared:    shalehookCleared,
+            rowBg:      C.panelBg, rowBorder: C.border,
+            labelColor: shalehookCleared ? C.textSecond : C.textPrimary,
+            btnColor:   shalehookCleared ? C.textSecond : C.btnNormal,
+            onLaunch:   () => this.launchToDungeon('shalehook-dig-site'),
         });
-        const shalehookBtn = this.add.text(350, 540, '  [ LAUNCH TO SHALEHOOK ]', {
-            fontFamily: 'Arial Black', fontSize: 14, color: C.btnNormal,
-        }).setInteractive({ useHandCursor: true });
-        shalehookBtn.on('pointerover', () => shalehookBtn.setColor(C.btnHover));
-        shalehookBtn.on('pointerout',  () => shalehookBtn.setColor(C.btnNormal));
-        shalehookBtn.on('pointerdown', () => this.launchToDungeon('shalehook-dig-site'));
 
         const coldframeCleared = GameState.getFlag('completed-coldframe');
-        this.add.text(350, 564, `◆ Coldframe Station-B  ·  Tier 1  ·  Missing Crew${coldframeCleared ? '  [CLEARED]' : ''}`, {
-            fontFamily: 'Arial', fontSize: 12, color: coldframeCleared ? C.textSecond : C.textPrimary,
+        sites.push({
+            label:      `◆ Coldframe Station-B  ·  Tier 1  ·  Missing Crew${coldframeCleared ? '  [CLEARED]' : '  ★ AVAILABLE'}`,
+            btnLabel:   '[ LAUNCH ]',
+            cleared:    coldframeCleared,
+            rowBg:      C.panelBg, rowBorder: C.border,
+            labelColor: coldframeCleared ? C.textSecond : C.textPrimary,
+            btnColor:   coldframeCleared ? C.textSecond : C.btnNormal,
+            onLaunch:   () => this.launchToDungeon('coldframe-station-b'),
         });
-        const coldframeBtn = this.add.text(350, 584, '  [ LAUNCH TO COLDFRAME ]', {
-            fontFamily: 'Arial Black', fontSize: 14, color: C.btnNormal,
-        }).setInteractive({ useHandCursor: true });
-        coldframeBtn.on('pointerover', () => coldframeBtn.setColor(C.btnHover));
-        coldframeBtn.on('pointerout',  () => coldframeBtn.setColor(C.btnNormal));
-        coldframeBtn.on('pointerdown', () => this.launchToDungeon('coldframe-station-b'));
 
-        // ── Phase 3 relay and post-relay sites ────────────────────────────
+        // ── Void Relay 7-9 (if relay capable) ────────────────────────────────
         if (isRelayCapable) {
             const relayDungeonCleared = GameState.getFlag('relay-jump-completed');
-            this.add.rectangle(490, 440, 680, 50, C.panelBg).setStrokeStyle(1, 0x283820);
-            const relayLabel = relayDungeonCleared
-                ? '◆ Void Relay 7-9  ·  Tier 2  ·  Anomaly Site  [TRANSITED]'
-                : '◆ Void Relay 7-9  ·  Tier 2  ·  Anomaly Site  ★ NEW';
-            this.add.text(350, 426, relayLabel, {
-                fontFamily: 'Arial', fontSize: 12, color: relayDungeonCleared ? C.textSecond : C.textSuccess,
+            sites.push({
+                label:      relayDungeonCleared
+                    ? '◆ Void Relay 7-9  ·  Tier 2  ·  Anomaly Site  [TRANSITED]'
+                    : '◆ Void Relay 7-9  ·  Tier 2  ·  Anomaly Site  ★ RELAY JUMP',
+                btnLabel:   relayDungeonCleared ? '[ TRANSITED ]' : '[ INITIATE RELAY JUMP ]',
+                cleared:    relayDungeonCleared,
+                rowBg:      0x080b08, rowBorder: 0x283820,
+                labelColor: relayDungeonCleared ? C.textSecond : C.textSuccess,
+                btnColor:   relayDungeonCleared ? C.textSecond : C.textSuccess,
+                onLaunch:   () => this.confirmRelayJump(),
             });
-            const relayLaunchBtn = this.add.text(350, 444, '  [ INITIATE RELAY JUMP — VOID RELAY 7-9 ]', {
-                fontFamily: 'Arial Black', fontSize: 14,
-                color: relayDungeonCleared ? C.textSecond : C.textSuccess,
-            }).setInteractive({ useHandCursor: true });
-            relayLaunchBtn.on('pointerover', () => relayLaunchBtn.setColor(C.btnHover));
-            relayLaunchBtn.on('pointerout',  () => relayLaunchBtn.setColor(relayDungeonCleared ? C.textSecond : C.textSuccess));
-            relayLaunchBtn.on('pointerdown', () => this.confirmRelayJump());
         }
 
         if (relayJumped) {
+            // ── Farpoint Waystation hub entry ─────────────────────────────────
+            sites.push({
+                label:      '◆ Farpoint Waystation  ·  Post-Relay Hub  ·  Contacts · Contracts',
+                btnLabel:   '[ ENTER HUB ]',
+                cleared:    false,
+                rowBg:      0x08090c, rowBorder: 0x263a22,
+                labelColor: C.textAccent,
+                btnColor:   C.textAccent,
+                onLaunch:   () => this.enterFarpointHub(),
+            });
+
+            // ── Farpoint Outer Ring dungeon ───────────────────────────────────
             const farpointCleared = GameState.getFlag('farpoint-cleared');
-            this.add.rectangle(490, 390, 680, 28, 0x08090c).setStrokeStyle(1, 0x263a22);
-            const fpLabel = farpointCleared
-                ? '◆ Farpoint Waystation  ·  Tier 3  ·  Frontier Salvage  [CLEARED]'
-                : '◆ Farpoint Waystation  ·  Tier 3  ·  Frontier Salvage  ★ NEW';
-            this.add.text(350, 380, fpLabel, {
-                fontFamily: 'Arial', fontSize: 12, color: farpointCleared ? C.textSecond : C.textWarn,
+            sites.push({
+                label:      `◆ Farpoint Outer Ring  ·  Tier 3  ·  Frontier Salvage${farpointCleared ? '  [CLEARED]' : '  ★ NEW'}`,
+                btnLabel:   '[ LAUNCH ]',
+                cleared:    farpointCleared,
+                rowBg:      0x08090c, rowBorder: 0x263a22,
+                labelColor: farpointCleared ? C.textSecond : C.textWarn,
+                btnColor:   farpointCleared ? C.textSecond : C.textWarn,
+                onLaunch:   () => this.launchToDungeon('farpoint-outer-ring'),
             });
-            const fpBtn = this.add.text(500, 396, '[ LAUNCH TO FARPOINT ]', {
-                fontFamily: 'Arial Black', fontSize: 13,
-                color: farpointCleared ? C.textSecond : C.textWarn,
-            }).setInteractive({ useHandCursor: true });
-            fpBtn.on('pointerover', () => fpBtn.setColor(C.btnHover));
-            fpBtn.on('pointerout',  () => fpBtn.setColor(farpointCleared ? C.textSecond : C.textWarn));
-            fpBtn.on('pointerdown', () => this.launchToDungeon('farpoint-outer-ring'));
 
-            // ── Phase 4 sector nodes ──────────────────────────────────────
+            // ── Phase 4 sites ─────────────────────────────────────────────────
             const kalindraClear = GameState.getFlag('kalindra-cleared');
-            const orinsClear    = GameState.getFlag('orins-crossing-cleared');
-
-            // Kalindra Drift node
-            this.add.rectangle(490, 345, 680, 26, 0x090c09).setStrokeStyle(1, 0x2a3018);
-            const kalindraLabel = kalindraClear
-                ? '◆ Kalindra Drift  ·  Tier 3  ·  Salvage / Anomaly  [CLEARED]'
-                : '◆ Kalindra Drift  ·  Tier 3  ·  Salvage / Anomaly  ★ NEW';
-            this.add.text(350, 337, kalindraLabel, {
-                fontFamily: 'Arial', fontSize: 12, color: kalindraClear ? C.textSecond : C.textSuccess,
+            sites.push({
+                label:      `◆ Kalindra Drift  ·  Tier 3  ·  Salvage / Anomaly${kalindraClear ? '  [CLEARED]' : '  ★ NEW'}`,
+                btnLabel:   '[ LAUNCH ]',
+                cleared:    kalindraClear,
+                rowBg:      0x090c09, rowBorder: 0x2a3018,
+                labelColor: kalindraClear ? C.textSecond : C.textSuccess,
+                btnColor:   kalindraClear ? C.textSecond : C.textSuccess,
+                onLaunch:   () => this.launchToDungeon('kalindra-processing-hub'),
             });
-            const kalindraBtn = this.add.text(500, 351, '[ LAUNCH TO KALINDRA DRIFT ]', {
-                fontFamily: 'Arial Black', fontSize: 13,
-                color: kalindraClear ? C.textSecond : C.textSuccess,
-            }).setInteractive({ useHandCursor: true });
-            kalindraBtn.on('pointerover', () => kalindraBtn.setColor(C.btnHover));
-            kalindraBtn.on('pointerout',  () => kalindraBtn.setColor(kalindraClear ? C.textSecond : C.textSuccess));
-            kalindraBtn.on('pointerdown', () => this.launchToDungeon('kalindra-processing-hub'));
 
-            // Orin's Crossing node
-            this.add.rectangle(490, 302, 680, 26, 0x0a0909).setStrokeStyle(1, 0x2c2030);
-            const orinsLabel = orinsClear
-                ? "◆ Orin's Crossing  ·  Tier 4  ·  Military Checkpoint  [CLEARED]"
-                : "◆ Orin's Crossing  ·  Tier 4  ·  Military Checkpoint  ★ NEW";
-            this.add.text(350, 294, orinsLabel, {
-                fontFamily: 'Arial', fontSize: 12, color: orinsClear ? C.textSecond : C.textDanger,
+            const orinsClear = GameState.getFlag('orins-crossing-cleared');
+            sites.push({
+                label:      `◆ Orin's Crossing  ·  Tier 4  ·  Military Checkpoint${orinsClear ? '  [CLEARED]' : '  ★ NEW'}`,
+                btnLabel:   '[ LAUNCH ]',
+                cleared:    orinsClear,
+                rowBg:      0x0a0909, rowBorder: 0x2c2030,
+                labelColor: orinsClear ? C.textSecond : C.textDanger,
+                btnColor:   orinsClear ? C.textSecond : C.textDanger,
+                onLaunch:   () => this.launchToDungeon('orins-crossing-locked-sector'),
             });
-            const orinsBtn = this.add.text(500, 308, "[ LAUNCH TO ORIN'S CROSSING ]", {
-                fontFamily: 'Arial Black', fontSize: 13,
-                color: orinsClear ? C.textSecond : C.textDanger,
-            }).setInteractive({ useHandCursor: true });
-            orinsBtn.on('pointerover', () => orinsBtn.setColor(C.btnHover));
-            orinsBtn.on('pointerout',  () => orinsBtn.setColor(orinsClear ? C.textSecond : C.textDanger));
-            orinsBtn.on('pointerdown', () => this.launchToDungeon('orins-crossing-locked-sector'));
 
-            // ── Phase 5 Redline sector nodes ─────────────────────────────
-            const vaultClear  = GameState.getFlag('vault-broken-signal-cleared');
+            // ── Phase 5 Redline sites ─────────────────────────────────────────
+            const vaultClear = GameState.getFlag('vault-broken-signal-cleared');
+            sites.push({
+                label:      `◆ Vault of the Broken Signal  ·  Tier 4  ·  ⚠ REDLINE${vaultClear ? '  [CLEARED]' : ''}`,
+                btnLabel:   '[ LAUNCH — REDLINE ]',
+                cleared:    vaultClear,
+                rowBg:      C.redlinePanelBg, rowBorder: C.redlineBorder,
+                labelColor: vaultClear ? C.textSecond : C.redlineText,
+                btnColor:   vaultClear ? C.textSecond : C.redlineTextDim,
+                onLaunch:   () => this.confirmRedlineLaunch('vault-of-the-broken-signal', 'Vault of the Broken Signal'),
+            });
+
             const ashveilClear = GameState.getFlag('ashveil-post-cleared');
-
-            // Vault of the Broken Signal node
-            this.add.rectangle(490, 258, 680, 26, C.redlinePanelBg).setStrokeStyle(1, C.redlineBorder);
-            const vaultLabel = vaultClear
-                ? '◆ Vault of the Broken Signal  ·  Tier 4  ·  REDLINE  ·  Industrial  [CLEARED]'
-                : '◆ Vault of the Broken Signal  ·  Tier 4  ·  ⚠ REDLINE  ·  Industrial';
-            this.add.text(350, 250, vaultLabel, {
-                fontFamily: 'Arial', fontSize: 12, color: vaultClear ? C.textSecond : C.redlineText,
+            sites.push({
+                label:      `◆ Ashveil Observation Post  ·  Tier 5  ·  ⚠ REDLINE  ·  Void-Adjacent${ashveilClear ? '  [CLEARED]' : ''}`,
+                btnLabel:   '[ LAUNCH — REDLINE ]',
+                cleared:    ashveilClear,
+                rowBg:      C.ashveilPanelBg, rowBorder: C.ashveilBorder,
+                labelColor: ashveilClear ? C.textSecond : C.ashveilText,
+                btnColor:   ashveilClear ? C.textSecond : C.ashveilTextDim,
+                onLaunch:   () => this.confirmRedlineLaunch('ashveil-observation-post', 'Ashveil Observation Post'),
             });
-            const vaultBtn = this.add.text(500, 264, '[ LAUNCH TO VAULT — REDLINE ]', {
-                fontFamily: 'Arial Black', fontSize: 13,
-                color: vaultClear ? C.textSecond : C.redlineTextDim,
-            }).setInteractive({ useHandCursor: true });
-            vaultBtn.on('pointerover', () => vaultBtn.setColor(C.btnHover));
-            vaultBtn.on('pointerout',  () => vaultBtn.setColor(vaultClear ? C.textSecond : C.redlineTextDim));
-            vaultBtn.on('pointerdown', () => this.confirmRedlineLaunch('vault-of-the-broken-signal', 'Vault of the Broken Signal'));
 
-            // Ashveil Observation Post node
-            this.add.rectangle(490, 214, 680, 26, C.ashveilPanelBg).setStrokeStyle(1, C.ashveilBorder);
-            const ashveilLabel = ashveilClear
-                ? '◆ Ashveil Observation Post  ·  Tier 5  ·  REDLINE  ·  Anomaly Site  [CLEARED]'
-                : '◆ Ashveil Observation Post  ·  Tier 5  ·  ⚠ REDLINE  ·  Void-Adjacent';
-            this.add.text(350, 206, ashveilLabel, {
-                fontFamily: 'Arial', fontSize: 12, color: ashveilClear ? C.textSecond : C.ashveilText,
-            });
-            const ashveilBtn = this.add.text(500, 220, '[ LAUNCH TO ASHVEIL — REDLINE ]', {
-                fontFamily: 'Arial Black', fontSize: 13,
-                color: ashveilClear ? C.textSecond : C.ashveilTextDim,
-            }).setInteractive({ useHandCursor: true });
-            ashveilBtn.on('pointerover', () => ashveilBtn.setColor(C.btnHover));
-            ashveilBtn.on('pointerout',  () => ashveilBtn.setColor(ashveilClear ? C.textSecond : C.ashveilTextDim));
-            ashveilBtn.on('pointerdown', () => this.confirmRedlineLaunch('ashveil-observation-post', 'Ashveil Observation Post'));
-
-            // ── Phase 6: Transit Node Zero ghost site ─────────────────────
+            // ── Phase 6: Transit Node Zero ghost site ─────────────────────────
             if (GameState.getFlag('kael-questline-stage-2')) {
                 const ghostSiteCleared = GameState.getFlag('transit-node-zero-cleared');
-                this.add.rectangle(490, 170, 680, 26, C.ghostPanelBg).setStrokeStyle(1, C.ghostBorder);
-                const ghostLabel = ghostSiteCleared
-                    ? '◆ Transit Node Zero  ·  Tier 4  ·  REDLINE  ·  Ghost Site  [CLEARED]'
-                    : '◆ Transit Node Zero  ·  Tier 4  ·  ⚠ REDLINE  ·  Ghost Site';
-                this.add.text(350, 162, ghostLabel, {
-                    fontFamily: 'Arial', fontSize: 12, color: ghostSiteCleared ? C.textSecond : C.ghostText,
+                sites.push({
+                    label:      `◆ Transit Node Zero  ·  Tier 4  ·  ⚠ REDLINE  ·  Ghost Site${ghostSiteCleared ? '  [CLEARED]' : ''}`,
+                    btnLabel:   '[ LAUNCH — REDLINE ]',
+                    cleared:    ghostSiteCleared,
+                    rowBg:      C.ghostPanelBg, rowBorder: C.ghostBorder,
+                    labelColor: ghostSiteCleared ? C.textSecond : C.ghostText,
+                    btnColor:   ghostSiteCleared ? C.textSecond : C.ghostTextDim,
+                    onLaunch:   () => this.confirmRedlineLaunch('transit-node-zero', 'Transit Node Zero'),
                 });
-                const ghostBtn = this.add.text(500, 176, '[ LAUNCH TO TRANSIT NODE ZERO — REDLINE ]', {
-                    fontFamily: 'Arial Black', fontSize: 13,
-                    color: ghostSiteCleared ? C.textSecond : C.ghostTextDim,
-                }).setInteractive({ useHandCursor: true });
-                ghostBtn.on('pointerover', () => ghostBtn.setColor(C.btnHover));
-                ghostBtn.on('pointerout',  () => ghostBtn.setColor(ghostSiteCleared ? C.textSecond : C.ghostTextDim));
-                ghostBtn.on('pointerdown', () => this.confirmRedlineLaunch('transit-node-zero', 'Transit Node Zero'));
             }
 
-            // ── Phase 7: Ashveil Deep void-class site ────────────────────
+            // ── Phase 7: Ashveil Deep ─────────────────────────────────────────
             if (GameState.getFlag('transit-node-zero-cleared')) {
                 const deepCleared = GameState.getFlag('ashveil-deep-cleared');
-                this.add.rectangle(490, 134, 680, 26, C.ashveilPanelBg).setStrokeStyle(1, C.ashveilBorder);
-                const deepLabel = deepCleared
-                    ? '◆ Ashveil Deep  ·  Tier 5  ·  REDLINE  ·  Void-class  [CLEARED]'
-                    : '◆ Ashveil Deep  ·  Tier 5  ·  ⚠ REDLINE  ·  Void-class';
-                this.add.text(350, 126, deepLabel, {
-                    fontFamily: 'Arial', fontSize: 12, color: deepCleared ? C.textSecond : C.ashveilText,
+                sites.push({
+                    label:      `◆ Ashveil Deep  ·  Tier 5  ·  ⚠ REDLINE  ·  Void-class${deepCleared ? '  [CLEARED]' : '  ★ NEW'}`,
+                    btnLabel:   '[ LAUNCH — REDLINE ]',
+                    cleared:    deepCleared,
+                    rowBg:      C.ashveilPanelBg, rowBorder: C.ashveilBorder,
+                    labelColor: deepCleared ? C.textSecond : C.ashveilText,
+                    btnColor:   deepCleared ? C.textSecond : C.ashveilTextDim,
+                    onLaunch:   () => this.confirmRedlineLaunch('ashveil-deep-void-class', 'Ashveil Deep'),
                 });
-                const deepBtn = this.add.text(500, 140, '[ LAUNCH TO ASHVEIL DEEP — REDLINE ]', {
-                    fontFamily: 'Arial Black', fontSize: 13,
-                    color: deepCleared ? C.textSecond : C.ashveilTextDim,
-                }).setInteractive({ useHandCursor: true });
-                deepBtn.on('pointerover', () => deepBtn.setColor(C.btnHover));
-                deepBtn.on('pointerout',  () => deepBtn.setColor(deepCleared ? C.textSecond : C.ashveilTextDim));
-                deepBtn.on('pointerdown', () => this.confirmRedlineLaunch('ashveil-deep-void-class', 'Ashveil Deep'));
             }
 
-            // ── Phase 8: Index Chamber — Null Architect contact site ─────
+            // ── Phase 8: Index Chamber ────────────────────────────────────────
             if (GameState.getFlag('ashveil-deep-cleared')) {
                 const indexCleared = GameState.getFlag('index-chamber-cleared');
-                this.add.rectangle(490, 98, 680, 26, C.indexPanelBg).setStrokeStyle(1, C.indexBorder);
-                const indexLabel = indexCleared
-                    ? '◆ The Index Chamber  ·  Tier 5  ·  REDLINE  ·  Null Architect  [CLEARED]'
-                    : '◆ The Index Chamber  ·  Tier 5  ·  ⚠ REDLINE  ·  Null Architect  ★ TRANSMISSION RECEIVED';
-                this.add.text(350, 90, indexLabel, {
-                    fontFamily: 'Arial', fontSize: 12, color: indexCleared ? C.textSecond : C.indexText,
+                sites.push({
+                    label:      `◆ The Index Chamber  ·  Tier 5  ·  ⚠ REDLINE  ·  Null Architect${indexCleared ? '  [CLEARED]' : '  ★ TRANSMISSION'}`,
+                    btnLabel:   '[ LAUNCH — REDLINE ]',
+                    cleared:    indexCleared,
+                    rowBg:      C.indexPanelBg, rowBorder: C.indexBorder,
+                    labelColor: indexCleared ? C.textSecond : C.indexText,
+                    btnColor:   indexCleared ? C.textSecond : C.indexTextDim,
+                    onLaunch:   () => this.confirmRedlineLaunch('index-chamber-null-prime', 'The Index Chamber'),
                 });
-                const indexBtn = this.add.text(500, 104, '[ LAUNCH TO INDEX CHAMBER — REDLINE ]', {
-                    fontFamily: 'Arial Black', fontSize: 13,
-                    color: indexCleared ? C.textSecond : C.indexTextDim,
-                }).setInteractive({ useHandCursor: true });
-                indexBtn.on('pointerover', () => indexBtn.setColor(C.btnHover));
-                indexBtn.on('pointerout',  () => indexBtn.setColor(indexCleared ? C.textSecond : C.indexTextDim));
-                indexBtn.on('pointerdown', () => this.confirmRedlineLaunch('index-chamber-null-prime', 'The Index Chamber'));
 
-                // ── Phase 9: Cycle Archive — Null Architect terminal site ──
+                // ── Phase 9: Cycle Archive ────────────────────────────────────
                 if (indexCleared) {
                     const cycleCleared = GameState.getFlag('cycle-archive-cleared');
-                    this.add.rectangle(490, 62, 680, 26, C.cyclePanelBg).setStrokeStyle(1, C.cycleBorder);
-                    const cycleLabel = cycleCleared
-                        ? '◆ The Cycle Archive  ·  Tier 5  ·  REDLINE  ·  Null Architect  [CLEARED]'
-                        : '◆ The Cycle Archive  ·  Tier 5  ·  ⚠ REDLINE  ·  Null Architect  ★ SECOND TRANSMISSION';
-                    this.add.text(350, 54, cycleLabel, {
-                        fontFamily: 'Arial', fontSize: 12, color: cycleCleared ? C.textSecond : C.cycleText,
+                    sites.push({
+                        label:      `◆ The Cycle Archive  ·  Tier 5  ·  ⚠ REDLINE  ·  Null Architect${cycleCleared ? '  [CLEARED]' : '  ★ 2ND TRANSMISSION'}`,
+                        btnLabel:   '[ LAUNCH — REDLINE ]',
+                        cleared:    cycleCleared,
+                        rowBg:      C.cyclePanelBg, rowBorder: C.cycleBorder,
+                        labelColor: cycleCleared ? C.textSecond : C.cycleText,
+                        btnColor:   cycleCleared ? C.textSecond : C.cycleTextDim,
+                        onLaunch:   () => this.confirmRedlineLaunch('cycle-archive-sanctum', 'The Cycle Archive'),
                     });
-                    const cycleBtn = this.add.text(500, 68, '[ LAUNCH TO CYCLE ARCHIVE — REDLINE ]', {
-                        fontFamily: 'Arial Black', fontSize: 13,
-                        color: cycleCleared ? C.textSecond : C.cycleTextDim,
-                    }).setInteractive({ useHandCursor: true });
-                    cycleBtn.on('pointerover', () => cycleBtn.setColor(C.btnHover));
-                    cycleBtn.on('pointerout',  () => cycleBtn.setColor(cycleCleared ? C.textSecond : C.cycleTextDim));
-                    cycleBtn.on('pointerdown', () => this.confirmRedlineLaunch('cycle-archive-sanctum', 'The Cycle Archive'));
 
-                    // ── Phase 10: Sovereign Threshold — Null Architect final resolution ──
+                    // ── Phase 10: Sovereign Threshold ────────────────────────
                     if (cycleCleared) {
                         const sovereignCleared = GameState.getFlag('sovereign-threshold-cleared');
-                        this.add.rectangle(490, 26, 680, 26, C.sovereignPanelBg).setStrokeStyle(1, C.sovereignBorder);
-                        const sovereignLabel = sovereignCleared
-                            ? '◆ The Sovereign Threshold  ·  Tier 5  ·  REDLINE  ·  Null Architect  [CLEARED]'
-                            : '◆ The Sovereign Threshold  ·  Tier 5  ·  ⚠ REDLINE  ·  Null Architect  ★ FINAL TRANSMISSION';
-                        this.add.text(350, 18, sovereignLabel, {
-                            fontFamily: 'Arial', fontSize: 12, color: sovereignCleared ? C.textSecond : C.sovereignText,
+                        sites.push({
+                            label:      `◆ The Sovereign Threshold  ·  Tier 5  ·  ⚠ REDLINE  ·  Null Architect${sovereignCleared ? '  [CLEARED]' : '  ★ FINAL TRANSMISSION'}`,
+                            btnLabel:   '[ LAUNCH — REDLINE ]',
+                            cleared:    sovereignCleared,
+                            rowBg:      C.sovereignPanelBg, rowBorder: C.sovereignBorder,
+                            labelColor: sovereignCleared ? C.textSecond : C.sovereignText,
+                            btnColor:   sovereignCleared ? C.textSecond : C.sovereignTextDim,
+                            onLaunch:   () => this.confirmRedlineLaunch('sovereign-threshold-main', 'The Sovereign Threshold'),
                         });
-                        const sovereignBtn = this.add.text(500, 32, '[ LAUNCH TO SOVEREIGN THRESHOLD — REDLINE ]', {
-                            fontFamily: 'Arial Black', fontSize: 13,
-                            color: sovereignCleared ? C.textSecond : C.sovereignTextDim,
-                        }).setInteractive({ useHandCursor: true });
-                        sovereignBtn.on('pointerover', () => sovereignBtn.setColor(C.btnHover));
-                        sovereignBtn.on('pointerout',  () => sovereignBtn.setColor(sovereignCleared ? C.textSecond : C.sovereignTextDim));
-                        sovereignBtn.on('pointerdown', () => this.confirmRedlineLaunch('sovereign-threshold-main', 'The Sovereign Threshold'));
 
-                        // ── Phase 11: The Origin Node — Null Architect first record ──
+                        // ── Phase 11: The Origin Node ─────────────────────────
                         if (sovereignCleared) {
                             const originCleared = GameState.getFlag('origin-node-cleared');
-                            this.add.rectangle(490, -10, 680, 26, C.originPanelBg).setStrokeStyle(1, C.originBorder);
-                            const originLabel = originCleared
-                                ? '◆ The Origin Node  ·  Tier 5  ·  REDLINE  ·  Null Architect  [CLEARED]'
-                                : '◆ The Origin Node  ·  Tier 5  ·  ⚠ REDLINE  ·  Null Architect  ★ HERALD ECHO ACTIVE';
-                            this.add.text(350, -18, originLabel, {
-                                fontFamily: 'Arial', fontSize: 12, color: originCleared ? C.textSecond : C.originText,
+                            sites.push({
+                                label:      `◆ The Origin Node  ·  Tier 5  ·  ⚠ REDLINE  ·  Null Architect${originCleared ? '  [CLEARED]' : '  ★ HERALD ECHO ACTIVE'}`,
+                                btnLabel:   '[ LAUNCH — REDLINE ]',
+                                cleared:    originCleared,
+                                rowBg:      C.originPanelBg, rowBorder: C.originBorder,
+                                labelColor: originCleared ? C.textSecond : C.originText,
+                                btnColor:   originCleared ? C.textSecond : C.originTextDim,
+                                onLaunch:   () => this.confirmRedlineLaunch('origin-node-prime', 'The Origin Node'),
                             });
-                            const originBtn = this.add.text(500, -4, '[ LAUNCH TO ORIGIN NODE — REDLINE ]', {
-                                fontFamily: 'Arial Black', fontSize: 13,
-                                color: originCleared ? C.textSecond : C.originTextDim,
-                            }).setInteractive({ useHandCursor: true });
-                            originBtn.on('pointerover', () => originBtn.setColor(C.btnHover));
-                            originBtn.on('pointerout',  () => originBtn.setColor(originCleared ? C.textSecond : C.originTextDim));
-                            originBtn.on('pointerdown', () => this.confirmRedlineLaunch('origin-node-prime', 'The Origin Node'));
                         }
                     }
                 }
             }
         }
 
+        // ── Render the scrollable sites list ──────────────────────────────────
+        const SITES_HEADER_Y = 418;
+        const SITES_VIEWPORT_Y = 438;
+        const SITES_VIEWPORT_H = 188;
+        const SITES_ROW_H = 30;
+
+        // Panel outline for the entire sites area
+        this.add.rectangle(490, SITES_HEADER_Y + (SITES_VIEWPORT_H / 2) + 12, 700, SITES_VIEWPORT_H + 28, C.panelBg)
+            .setStrokeStyle(1, C.border);
+        this.add.text(490, SITES_HEADER_Y, 'AVAILABLE SITES', {
+            fontFamily: 'Arial Black', fontSize: 13, color: C.textWarn, align: 'center',
+        }).setOrigin(0.5);
+
+        const totalSitesH = sites.length * SITES_ROW_H;
+        const maxSitesScroll = Math.max(0, totalSitesH - SITES_VIEWPORT_H);
+        let sitesScrollY = 0;
+
+        const sitesMaskGfx = this.make.graphics({ x: 0, y: 0 });
+        sitesMaskGfx.fillRect(155, SITES_VIEWPORT_Y, 690, SITES_VIEWPORT_H);
+        const sitesMask = sitesMaskGfx.createGeometryMask();
+
+        const sitesCt = this.add.container(0, 0);
+        sitesCt.setMask(sitesMask);
+
+        sites.forEach((site, i) => {
+            const y = SITES_VIEWPORT_Y + i * SITES_ROW_H;
+            sitesCt.add(this.add.rectangle(490, y + SITES_ROW_H / 2, 688, SITES_ROW_H - 2, site.rowBg)
+                .setStrokeStyle(1, site.rowBorder));
+            sitesCt.add(this.add.text(168, y + 6, site.label, {
+                fontFamily: 'Arial', fontSize: 11, color: site.labelColor,
+            }));
+            const siteBtn = this.add.text(836, y + SITES_ROW_H / 2, site.btnLabel, {
+                fontFamily: 'Arial Black', fontSize: 10, color: site.btnColor,
+            }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
+            siteBtn.on('pointerover', () => siteBtn.setColor(C.btnHover));
+            siteBtn.on('pointerout', () => siteBtn.setColor(site.btnColor));
+            siteBtn.on('pointerdown', () => site.onLaunch());
+            sitesCt.add(siteBtn);
+        });
+
+        if (maxSitesScroll > 0) {
+            this.add.text(490, SITES_VIEWPORT_Y + SITES_VIEWPORT_H + 10, '▼ scroll for more sites', {
+                fontFamily: 'Arial', fontSize: 10, color: C.textMuted, align: 'center',
+            }).setOrigin(0.5);
+            this.input.on('wheel', (_pointer: unknown, _gameObjects: unknown, _deltaX: unknown, deltaY: unknown) => {
+                sitesScrollY = Math.max(0, Math.min(maxSitesScroll, sitesScrollY + (deltaY as number) * 0.3));
+                sitesCt.setY(-sitesScrollY);
+            });
+        }
+
         // ── Relay goal strip
         this.buildRelayGoalStrip();
+
 
         // Ship status bar at bottom
         this.add.rectangle(512, 748, 1024, 1, C.border);
