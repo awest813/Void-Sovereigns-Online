@@ -290,7 +290,7 @@ export class HubScene extends Scene {
         });
         const hullPct = gs.shipHull / gs.shipMaxHull;
         this.shipHullBar = this.drawBar(null, 240, y + 10, 100, 10, hullPct,
-            hullPct > 0.5 ? C.barFull : C.barDamaged, 0x223322);
+            hullPct > 0.5 ? C.barFull : C.barDamaged, 0x1e1a10);
         this.shipHullText = this.add.text(295, y + 3, `${gs.shipHull}/${gs.shipMaxHull}`, {
             fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
         });
@@ -300,7 +300,7 @@ export class HubScene extends Scene {
             fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
         });
         const fuelPct = gs.shipFuel / gs.shipMaxFuel;
-        this.shipFuelBar = this.drawBar(null, 415, y + 10, 80, 10, fuelPct, C.barFuel, 0x112233);
+        this.shipFuelBar = this.drawBar(null, 415, y + 10, 80, 10, fuelPct, C.barFuel, 0x101820);
         this.shipFuelText = this.add.text(500, y + 3, `${gs.shipFuel}/${gs.shipMaxFuel}`, {
             fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
         });
@@ -415,7 +415,7 @@ export class HubScene extends Scene {
         x: number, y: number,
         width: number, height: number,
         pct: number, fillColor: number,
-        bgColor = 0x1a1a2a,
+        bgColor = 0x110f0c,
         withBgStroke = false,
     ): Phaser.GameObjects.Rectangle {
         const clampedPct = Math.max(0, Math.min(1, pct));
@@ -565,10 +565,10 @@ export class HubScene extends Scene {
             bounty: C.textDanger,
             delivery: C.textAccent,
             escort: C.textWarn,
-            investigation: '#bb88ff',
+            investigation: '#8060a0',
             station: C.textSuccess,
-            survey: '#88ddff',
-            extraction: '#ff6644',
+            survey: '#608090',
+            extraction: '#b05030',
         };
 
         // Faction short-name map for contract labels
@@ -618,8 +618,8 @@ export class HubScene extends Scene {
                 : false;
             const isRedline = !!ct.isRedline;
 
-            const rowBg = isRedline ? 0x1a0505 : C.panelBg;
-            const rowBorder = isRedline ? 0x882222 : C.border;
+            const rowBg = isRedline ? 0x130808 : C.panelBg;
+            const rowBorder = isRedline ? 0x702020 : C.border;
             scrollCt.add(this.add.rectangle(492, y + 34, 860, rowH - 8, rowBg).setStrokeStyle(1, rowBorder));
 
             // Tier badge
@@ -633,7 +633,7 @@ export class HubScene extends Scene {
             const catColor = catColors[ct.category] ?? C.textSecond;
             if (isRedline) {
                 scrollCt.add(this.add.text(78, y + 28, '⚠ REDLINE', {
-                    fontFamily: 'Arial Black', fontSize: 10, color: '#ff3333',
+                    fontFamily: 'Arial Black', fontSize: 10, color: '#c03028',
                 }).setOrigin(0.5));
             } else {
                 scrollCt.add(this.add.text(78, y + 28, catLabel, {
@@ -645,12 +645,12 @@ export class HubScene extends Scene {
             if (ct.factionId) {
                 const fShort = factionShortNames[ct.factionId] ?? ct.factionId;
                 scrollCt.add(this.add.text(78, y + 46, `[${fShort}]`, {
-                    fontFamily: 'Arial', fontSize: 9, color: '#6688aa',
+                    fontFamily: 'Arial', fontSize: 9, color: C.textSecond,
                 }).setOrigin(0.5));
             }
 
             // Title (dimmed if rep-locked)
-            const titleColor = repLocked ? '#555566' : (isRedline ? '#ff8866' : C.textPrimary);
+            const titleColor = repLocked ? C.textMuted : (isRedline ? '#a05038' : C.textPrimary);
             scrollCt.add(this.add.text(140, y + 6, ct.title, {
                 fontFamily: 'Arial Black', fontSize: 13, color: titleColor,
             }));
@@ -660,7 +660,7 @@ export class HubScene extends Scene {
                 const fShort = factionShortNames[repReq.factionId] ?? repReq.factionId;
                 const playerRep = GameState.getReputation(repReq.factionId);
                 scrollCt.add(this.add.text(140, y + 26, `REQUIRES ${fShort} reputation ${repReq.minRep} (current: ${playerRep})`, {
-                    fontFamily: 'Arial', fontSize: 11, color: '#665544',
+                    fontFamily: 'Arial', fontSize: 11, color: C.textMuted,
                     wordWrap: { width: 560 },
                 }));
             } else {
@@ -676,7 +676,7 @@ export class HubScene extends Scene {
             if (ct.reward.itemRewards && ct.reward.itemRewards.length > 0) {
                 rewardParts.push(`+item`);
             }
-            const rewardColor = isRedline ? '#ffaa44' : C.textWarn;
+            const rewardColor = isRedline ? '#c89040' : C.textWarn;
             scrollCt.add(this.add.text(140, y + 60, `REWARD: ${rewardParts.join('  ·  ')}`, {
                 fontFamily: 'Arial', fontSize: 11, color: rewardColor,
             }));
@@ -684,13 +684,13 @@ export class HubScene extends Scene {
             // State button
             if (repLocked) {
                 scrollCt.add(this.add.text(870, y + 34, '[ REP REQUIRED ]', {
-                    fontFamily: 'Arial', fontSize: 11, color: '#665544',
+                    fontFamily: 'Arial', fontSize: 11, color: C.textMuted,
                 }).setOrigin(1, 0.5));
             } else if (isCompleted) {
                 const turnInBtn = this.add.text(870, y + 34, '[ TURN IN ]', {
                     fontFamily: 'Arial Black', fontSize: 13, color: C.textSuccess,
                 }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
-                turnInBtn.on('pointerover', () => turnInBtn.setColor('#ffffff'));
+                turnInBtn.on('pointerover', () => turnInBtn.setColor(C.btnHover));
                 turnInBtn.on('pointerout', () => turnInBtn.setColor(C.textSuccess));
                 turnInBtn.on('pointerdown', () => {
                     GameState.turnInContract(ct.id);
@@ -783,19 +783,19 @@ export class HubScene extends Scene {
         const c = this.add.container(0, 0);
         this.panels.set('redline-warn', c);
 
-        c.add(this.add.rectangle(512, 384, 840, 440, 0x0f0005).setStrokeStyle(2, 0xaa2222));
+        c.add(this.add.rectangle(512, 384, 840, 440, 0x0b0808).setStrokeStyle(2, 0x702020));
         c.add(this.add.text(512, 200, '⚠  REDLINE CONTRACT', {
-            fontFamily: 'Arial Black', fontSize: 22, color: '#ff3333', align: 'center',
+            fontFamily: 'Arial Black', fontSize: 22, color: '#c03028', align: 'center',
         }).setOrigin(0.5));
         c.add(this.add.text(512, 232, contractTitle, {
-            fontFamily: 'Arial', fontSize: 14, color: '#ff8866', align: 'center',
+            fontFamily: 'Arial', fontSize: 14, color: '#a05038', align: 'center',
         }).setOrigin(0.5));
-        c.add(this.add.rectangle(512, 252, 780, 1, 0x882222));
+        c.add(this.add.rectangle(512, 252, 780, 1, 0x602020));
 
         const warnText = warningText.length > 0 ? warningText
             : 'If you are killed during this run, most equipped field gear will not be recovered. Accept with full knowledge of the risk.';
         c.add(this.add.text(512, 348, warnText, {
-            fontFamily: 'Arial', fontSize: 12, color: '#cc8866', align: 'center',
+            fontFamily: 'Arial', fontSize: 12, color: '#8a6040', align: 'center',
             wordWrap: { width: 740 },
         }).setOrigin(0.5));
 
@@ -806,25 +806,25 @@ export class HubScene extends Scene {
             : '✗ No insurance — buy at Services (250c)';
         c.add(this.add.text(512, 472, insuranceStatus, {
             fontFamily: 'Arial Black', fontSize: 11,
-            color: gs.redlineInsuranceActive ? '#44ff88' : '#886644', align: 'center',
+            color: gs.redlineInsuranceActive ? '#607a48' : '#786040', align: 'center',
         }).setOrigin(0.5));
 
         c.add(this.add.text(512, 490, 'Use Services → Field Insurance to protect gear. Set secure slot to protect 1 critical item.', {
-            fontFamily: 'Arial', fontSize: 11, color: '#665544', align: 'center',
+            fontFamily: 'Arial', fontSize: 11, color: C.textMuted, align: 'center',
         }).setOrigin(0.5));
 
         const acceptBtn = this.add.text(380, 560, '[ ACCEPT REDLINE CONTRACT ]', {
-            fontFamily: 'Arial Black', fontSize: 14, color: '#ff3333', align: 'center',
+            fontFamily: 'Arial Black', fontSize: 14, color: '#c03028', align: 'center',
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        acceptBtn.on('pointerover', () => acceptBtn.setColor('#ffffff'));
-        acceptBtn.on('pointerout', () => acceptBtn.setColor('#ff3333'));
+        acceptBtn.on('pointerover', () => acceptBtn.setColor(C.btnHover));
+        acceptBtn.on('pointerout', () => acceptBtn.setColor('#c03028'));
         acceptBtn.on('pointerdown', () => {
             GameState.acceptContract(contractId);
             c.destroy();
             this.panels.delete('redline-warn');
             this.buildContractPanel();
             this.showPanel('contracts');
-            this.showToast(`REDLINE CONTRACT ACCEPTED: ${contractTitle}`, '#ff6644');
+            this.showToast(`REDLINE CONTRACT ACCEPTED: ${contractTitle}`, '#b05030');
         });
         c.add(acceptBtn);
 
@@ -945,7 +945,7 @@ export class HubScene extends Scene {
 
         visibleLines.forEach((line, i) => {
             const y = DIALOGUE_VIEWPORT_TOP + i * DIALOGUE_LINE_HEIGHT;
-            scrollCt.add(this.add.rectangle(512, y + 32, 720, DIALOGUE_LINE_HEIGHT - 8, 0x0a0a1a).setStrokeStyle(1, C.border));
+            scrollCt.add(this.add.rectangle(512, y + 32, 720, DIALOGUE_LINE_HEIGHT - 8, 0x0b0a09).setStrokeStyle(1, C.border));
             scrollCt.add(this.add.text(512, y + 32, `"${line.text}"`, {
                 fontFamily: 'Arial', fontSize: 13, color: C.textPrimary, align: 'center',
                 fontStyle: 'italic', wordWrap: { width: 680 },
@@ -1134,7 +1134,7 @@ export class HubScene extends Scene {
             : `◆ REPAIR SHIP HULL — ${hullDmg} HP damaged — Cost: ${repairCost}c`;
 
         const repairColor = hullDmg === 0 ? C.textSuccess : C.textPrimary;
-        c.add(this.add.rectangle(512, 212, 700, 40, 0x0a0a1a).setStrokeStyle(1, C.border));
+        c.add(this.add.rectangle(512, 212, 700, 40, 0x0b0a09).setStrokeStyle(1, C.border));
         const repairLine = this.add.text(180, 202, repairLabel, {
             fontFamily: 'Arial', fontSize: 13, color: repairColor,
         });
@@ -1164,7 +1164,7 @@ export class HubScene extends Scene {
             : `◆ REFUEL SHIP — ${fuelNeeded} units needed — Cost: ${fuelCost}c`;
         const fuelColor = fuelNeeded === 0 ? C.textSuccess : C.textPrimary;
 
-        c.add(this.add.rectangle(512, 262, 700, 40, 0x0a0a1a).setStrokeStyle(1, C.border));
+        c.add(this.add.rectangle(512, 262, 700, 40, 0x0b0a09).setStrokeStyle(1, C.border));
         c.add(this.add.text(180, 251, fuelLabel, {
             fontFamily: 'Arial', fontSize: 13, color: fuelColor,
         }));
@@ -1198,7 +1198,7 @@ export class HubScene extends Scene {
         const pilotPct = gs.pilotHull / gs.pilotMaxHull;
         const pilotBarColor  = pilotPct < 0.4 ? C.barCritical : pilotPct < 0.7 ? C.barDamaged : C.barHull;
         const pilotTextColor = pilotPct < 0.4 ? C.textDanger  : pilotPct < 0.7 ? C.textWarn   : C.textSuccess;
-        c.add(this.add.rectangle(512, 342, 700, 30, 0x0a0a1a).setStrokeStyle(1, C.border));
+        c.add(this.add.rectangle(512, 342, 700, 30, 0x0b0a09).setStrokeStyle(1, C.border));
         c.add(this.add.text(180, 334, 'PILOT HP', {
             fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
         }));
@@ -1220,7 +1220,7 @@ export class HubScene extends Scene {
 
         shopItems.forEach((item, i) => {
             const y = 380 + i * 48;
-            c.add(this.add.rectangle(512, y + 12, 700, 38, 0x0a0a1a).setStrokeStyle(1, C.border));
+            c.add(this.add.rectangle(512, y + 12, 700, 38, 0x0b0a09).setStrokeStyle(1, C.border));
             c.add(this.add.text(180, y + 2, `◆ ${item.name}`, {
                 fontFamily: 'Arial', fontSize: 13, color: C.textPrimary,
             }));
@@ -1246,25 +1246,25 @@ export class HubScene extends Scene {
         // ── Field Insurance (Redline protection) ────────────────────────
         const insuranceY = 380 + shopItems.length * 48 + 8;
         const insuranceActive = gs.redlineInsuranceActive;
-        c.add(this.add.rectangle(512, insuranceY + 12, 700, 38, insuranceActive ? 0x0a1a0a : 0x0a0a1a)
-            .setStrokeStyle(1, insuranceActive ? 0x33aa55 : 0xaa4422));
+        c.add(this.add.rectangle(512, insuranceY + 12, 700, 38, insuranceActive ? 0x0a100a : 0x0b0a09)
+            .setStrokeStyle(1, insuranceActive ? 0x3a6030 : 0x7a3818));
         const insuranceLabel = insuranceActive
             ? '◆ FIELD INSURANCE — ACTIVE  (protects 1 extra item on Redline death)'
             : '◆ Field Insurance (250c) — Redline: reduces gear loss by 1 item';
         c.add(this.add.text(180, insuranceY + 2, insuranceLabel, {
-            fontFamily: 'Arial', fontSize: 12, color: insuranceActive ? C.textSuccess : '#cc7744',
+            fontFamily: 'Arial', fontSize: 12, color: insuranceActive ? C.textSuccess : '#a06030',
         }));
         if (!insuranceActive) {
             const insBtn = this.add.text(870, insuranceY + 12, `[ BUY INSURANCE (250c) ]`, {
-                fontFamily: 'Arial Black', fontSize: 12, color: gs.credits >= 250 ? '#ffaa22' : C.textDanger,
+                fontFamily: 'Arial Black', fontSize: 12, color: gs.credits >= 250 ? C.textAccent : C.textDanger,
             }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
             insBtn.on('pointerover', () => insBtn.setColor(C.btnHover));
-            insBtn.on('pointerout',  () => insBtn.setColor(gs.credits >= 250 ? '#ffaa22' : C.textDanger));
+            insBtn.on('pointerout',  () => insBtn.setColor(gs.credits >= 250 ? C.textAccent : C.textDanger));
             insBtn.on('pointerdown', () => {
                 if (GameState.purchaseInsurance()) {
                     this.refreshStatusBar();
                     this.populateServicesPanel(c);
-                    this.showToast('Field Insurance active — Redline gear loss reduced.', '#ffaa22');
+                    this.showToast('Field Insurance active — Redline gear loss reduced.', C.textWarn);
                 }
             });
             c.add(insBtn);
@@ -1277,7 +1277,7 @@ export class HubScene extends Scene {
         // ── Secure Slot (Redline protection) ───────────────────────────
         const secureSlotY = insuranceY + 104;
         c.add(this.add.text(180, secureSlotY, '◆ SECURE SLOT — One item protected on Redline death', {
-            fontFamily: 'Arial Black', fontSize: 12, color: '#ffcc44',
+            fontFamily: 'Arial Black', fontSize: 12, color: C.textAccent,
         }));
         const securedId = gs.redlineSecuredItemId;
         const securableItems = gs.inventory.filter(i => i.type === 'consumable');
@@ -1292,10 +1292,10 @@ export class HubScene extends Scene {
                 const label = `  ${isSecured ? '✓ [SECURED]' : '[ SECURE ]'}  ${item.name}  ×${item.qty}`;
                 const secBtn = this.add.text(180, sy, label, {
                     fontFamily: isSecured ? 'Arial Black' : 'Arial', fontSize: 11,
-                    color: isSecured ? '#44ff88' : '#aaaacc',
+                    color: isSecured ? C.textSuccess : C.btnNormal,
                 }).setInteractive({ useHandCursor: true });
                 secBtn.on('pointerover', () => secBtn.setColor(C.btnHover));
-                secBtn.on('pointerout',  () => secBtn.setColor(isSecured ? '#44ff88' : '#aaaacc'));
+                secBtn.on('pointerout',  () => secBtn.setColor(isSecured ? C.textSuccess : C.btnNormal));
                 secBtn.on('pointerdown', () => {
                     GameState.secureRunItem(isSecured ? null : item.id);
                     this.populateServicesPanel(c);
@@ -1318,7 +1318,7 @@ export class HubScene extends Scene {
         } else {
             sellable.forEach((item, i) => {
                 const y = sellHeaderY + 18 + i * 40;
-                c.add(this.add.rectangle(512, y + 10, 700, 34, 0x0a0a1a).setStrokeStyle(1, C.border));
+                c.add(this.add.rectangle(512, y + 10, 700, 34, 0x0b0a09).setStrokeStyle(1, C.border));
                 c.add(this.add.text(180, y + 2, `◆ ${item.name}  ×${item.qty}  (${item.value}c each)`, {
                     fontFamily: 'Arial', fontSize: 12, color: C.textPrimary,
                 }));
@@ -1437,9 +1437,9 @@ export class HubScene extends Scene {
             c.add(this.add.text(150, 418, `PATH A: Buy Meridian Hauler II from Oziel Kaur — ${HAULER_PURCHASE_COST}c`, {
                 fontFamily: 'Arial Black', fontSize: 12, color: C.textWarn,
             }));
-            this.drawBar(c, 512, 446, 700, 14, pathAProgress, 0xcc8822, 0x1a1a2a, true);
+            this.drawBar(c, 512, 446, 700, 14, pathAProgress, 0x9a6818, 0x110f0c, true);
             c.add(this.add.text(512, 446, creditsToHauler === 0 ? 'READY' : `${gs.credits}c / ${HAULER_PURCHASE_COST}c`, {
-                fontFamily: 'Arial Black', fontSize: 10, color: '#ffffff', align: 'center',
+                fontFamily: 'Arial Black', fontSize: 10, color: C.btnHover, align: 'center',
             }).setOrigin(0.5));
 
             // Path B: upgrade Cutter
@@ -1487,7 +1487,7 @@ export class HubScene extends Scene {
             const y = startY + i * rowH;
             const installed = GameState.isUpgradeInstalled(upg.id);
             const canAfford = gs.credits >= upg.cost;
-            const rowColor = installed ? 0x0a1a0a : 0x0a0a1a;
+            const rowColor = installed ? 0x0a100a : 0x0b0a09;
             c.add(this.add.rectangle(492, y + 28, 860, rowH - 8, rowColor).setStrokeStyle(1, C.border));
 
             // Relay tag
@@ -1629,7 +1629,7 @@ export class HubScene extends Scene {
             }).setOrigin(1, 0));
 
             // Rep bar
-            this.drawBar(c, x + 100, y + 44, 180, 6, repPct, parseInt(repColor.replace('#', '0x'), 16), 0x111122, true);
+            this.drawBar(c, x + 100, y + 44, 180, 6, repPct, parseInt(repColor.replace('#', '0x'), 16), 0x100e0c, true);
 
             // Contact NPC button (if available and relay jumped for Phase 4 NPCs)
             const factionNPC = allNPCs.find(n => n.faction === faction.id && FACTION_NPC_IDS.includes(n.id));
@@ -1731,7 +1731,7 @@ export class HubScene extends Scene {
 
         npc.dialogue.filter(line => this.evaluateDialogueCondition(line.condition)).forEach((line, i) => {
             const y = DIALOGUE_VIEWPORT_TOP + i * DIALOGUE_LINE_HEIGHT;
-            scrollCt.add(this.add.rectangle(512, y + 32, 720, DIALOGUE_LINE_HEIGHT - 8, 0x0a0a1a).setStrokeStyle(1, C.border));
+            scrollCt.add(this.add.rectangle(512, y + 32, 720, DIALOGUE_LINE_HEIGHT - 8, 0x0b0a09).setStrokeStyle(1, C.border));
             scrollCt.add(this.add.text(512, y + 32, `"${line.text}"`, {
                 fontFamily: 'Arial', fontSize: 13, color: C.textPrimary, align: 'center',
                 fontStyle: 'italic', wordWrap: { width: 680 },
@@ -1781,7 +1781,7 @@ export class HubScene extends Scene {
             titleColor = C.textWarn;
         } else if (isRedlineDeath) {
             title = '⚠ REDLINE FAILURE';
-            titleColor = '#ff3333';
+            titleColor = '#c03028';
         } else if (gs.lastRunSuccess) {
             title = 'EXTRACTION SUCCESSFUL';
             titleColor = C.textSuccess;
@@ -1814,7 +1814,7 @@ export class HubScene extends Scene {
 
         // Relay milestone highlight
         if (isRelayMilestone) {
-            c.add(this.add.rectangle(512, 166, 800, 28, 0x0a1a0a).setStrokeStyle(1, 0x335544));
+            c.add(this.add.rectangle(512, 166, 800, 28, 0x0a100a).setStrokeStyle(1, 0x283820));
             c.add(this.add.text(512, 166, '✓  FARPOINT WAYSTATION IS NOW ACCESSIBLE — Check the Sector Map and Contract Board', {
                 fontFamily: 'Arial Black', fontSize: 12, color: C.textSuccess, align: 'center',
             }).setOrigin(0.5));
@@ -1822,9 +1822,9 @@ export class HubScene extends Scene {
 
         // Redline death alert
         if (isRedlineDeath) {
-            c.add(this.add.rectangle(512, 166, 800, 28, 0x1a0005).setStrokeStyle(1, 0xaa2222));
+            c.add(this.add.rectangle(512, 166, 800, 28, 0x130808).setStrokeStyle(1, 0x702020));
             c.add(this.add.text(512, 166, '⚠ Redline failure — field gear was lost during emergency extraction', {
-                fontFamily: 'Arial Black', fontSize: 12, color: '#ff4422', align: 'center',
+                fontFamily: 'Arial Black', fontSize: 12, color: '#c03028', align: 'center',
             }).setOrigin(0.5));
         }
 

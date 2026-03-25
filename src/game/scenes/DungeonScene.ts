@@ -15,13 +15,13 @@ import { DebugPanel } from '../ui/DebugPanel';
 // Scene colour palette — extends shared UITheme with dungeon-atmosphere overrides.
 const C = {
     ...T,
-    bg:        T.bgDeep,     // deeper space
-    panelBg:   T.panelMid,   // greenish-dark panels
-    border:    T.borderFaint, // subtle border
-    textSecond:'#666677',     // dimmer secondary text
-    barHull:   0x33994d,      // slightly cooler hull green
-    barDamaged:0xaa4422,      // slightly muted damaged
-    barFuel:   0x336699,      // muted fuel blue
+    bg:        T.bgDeep,     // deeper void
+    panelBg:   T.panelMid,   // worn-charcoal panels
+    border:    T.borderFaint, // dark olive border
+    textSecond:'#5e5a50',     // dimmer warm-gray secondary text
+    barHull:   0x3d6830,      // slightly deeper tactical green
+    barDamaged:0x7a3e18,      // darker burnt sienna
+    barFuel:   0x2e4e64,      // darker muted steel blue
 };
 
 // All contracts from all phases — used for ID→title lookups in completion screen.
@@ -158,7 +158,7 @@ export class DungeonScene extends Scene {
         c.add(this.add.text(450, 10, 'PILOT', {
             fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
         }));
-        c.add(this.add.rectangle(510, 20, 120, 10, 0x1a1a2a).setStrokeStyle(1, C.border));
+        c.add(this.add.rectangle(510, 20, 120, 10, 0x110f0c).setStrokeStyle(1, C.border));
         const pilotPct = gs.pilotHull / gs.pilotMaxHull;
         c.add(this.add.rectangle(
             450 + (pilotPct * 120) / 2, 20,
@@ -173,7 +173,7 @@ export class DungeonScene extends Scene {
         c.add(this.add.text(640, 10, 'SHIP', {
             fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
         }));
-        c.add(this.add.rectangle(695, 20, 100, 10, 0x1a1a2a).setStrokeStyle(1, C.border));
+        c.add(this.add.rectangle(695, 20, 100, 10, 0x110f0c).setStrokeStyle(1, C.border));
         const shipPct = gs.shipHull / gs.shipMaxHull;
         c.add(this.add.rectangle(
             645 + (shipPct * 100) / 2, 20,
@@ -285,7 +285,7 @@ export class DungeonScene extends Scene {
         const gs = GameState.get();
 
         this.contentContainer.add(
-            this.add.rectangle(512, 340, 900, 440, 0x0a0005).setStrokeStyle(2, 0xaa2222),
+            this.add.rectangle(512, 340, 900, 440, 0x0b0808).setStrokeStyle(2, 0x702020),
         );
 
         this.addContentText(512, 130, '⚠  REDLINE RUN — RISK SUMMARY', {
@@ -476,7 +476,7 @@ export class DungeonScene extends Scene {
         }).setOrigin(0.5);
 
         // Enemy HP bar
-        this.contentContainer.add(this.add.rectangle(512, 130, 360, 16, 0x1a0a0a).setStrokeStyle(1, C.border));
+        this.contentContainer.add(this.add.rectangle(512, 130, 360, 16, 0x130a08).setStrokeStyle(1, C.border));
         this.contentContainer.add(this.add.rectangle(
             332 + (enemyHpPct * 360) / 2, 130,
             enemyHpPct * 360, 16, C.barEnemy,
@@ -495,7 +495,7 @@ export class DungeonScene extends Scene {
 
         // Combat log
         this.contentContainer.add(
-            this.add.rectangle(512, 258, 940, 150, 0x080810).setStrokeStyle(1, C.border),
+            this.add.rectangle(512, 258, 940, 150, 0x09080a).setStrokeStyle(1, C.border),
         );
         const logLines = cb.log.slice(-5);
         logLines.forEach((line, i) => {
@@ -513,7 +513,7 @@ export class DungeonScene extends Scene {
         this.addContentText(80, 348, `PILOT HP:`, {
             fontFamily: 'Arial', fontSize: 13, color: C.textSecond,
         });
-        this.contentContainer.add(this.add.rectangle(190, 358, 160, 12, 0x0a1a0a).setStrokeStyle(1, C.border));
+        this.contentContainer.add(this.add.rectangle(190, 358, 160, 12, 0x0b1009).setStrokeStyle(1, C.border));
         this.contentContainer.add(this.add.rectangle(
             110 + (pilotPct * 160) / 2, 358,
             pilotPct * 160, 12,
@@ -526,7 +526,7 @@ export class DungeonScene extends Scene {
         this.addContentText(340, 348, `SHIP HP:`, {
             fontFamily: 'Arial', fontSize: 13, color: C.textSecond,
         });
-        this.contentContainer.add(this.add.rectangle(445, 358, 120, 12, 0x0a0a1a).setStrokeStyle(1, C.border));
+        this.contentContainer.add(this.add.rectangle(445, 358, 120, 12, 0x0b0a09).setStrokeStyle(1, C.border));
         this.contentContainer.add(this.add.rectangle(
             385 + (shipPct * 120) / 2, 358,
             shipPct * 120, 12,
@@ -777,8 +777,8 @@ export class DungeonScene extends Scene {
         GameState.setReturnFromDungeon(this.runLoot, this.runCredits, this.runXp, fullClear, completedContractIds, def.id);
         if (bossCleared && def.clearFlag) GameState.setFlag(def.clearFlag, true);
 
-        const panelBg = isRedline ? 0x050008 : C.panelBg;
-        const panelBorder = isRedline ? 0x886600 : C.border;
+        const panelBg = isRedline ? 0x0b0808 : C.panelBg;
+        const panelBorder = isRedline ? 0x7a5010 : C.border;
         this.contentContainer.add(
             this.add.rectangle(512, 330, 900, 420, panelBg).setStrokeStyle(2, panelBorder),
         );
@@ -788,10 +788,10 @@ export class DungeonScene extends Scene {
         let titleColor: string;
         if (isRedline && fullClear) {
             title = `⚠ REDLINE EXTRACTION — ${def.name.toUpperCase()}`;
-            titleColor = '#ffaa22';
+            titleColor = '#c89040';
         } else if (isRedline) {
             title = '⚠ REDLINE — PARTIAL EXTRACTION';
-            titleColor = '#ff8822';
+            titleColor = '#b07030';
         } else if (fullClear) {
             title = `${def.name.toUpperCase()} — CLEARED`;
             titleColor = C.textSuccess;
@@ -806,7 +806,7 @@ export class DungeonScene extends Scene {
 
         if (isRedline) {
             this.addContentText(512, 144, 'You extracted alive. Gear is safe. Full contract reward secured.', {
-                fontFamily: 'Arial Black', fontSize: 13, color: '#ffaa44', align: 'center',
+                fontFamily: 'Arial Black', fontSize: 13, color: '#b87838', align: 'center',
             }).setOrigin(0.5);
         } else {
             this.addContentText(512, 144, 'Returning to Meridian Station...', {
@@ -824,7 +824,7 @@ export class DungeonScene extends Scene {
 
         if (this.runLoot.length > 0) {
             const lootLabel = isRedline ? 'LOOT SECURED:' : 'SALVAGE:';
-            const lootColor = isRedline ? '#ffaa44' : C.textPrimary;
+            const lootColor = isRedline ? '#b87838' : C.textPrimary;
             this.addContentText(200, 234, lootLabel, {
                 fontFamily: 'Arial Black', fontSize: 13, color: lootColor,
             });
@@ -860,12 +860,12 @@ export class DungeonScene extends Scene {
         const isRedline = gs.activeRunIsRedline;
 
         this.contentContainer.add(
-            this.add.rectangle(512, 360, 900, 440, isRedline ? 0x0a0005 : 0x0a0308)
-                .setStrokeStyle(2, isRedline ? 0xaa1111 : C.border),
+            this.add.rectangle(512, 360, 900, 440, isRedline ? 0x0b0808 : 0x0b0a08)
+                .setStrokeStyle(2, isRedline ? 0x702020 : C.border),
         );
 
         const titleText = isRedline ? '⚠ REDLINE FAILURE' : 'SYSTEMS CRITICAL';
-        const titleColor = isRedline ? '#ff2222' : C.textDanger;
+        const titleColor = isRedline ? '#c03028' : C.textDanger;
         this.addContentText(512, 160, titleText, {
             fontFamily: 'Arial Black', fontSize: 28, color: titleColor, align: 'center',
             stroke: '#000000', strokeThickness: 4,
