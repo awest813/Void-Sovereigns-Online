@@ -320,6 +320,25 @@ export class SectorMapScene extends Scene {
                         sovereignBtn.on('pointerover', () => sovereignBtn.setColor(C.btnHover));
                         sovereignBtn.on('pointerout',  () => sovereignBtn.setColor(sovereignCleared ? C.textSecond : C.sovereignTextDim));
                         sovereignBtn.on('pointerdown', () => this.confirmRedlineLaunch('sovereign-threshold-main', 'The Sovereign Threshold'));
+
+                        // ── Phase 11: The Origin Node — Null Architect first record ──
+                        if (sovereignCleared) {
+                            const originCleared = GameState.getFlag('origin-node-cleared');
+                            this.add.rectangle(490, -10, 680, 26, C.originPanelBg).setStrokeStyle(1, C.originBorder);
+                            const originLabel = originCleared
+                                ? '◆ The Origin Node  ·  Tier 5  ·  REDLINE  ·  Null Architect  [CLEARED]'
+                                : '◆ The Origin Node  ·  Tier 5  ·  ⚠ REDLINE  ·  Null Architect  ★ HERALD ECHO ACTIVE';
+                            this.add.text(350, -18, originLabel, {
+                                fontFamily: 'Arial', fontSize: 12, color: originCleared ? C.textSecond : C.originText,
+                            });
+                            const originBtn = this.add.text(500, -4, '[ LAUNCH TO ORIGIN NODE — REDLINE ]', {
+                                fontFamily: 'Arial Black', fontSize: 13,
+                                color: originCleared ? C.textSecond : C.originTextDim,
+                            }).setInteractive({ useHandCursor: true });
+                            originBtn.on('pointerover', () => originBtn.setColor(C.btnHover));
+                            originBtn.on('pointerout',  () => originBtn.setColor(originCleared ? C.textSecond : C.originTextDim));
+                            originBtn.on('pointerdown', () => this.confirmRedlineLaunch('origin-node-prime', 'The Origin Node'));
+                        }
                     }
                 }
             }

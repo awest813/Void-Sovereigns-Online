@@ -1196,6 +1196,101 @@ export const DUNGEON_REGISTRY: Record<string, DungeonDef> = {
         ],
         clearFlag: 'sovereign-threshold-cleared',
     },
+
+    // ── Phase 11: The Origin Node ──────────────────────────────────────────
+    'origin-node-prime': {
+        id: 'origin-node-prime',
+        name: 'The Origin Node',
+        tier: 5,
+        description:
+            'The site where the Null Architect recorded the first cycle entry. ' +
+            'It predates every known Architect installation by centuries and has been active, ' +
+            'unmaintained and unwatched, since the first civilization chose to be witnessed. ' +
+            'The Origin Node Apex is not a guardian. It is the first record, manifested as enforcement.',
+        isRedline: true,
+        introText:
+            'The approach corridor is the oldest infrastructure you have ever transited. ' +
+            'Maintenance signatures centuries deep. A lane kept open by automated systems ' +
+            'that have never received an update because nothing has ever existed to update them.\n\n' +
+            'The Herald Echo output one phrase when you filed the approach: ' +
+            '"THE ORIGIN NODE IS OPEN. THE FIRST RECORD IS UNWITNESSED. YOU ARE EXPECTED."\n\n' +
+            'Your objectives: reach the first-record terminal, witness the cycle-zero entry, ' +
+            'and return alive. The Origin Node Apex is in the terminal chamber. ' +
+            'It has been active for centuries. Proceed accordingly.',
+        rooms: [
+            {
+                id: 'origin-node-entrance',
+                name: 'Origin Approach',
+                type: 'entrance',
+                description:
+                    'The approach completes before you dock. The node\'s access log shows forty-one prior entry attempts — ' +
+                    'all recorded, none completed. Your vessel registry is the forty-second entry. ' +
+                    'The first record terminal is at the end of the sequence.',
+                enemies: [],
+                cleared: false,
+            },
+            {
+                id: 'origin-node-echo-chamber',
+                name: 'Echo Chamber',
+                type: 'combat',
+                description:
+                    'The first interior chamber is lined with faint resonance impressions — ' +
+                    'echoes of civilizations that entered the node but did not reach the terminal. ' +
+                    'Some have manifested as partial enforcement constructs: incomplete, unstable, ' +
+                    'but still active after centuries of unattended operation.',
+                enemies: ['origin-node-echo', 'origin-node-echo'],
+                cleared: false,
+            },
+            {
+                id: 'origin-node-first-record-gallery',
+                name: 'First Record Gallery',
+                type: 'loot',
+                description:
+                    'The gallery holds fragments of the original cycle-zero record — ' +
+                    'the Architect\'s first notation, the first classification, the first decision. ' +
+                    'The resonance density here is unlike anything in the archive sequence. ' +
+                    'The air itself registers as psi-active on every scanner brought inside.',
+                enemies: [],
+                lootItems: ['origin-cycle-fragment', 'first-record-extract', 'origin-node-access-token'],
+                cleared: false,
+            },
+            {
+                id: 'origin-node-enforcement-hall',
+                name: 'Origin Enforcement Hall',
+                type: 'combat',
+                description:
+                    'The final approach to the first-record terminal. ' +
+                    'An Arbiter and a Guardian hold the corridor — centuries-old constructs ' +
+                    'built before the Architect had operational data on how civilizations would approach this site. ' +
+                    'They are less refined than threshold enforcement. They are not less dangerous.',
+                enemies: ['origin-node-arbiter', 'origin-node-guardian'],
+                cleared: false,
+            },
+            {
+                id: 'origin-node-terminal',
+                name: 'First Record Terminal — Origin Apex',
+                type: 'boss',
+                description:
+                    'The first-record terminal. The Origin Apex is already active — ' +
+                    'it has been active since the first cycle entry was made, ' +
+                    'waiting for a witness that took forty-one cycles to arrive. ' +
+                    'The Apex is the record manifest as enforcement. Defeating it does not erase the record. ' +
+                    'The record is the node. Defeating the Apex recovers the token of the first decision.',
+                enemies: ['origin-node-apex'],
+                cleared: false,
+            },
+        ],
+        contractCompletions: [
+            { contractId: 'frontier-origin-node-survey',    requireAnyProgress: true },
+            { contractId: 'synod-origin-resonance-trace',   requireLootCleared: true },
+            { contractId: 'covenant-origin-first-record',   requireAnyProgress: true },
+            { contractId: 'ica-origin-node-jurisdiction',   requireAnyProgress: true },
+            { contractId: 'aegis-origin-threat-assessment', requireAnyProgress: true },
+            { contractId: 'redline-origin-record-extraction', requireBossCleared: true },
+            { contractId: 'redline-origin-architect-seal',    requireBossCleared: true },
+        ],
+        clearFlag: 'origin-node-cleared',
+    },
 };
 
 /** Returns a fresh copy of a dungeon (rooms reset to uncleared). */
