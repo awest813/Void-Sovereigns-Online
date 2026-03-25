@@ -6,6 +6,32 @@ export interface LootEntry {
     qty: number;
 }
 
+/**
+ * A telegraphed special attack that bosses and elite enemies can execute once
+ * per combat. When the enemy's HP drops below `triggerHpPct`, it spends one
+ * turn charging (skips its normal attack and logs `chargeMsg`). On the next
+ * enemy action the special fires: it deals `damageMult × normal attack roll`
+ * and optionally applies a status effect to the player.
+ */
+export interface EnemySpecialAbility {
+    /** Short name shown in SCAN readout and charge/execute log lines. */
+    name: string;
+    /** HP fraction below which the charge triggers — e.g. 0.40 means below 40% HP. */
+    triggerHpPct: number;
+    /** Logged when charging begins (enemy skips its attack that turn). */
+    chargeMsg: string;
+    /** Logged when the special fires. */
+    executeMsg: string;
+    /** Multiplier applied to the enemy's normal attack roll on execution. */
+    damageMult: number;
+    /** Optional status effect applied to the player when the special fires. */
+    appliesEffect?: 'burning' | 'disrupted';
+    /** Damage per turn for the burning status (ignored for disrupted). */
+    effectValue?: number;
+    /** Number of turns the status effect lasts. */
+    effectTurns?: number;
+}
+
 export interface EnemyDef {
     id: string;
     name: string;
@@ -18,6 +44,8 @@ export interface EnemyDef {
     creditDropMin: number;
     creditDropMax: number;
     lootPool: LootEntry[];
+    /** Telegraphed special attack — triggers once when HP drops below threshold. */
+    specialAbility?: EnemySpecialAbility;
 }
 
 export const ENEMIES: Record<string, EnemyDef> = {
@@ -88,6 +116,13 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'drill-component',       chance: 0.8, qty: 2 },
             { itemId: 'salvage-crate-standard', chance: 0.7, qty: 1 },
         ],
+        specialAbility: {
+            name: 'Core Overload',
+            triggerHpPct: 0.40,
+            chargeMsg: 'CORE OVERLOAD — excavation drives spinning to critical frequency.',
+            executeMsg: 'CORE OVERLOAD — all excavation drills converge in a single burst!',
+            damageMult: 2.0,
+        },
     },
 
     // ── Coldframe Station-B enemies ─────────────────────────────────────────
@@ -142,6 +177,15 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'power-cell',            chance: 0.90, qty: 2 },
             { itemId: 'salvage-crate-standard', chance: 0.65, qty: 1 },
         ],
+        specialAbility: {
+            name: 'System Lockdown',
+            triggerHpPct: 0.40,
+            chargeMsg: 'SYSTEM LOCKDOWN — network suppression fields cycling to max output.',
+            executeMsg: 'SYSTEM LOCKDOWN — network suppression deployed across all systems!',
+            damageMult: 1.8,
+            appliesEffect: 'disrupted',
+            effectTurns: 2,
+        },
     },
 
     // ── Void Relay 7-9 enemies ──────────────────────────────────────────────
@@ -197,6 +241,16 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'signal-fragment',       chance: 0.90, qty: 2 },
             { itemId: 'power-cell',            chance: 0.85, qty: 2 },
         ],
+        specialAbility: {
+            name: 'Cascade Discharge',
+            triggerHpPct: 0.35,
+            chargeMsg: 'CASCADE DISCHARGE — relay conduits overloading. Electromagnetic buildup detected.',
+            executeMsg: 'CASCADE DISCHARGE — full electromagnetic surge through all relay conduits!',
+            damageMult: 1.8,
+            appliesEffect: 'burning',
+            effectValue: 8,
+            effectTurns: 3,
+        },
     },
 
     // ── Farpoint Waystation enemies ─────────────────────────────────────────
@@ -235,6 +289,13 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'power-cell',            chance: 0.85, qty: 2 },
             { itemId: 'signal-fragment',       chance: 0.50, qty: 1 },
         ],
+        specialAbility: {
+            name: 'Emergency Override',
+            triggerHpPct: 0.40,
+            chargeMsg: 'EMERGENCY OVERRIDE — all crowd-control, lockdown, and threat-response systems converging.',
+            executeMsg: 'EMERGENCY OVERRIDE — full combined-systems strike!',
+            damageMult: 2.0,
+        },
     },
 
     // ── Kalindra Processing Hub enemies ─────────────────────────────────────
@@ -290,6 +351,15 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'void-pattern-record',     chance: 0.60, qty: 1 },
             { itemId: 'power-cell',              chance: 0.85, qty: 2 },
         ],
+        specialAbility: {
+            name: 'Freight Protocol Escalation',
+            triggerHpPct: 0.35,
+            chargeMsg: 'FREIGHT PROTOCOL ESCALATION — re-routing all freight handling systems to combat load.',
+            executeMsg: 'FREIGHT PROTOCOL ESCALATION — mass-driver payload released!',
+            damageMult: 2.0,
+            appliesEffect: 'disrupted',
+            effectTurns: 2,
+        },
     },
 
     // ── Orin's Crossing enemies ──────────────────────────────────────────────
@@ -346,6 +416,16 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'power-cell',               chance: 0.85, qty: 2 },
             { itemId: 'void-pattern-record',      chance: 0.45, qty: 1 },
         ],
+        specialAbility: {
+            name: 'Lethal Response Protocol',
+            triggerHpPct: 0.35,
+            chargeMsg: 'LETHAL RESPONSE PROTOCOL — escalating to terminal deterrence. All reserves committing.',
+            executeMsg: 'LETHAL RESPONSE PROTOCOL — terminal deterrence strike!',
+            damageMult: 2.0,
+            appliesEffect: 'burning',
+            effectValue: 10,
+            effectTurns: 3,
+        },
     },
 
     // ── Phase 5 — Vault of the Broken Signal enemies ─────────────────────
@@ -412,6 +492,13 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'power-cell',               chance: 0.85, qty: 2 },
             { itemId: 'restricted-nav-module',    chance: 0.35, qty: 1 },
         ],
+        specialAbility: {
+            name: 'Signal Rupture',
+            triggerHpPct: 0.33,
+            chargeMsg: 'SIGNAL RUPTURE — void-frequency broadcast building to critical amplitude.',
+            executeMsg: 'SIGNAL RUPTURE — full-spectrum void discharge!',
+            damageMult: 2.2,
+        },
     },
 
     // ── Phase 5 — Ashveil Observation Post enemies ────────────────────────
@@ -483,6 +570,16 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'signal-fragment',           chance: 0.85, qty: 2 },
             { itemId: 'restricted-nav-module',     chance: 0.40, qty: 1 },
         ],
+        specialAbility: {
+            name: 'Void Resonance Surge',
+            triggerHpPct: 0.33,
+            chargeMsg: 'VOID RESONANCE SURGE — void-resonance patterns amplifying to critical output.',
+            executeMsg: 'VOID RESONANCE SURGE — resonance overload released!',
+            damageMult: 2.0,
+            appliesEffect: 'burning',
+            effectValue: 12,
+            effectTurns: 3,
+        },
     },
 
     // ── Phase 6 — Transit Node Zero enemies ──────────────────────────────
@@ -576,6 +673,15 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'relay-data-core',      chance: 0.60, qty: 1 },
             { itemId: 'power-cell',           chance: 0.80, qty: 2 },
         ],
+        specialAbility: {
+            name: 'Phase Collapse',
+            triggerHpPct: 0.33,
+            chargeMsg: 'PHASE COLLAPSE — null-transit fields destabilizing. Phased suppression building.',
+            executeMsg: 'PHASE COLLAPSE — null-phase suppression field deployed!',
+            damageMult: 1.8,
+            appliesEffect: 'disrupted',
+            effectTurns: 3,
+        },
     },
 
     // ── Phase 7 — Ashveil Deep enemies ───────────────────────────────────
@@ -645,6 +751,13 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'null-lattice-segment', chance: 0.7, qty: 1 },
             { itemId: 'psi-lattice-sample', chance: 0.8, qty: 2 },
         ],
+        specialAbility: {
+            name: 'Deep Frontier Termination',
+            triggerHpPct: 0.33,
+            chargeMsg: 'DEEP FRONTIER TERMINATION — deep corridor deterrence sequence activating.',
+            executeMsg: 'DEEP FRONTIER TERMINATION — full deterrence activation engaged!',
+            damageMult: 2.2,
+        },
     },
 
     // ── Phase 8 — Index Chamber entities ────────────────────────────────
@@ -712,6 +825,15 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'architect-response-record', chance: 0.9, qty: 1 },
             { itemId: 'index-cycle-fragment',      chance: 0.8, qty: 2 },
         ],
+        specialAbility: {
+            name: 'Archive Lock Sequence',
+            triggerHpPct: 0.33,
+            chargeMsg: 'ARCHIVE LOCK SEQUENCE — index enforcement protocols escalating to terminal response.',
+            executeMsg: 'ARCHIVE LOCK SEQUENCE — total archive enforcement deployed!',
+            damageMult: 2.4,
+            appliesEffect: 'disrupted',
+            effectTurns: 2,
+        },
     },
 
     // ── Phase 9: Cycle Archive enemies ───────────────────────────────────
@@ -779,6 +901,13 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'archive-classification-core', chance: 0.9, qty: 1 },
             { itemId: 'cycle-record-fragment',        chance: 0.8, qty: 2 },
         ],
+        specialAbility: {
+            name: 'Cycle Termination Protocol',
+            triggerHpPct: 0.33,
+            chargeMsg: 'CYCLE TERMINATION PROTOCOL — archive cycle enforcement entering terminal phase.',
+            executeMsg: 'CYCLE TERMINATION PROTOCOL — final enforcement cycle executed!',
+            damageMult: 2.5,
+        },
     },
 
     // ── Phase 10: Sovereign Threshold ─────────────────────────────────────
@@ -846,6 +975,16 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'forced-sovereignty-record',   chance: 0.9, qty: 1 },
             { itemId: 'threshold-resonance-record',  chance: 0.8, qty: 2 },
         ],
+        specialAbility: {
+            name: 'Sovereignty Seal',
+            triggerHpPct: 0.30,
+            chargeMsg: 'SOVEREIGNTY SEAL — threshold resolution sequence initiating. All enforcement converging.',
+            executeMsg: 'SOVEREIGNTY SEAL — sovereignty protocol executed at full force!',
+            damageMult: 2.5,
+            appliesEffect: 'burning',
+            effectValue: 15,
+            effectTurns: 3,
+        },
     },
 
     // ── Phase 11: Origin Node enemies ─────────────────────────────────────
@@ -913,6 +1052,13 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'first-record-extract',      chance: 0.9, qty: 1 },
             { itemId: 'origin-cycle-fragment',     chance: 0.8, qty: 2 },
         ],
+        specialAbility: {
+            name: 'First Record Execution',
+            triggerHpPct: 0.30,
+            chargeMsg: 'FIRST RECORD EXECUTION — the origin record is asserting itself. All deterrence converges on one point.',
+            executeMsg: 'FIRST RECORD EXECUTION — the first cycle strikes.',
+            damageMult: 3.0,
+        },
     },
 };
 
