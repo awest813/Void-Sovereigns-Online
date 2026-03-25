@@ -16,6 +16,8 @@ import { phase7NPCs } from '../../../content/npcs/phase7-npcs';
 import { phase5Lore } from '../../../content/lore/phase5-lore';
 import { phase6Lore } from '../../../content/lore/phase6-lore';
 import { phase7Lore } from '../../../content/lore/phase7-lore';
+import { starterLore } from '../../../content/lore/starter-lore';
+import { phase4Lore } from '../../../content/lore/phase4-lore';
 import { factions } from '../../../content/factions/factions';
 import { SHIP_UPGRADES, HAULER_PURCHASE_COST } from '../data/shipUpgrades';
 import { ITEMS } from '../data/items';
@@ -198,6 +200,18 @@ const GHOST_SITE_CONTRACT_IDS = new Set(['ghost-site-ica-recovery', 'ghost-site-
 
 // Lore entries unlocked when specific contracts are turned in
 const CONTRACT_LORE_UNLOCKS: Record<string, string[]> = {
+    // ── Phase 1 / Starter ──────────────────────────────────────────────────
+    'scrap-recovery-shalehook':       ['history-meridian-decline', 'lore-ashwake-history'],
+    'robot-suppression-shalehook':    ['lore-rogue-automation'],
+    'deep-survey-relay-static':       ['lore-void-relays-overview', 'lore-void-covenant'],
+    // ── Phase 4 ────────────────────────────────────────────────────────────
+    'kalindra-deep-salvage':          ['lore-kalindra-collapse'],
+    'aegis-anomaly-assessment':       ['lore-aegis-sealed-notice'],
+    'orin-transit-audit':             ['lore-orins-crossing-history', 'lore-sol-union-jurisdiction'],
+    'orin-classified-recovery':       ['lore-impossible-telemetry-orin'],
+    'frontier-compact-survey-run':    ['lore-frontier-compact-frontier'],
+    'redline-kalindra-signal-core':   ['lore-anomaly-pattern-escalation', 'lore-redline-runs-briefing'],
+    // ── Phase 6 ────────────────────────────────────────────────────────────
     'kael-ping-investigation':      ['kael-personal-record'],
     'kael-zero-second-expedition':  ['transit-node-zero-approach', 'transit-zero-interior-partial'],
     'ghost-site-ica-recovery':      ['ica-relay-archive-fragment', 'null-architect-encounter-report'],
@@ -229,6 +243,8 @@ export class HubScene extends Scene {
     private _contractScrollHandler: ((...args: unknown[]) => void) | null = null;
     // Wheel-scroll handler wired during codex panel — removed when leaving that panel.
     private _codexScrollHandler: ((...args: unknown[]) => void) | null = null;
+    // Wheel-scroll handler wired during inventory panel — removed when leaving that panel.
+    private _inventoryScrollHandler: ((...args: unknown[]) => void) | null = null;
 
     constructor() {
         super('Hub');
@@ -248,6 +264,7 @@ export class HubScene extends Scene {
         this.buildShipyardPanel();
         this.buildFactionsPanel();
         this.buildCodexPanel();
+        this.buildInventoryPanel();
 
         if (gs.returnFromDungeon) {
             this.buildDebriefPanel();
@@ -389,6 +406,11 @@ export class HubScene extends Scene {
             this.input.off('wheel', this._codexScrollHandler);
             this._codexScrollHandler = null;
         }
+        // Tear down the inventory scroll handler whenever we leave that panel.
+        if (name !== 'inventory' && this._inventoryScrollHandler) {
+            this.input.off('wheel', this._inventoryScrollHandler);
+            this._inventoryScrollHandler = null;
+        }
         // Re-populate the main panel so contract badges reflect the latest state.
         if (name === 'main') {
             const c = this.panels.get('main');
@@ -504,6 +526,7 @@ export class HubScene extends Scene {
             { label: '[ CONTRACT BOARD ]',    badge: contractBadge, badgeColor: contractBadgeColor, sub: 'Take on work in the Belt', target: 'contracts' },
             { label: '[ SERVICES ]',          badge: '',            badgeColor: C.textSecond,       sub: 'Repair, fuel, sell salvage',         target: 'services' },
             { label: '[ SECTOR MAP ]',        badge: '',            badgeColor: C.textSecond,       sub: 'Launch to Ashwake Belt',             target: 'sectormap' },
+            { label: '[ LOADOUT / INVENTORY ]', badge: '',          badgeColor: C.textSecond,       sub: 'Gear, consumables, salvage',         target: 'inventory' },
             { label: '[ STATION CONTACTS ]',  badge: '',            badgeColor: C.textSecond,       sub: 'Talk to the locals',                 target: 'npcs' },
             { label: '[ FACTION STANDINGS ]', badge: '',            badgeColor: C.textSecond,       sub: 'Reputation + faction contacts',      target: 'factions' },
             { label: '[ SHIP STATUS ]',       badge: '',            badgeColor: C.textSecond,       sub: 'Current ship + relay goal',          target: 'shipstatus' },
@@ -720,6 +743,15 @@ export class HubScene extends Scene {
                 fontFamily: 'Arial', fontSize: 11, color: rewardColor,
             }));
 
+            // Detail button (always available, opens full contract info overlay)
+            const detailBtn = this.add.text(625, y + 60, '[ ▶ DETAILS ]', {
+                fontFamily: 'Arial', fontSize: 10, color: C.textSecond,
+            }).setInteractive({ useHandCursor: true });
+            detailBtn.on('pointerover', () => detailBtn.setColor(C.btnHover));
+            detailBtn.on('pointerout',  () => detailBtn.setColor(C.textSecond));
+            detailBtn.on('pointerdown', () => this.showContractDetail(ct.id));
+            scrollCt.add(detailBtn);
+
             // State button
             if (repLocked) {
                 scrollCt.add(this.add.text(870, y + 34, '[ REP REQUIRED ]', {
@@ -880,6 +912,154 @@ export class HubScene extends Scene {
         c.add(cancelBtn);
 
         this.showPanel('redline-warn');
+    }
+
+    /**
+     * Shows a full-detail overlay for the given contract ID.
+     * Covers the contract board to show the complete description, objectives, and reward.
+     */
+    private showContractDetail(contractId: string) {
+        const existing = this.panels.get('contract-detail');
+        if (existing) { existing.destroy(); this.panels.delete('contract-detail'); }
+
+        const allContracts = [...starterContracts, ...phase2Contracts, ...phase3Contracts, ...phase4Contracts, ...phase5Contracts, ...phase6Contracts, ...phase7Contracts];
+        const ct = allContracts.find(c => c.id === contractId);
+        if (!ct) return;
+
+        const isAccepted  = GameState.isContractAccepted(ct.id);
+        const isCompleted = GameState.isContractCompleted(ct.id);
+
+        const factionShortNames: Record<string, string> = {
+            'meridian-dock-authority':            'Meridian Dock Authority',
+            'ashwake-extraction-guild':           'Ashwake Extraction Guild',
+            'void-covenant':                      'Void Covenant',
+            'free-transit-compact':               'Free Transit Compact',
+            'interstellar-commonwealth-authority':'Interstellar Commonwealth Authority',
+            'frontier-compact':                   'Frontier Compact',
+            'sol-union-directorate':              'Sol Union Directorate',
+            'aegis-division':                     'Aegis Division',
+            'vanta-corsairs':                     'Vanta Corsairs',
+            'helion-synod':                       'Helion Synod',
+        };
+
+        const c = this.add.container(0, 0);
+        this.panels.set('contract-detail', c);
+
+        // Backdrop
+        c.add(this.add.rectangle(512, 384, 1024, 768, 0x000000).setAlpha(0.7));
+        // Panel
+        const panelBg = ct.isRedline ? C.redlinePanelBg : C.panelBg;
+        const panelBorder = ct.isRedline ? C.redlineBorder : C.border;
+        c.add(this.add.rectangle(512, 380, 820, 620, panelBg).setStrokeStyle(2, panelBorder));
+
+        // Header
+        const titleColor = ct.isRedline ? C.redlineText : C.textPrimary;
+        c.add(this.add.text(512, 96, ct.title, {
+            fontFamily: 'Arial Black', fontSize: 18, color: titleColor,
+            align: 'center', stroke: '#000000', strokeThickness: 2,
+            wordWrap: { width: 760 },
+        }).setOrigin(0.5));
+
+        // Tier · Category · Faction
+        const tierText = `Tier ${ct.tier}`;
+        const catText  = ct.category.toUpperCase();
+        const facText  = ct.factionId ? (factionShortNames[ct.factionId] ?? ct.factionId) : '';
+        const metaLine = [tierText, catText, facText].filter(Boolean).join('  ·  ');
+        const metaColor = ct.isRedline ? C.redlineTextDim : C.textSecond;
+        c.add(this.add.text(512, 132, metaLine, {
+            fontFamily: 'Arial', fontSize: 12, color: metaColor, align: 'center',
+        }).setOrigin(0.5));
+
+        // Separator
+        c.add(this.add.rectangle(512, 150, 760, 1, panelBorder));
+
+        // Full description
+        c.add(this.add.text(130, 162, ct.description, {
+            fontFamily: 'Arial', fontSize: 12, color: C.textPrimary,
+            wordWrap: { width: 760 }, lineSpacing: 4,
+        }));
+
+        // Objectives
+        let objY = 260;
+        if (ct.objectives && ct.objectives.length > 0) {
+            c.add(this.add.text(130, objY, 'OBJECTIVES', {
+                fontFamily: 'Arial Black', fontSize: 12, color: C.textAccent,
+            }));
+            objY += 20;
+            for (const obj of ct.objectives) {
+                c.add(this.add.text(130, objY, `◆  ${obj}`, {
+                    fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
+                    wordWrap: { width: 760 },
+                }));
+                objY += 18;
+            }
+        }
+
+        // Reward breakdown
+        const rewY = Math.max(objY + 12, 440);
+        c.add(this.add.rectangle(512, rewY + 46, 760, 76, C.panelDark).setStrokeStyle(1, panelBorder));
+        c.add(this.add.text(130, rewY + 8, 'REWARD', {
+            fontFamily: 'Arial Black', fontSize: 12, color: ct.isRedline ? C.redlineText : C.textAccent,
+        }));
+        c.add(this.add.text(130, rewY + 28, `Credits: ${ct.reward.credits}c`, {
+            fontFamily: 'Arial', fontSize: 12, color: C.textWarn,
+        }));
+        c.add(this.add.text(310, rewY + 28, `XP: ${ct.reward.xp}`, {
+            fontFamily: 'Arial', fontSize: 12, color: C.textAccent,
+        }));
+        if (ct.reward.reputationGain) {
+            const repParts = Object.entries(ct.reward.reputationGain)
+                .map(([fac, amt]) => `+${amt} ${factionShortNames[fac] ?? fac}`)
+                .join('  ·  ');
+            c.add(this.add.text(130, rewY + 48, `Rep: ${repParts}`, {
+                fontFamily: 'Arial', fontSize: 11, color: C.textSuccess,
+            }));
+        }
+        if (ct.reward.itemRewards && ct.reward.itemRewards.length > 0) {
+            const itemNames = ct.reward.itemRewards.map(id => ITEMS[id]?.name ?? id).join(', ');
+            c.add(this.add.text(490, rewY + 28, `Items: ${itemNames}`, {
+                fontFamily: 'Arial', fontSize: 11, color: C.textAccent,
+            }));
+        }
+
+        // Action buttons
+        const btnY = rewY + 108;
+        const closeBtn = this.add.text(700, btnY, '[ CLOSE ]', {
+            fontFamily: 'Arial Black', fontSize: 14, color: C.textSecond, align: 'center',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        closeBtn.on('pointerover', () => closeBtn.setColor(C.btnHover));
+        closeBtn.on('pointerout',  () => closeBtn.setColor(C.textSecond));
+        closeBtn.on('pointerdown', () => {
+            c.destroy();
+            this.panels.delete('contract-detail');
+            this.showPanel('contracts');
+        });
+        c.add(closeBtn);
+
+        if (!isAccepted && !isCompleted) {
+            const acceptLabel = ct.isRedline ? '[ ACCEPT REDLINE ]' : '[ ACCEPT CONTRACT ]';
+            const acceptColor = ct.isRedline ? C.redlineBtn : C.btnNormal;
+            const acceptBtn = this.add.text(340, btnY, acceptLabel, {
+                fontFamily: 'Arial Black', fontSize: 14, color: acceptColor, align: 'center',
+            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            acceptBtn.on('pointerover', () => acceptBtn.setColor(C.btnHover));
+            acceptBtn.on('pointerout',  () => acceptBtn.setColor(acceptColor));
+            acceptBtn.on('pointerdown', () => {
+                c.destroy();
+                this.panels.delete('contract-detail');
+                if (ct.isRedline) {
+                    this.showRedlineWarning(ct.id, ct.title, ct.redlineWarning ?? '');
+                } else {
+                    GameState.acceptContract(ct.id);
+                    this.buildContractPanel();
+                    this.showPanel('contracts');
+                    this.showToast(`Contract accepted: ${ct.title}`, C.textAccent);
+                }
+            });
+            c.add(acceptBtn);
+        }
+
+        this.showPanel('contract-detail');
     }
 
     // ── NPC list panel ────────────────────────────────────────────────────
@@ -1068,7 +1248,7 @@ export class HubScene extends Scene {
 
         this.panelHeader(c, 'CODEX', 'Unlocked field intelligence and personal records');
 
-        const unlockedEntries = [...phase5Lore, ...phase6Lore, ...phase7Lore]
+        const unlockedEntries = [...starterLore, ...phase4Lore, ...phase5Lore, ...phase6Lore, ...phase7Lore]
             .filter(entry => GameState.isLoreUnlocked(entry.id));
 
         const CODEX_VIEWPORT_TOP    = 148;
@@ -1572,20 +1752,11 @@ export class HubScene extends Scene {
                 buyBtn.on('pointerover', () => buyBtn.setColor(C.btnHover));
                 buyBtn.on('pointerout',  () => buyBtn.setColor(canAfford ? C.btnNormal : C.textDanger));
                 buyBtn.on('pointerdown', () => {
-                    if (GameState.spendCredits(upg.cost)) {
-                        GameState.installUpgrade(upg.id, upg.statBonus);
-                        if (upg.id === 'drift-drive-upgrade' && GameState.isCutterRelayCapable()) {
-                            GameState.setFlag('cutter-relay-capable', true);
-                        }
-                        this.refreshStatusBar();
-                        this.refreshShipBar();
-                        this.showInstallNote(upg.installNote, () => {
-                            this.populateShipyardPanel(c);
-                            // Keep ship status panel current so upgrades are visible immediately.
-                            const shipStatusC = this.panels.get('shipstatus');
-                            if (shipStatusC) this.populateShipStatusPanel(shipStatusC);
-                        });
-                    }
+                    this.showUpgradePreview(upg.id, upg.name, upg.cost, upg.statBonus, upg.installNote, () => {
+                        this.populateShipyardPanel(c);
+                        const shipStatusC = this.panels.get('shipstatus');
+                        if (shipStatusC) this.populateShipStatusPanel(shipStatusC);
+                    });
                 });
                 c.add(buyBtn);
             }
@@ -1624,6 +1795,108 @@ export class HubScene extends Scene {
         });
         c.add(closeBtn);
         this.showPanel('install-note');
+    }
+
+    /**
+     * Shows a stat-diff preview before purchasing an upgrade.
+     * Includes current vs projected stats and a confirm / cancel choice.
+     */
+    private showUpgradePreview(
+        upgradeId: string,
+        upgradeName: string,
+        cost: number,
+        statBonus: { hull?: number; shielding?: number; cargoCapacity?: number; fuelCapacity?: number; jumpRange?: number },
+        installNote: string,
+        onConfirmed: () => void,
+    ) {
+        const existing = this.panels.get('upgrade-preview');
+        if (existing) { existing.destroy(); this.panels.delete('upgrade-preview'); }
+
+        const gs = GameState.get();
+        if (gs.credits < cost) {
+            this.showToast(`Not enough credits — need ${cost}c`, C.textDanger);
+            return;
+        }
+
+        const c = this.add.container(0, 0);
+        this.panels.set('upgrade-preview', c);
+
+        c.add(this.add.rectangle(512, 384, 780, 460, C.panelBg).setStrokeStyle(2, C.border));
+        c.add(this.add.text(512, 166, 'INSTALL PREVIEW', {
+            fontFamily: 'Arial Black', fontSize: 20, color: C.textAccent, align: 'center',
+        }).setOrigin(0.5));
+        c.add(this.add.text(512, 198, upgradeName, {
+            fontFamily: 'Arial', fontSize: 14, color: C.textPrimary, align: 'center',
+        }).setOrigin(0.5));
+        c.add(this.add.text(512, 218, `Cost: ${cost}c  (${gs.credits - cost}c remaining after install)`, {
+            fontFamily: 'Arial', fontSize: 12, color: C.textWarn, align: 'center',
+        }).setOrigin(0.5));
+
+        // Separator
+        c.add(this.add.rectangle(512, 232, 720, 1, C.border));
+
+        // Stat diff rows
+        const statDefs: Array<{ label: string; current: number; bonus: number | undefined; unit: string }> = [
+            { label: 'Max Hull',          current: gs.shipMaxHull,   bonus: statBonus.hull,          unit: ' HP' },
+            { label: 'Shielding',         current: gs.shipStatOverrides.shieldingBonus, bonus: statBonus.shielding, unit: '' },
+            { label: 'Cargo Capacity',    current: gs.shipStatOverrides.cargoBonus,     bonus: statBonus.cargoCapacity, unit: ' units' },
+            { label: 'Max Fuel',          current: gs.shipMaxFuel,   bonus: statBonus.fuelCapacity,  unit: '' },
+            { label: 'Jump Range Bonus',  current: gs.shipStatOverrides.jumpRangeBonus, bonus: statBonus.jumpRange, unit: '' },
+        ].filter(row => row.bonus != null && row.bonus > 0);
+
+        if (statDefs.length === 0) {
+            c.add(this.add.text(512, 280, 'This upgrade provides capability enhancements\n(no direct stat changes to display).', {
+                fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+            }).setOrigin(0.5));
+        } else {
+            c.add(this.add.text(200, 244, 'STAT', { fontFamily: 'Arial Black', fontSize: 11, color: C.textSecond }));
+            c.add(this.add.text(530, 244, 'CURRENT', { fontFamily: 'Arial Black', fontSize: 11, color: C.textSecond }));
+            c.add(this.add.text(660, 244, 'AFTER', { fontFamily: 'Arial Black', fontSize: 11, color: C.textSuccess }));
+
+            statDefs.forEach((row, i) => {
+                const ry = 264 + i * 26;
+                const newVal = row.current + (row.bonus ?? 0);
+                c.add(this.add.text(200, ry, row.label, { fontFamily: 'Arial', fontSize: 12, color: C.textPrimary }));
+                c.add(this.add.text(540, ry, `${row.current}${row.unit}`, { fontFamily: 'Arial', fontSize: 12, color: C.textSecond }).setOrigin(0.5));
+                c.add(this.add.text(670, ry, `${newVal}${row.unit}  (+${row.bonus})`, { fontFamily: 'Arial', fontSize: 12, color: C.textSuccess }).setOrigin(0.5));
+            });
+        }
+
+        // Confirm / cancel buttons
+        const btnY = 552;
+        const confirmBtn = this.add.text(360, btnY, '[ CONFIRM INSTALL ]', {
+            fontFamily: 'Arial Black', fontSize: 15, color: C.btnNormal, align: 'center',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        confirmBtn.on('pointerover', () => confirmBtn.setColor(C.btnHover));
+        confirmBtn.on('pointerout',  () => confirmBtn.setColor(C.btnNormal));
+        confirmBtn.on('pointerdown', () => {
+            c.destroy();
+            this.panels.delete('upgrade-preview');
+            if (GameState.spendCredits(cost)) {
+                GameState.installUpgrade(upgradeId, statBonus);
+                if (upgradeId === 'drift-drive-upgrade' && GameState.isCutterRelayCapable()) {
+                    GameState.setFlag('cutter-relay-capable', true);
+                }
+                this.refreshStatusBar();
+                this.refreshShipBar();
+                this.showInstallNote(installNote, onConfirmed);
+            }
+        });
+        c.add(confirmBtn);
+
+        const cancelBtn = this.add.text(650, btnY, '[ CANCEL ]', {
+            fontFamily: 'Arial Black', fontSize: 15, color: C.textSecond, align: 'center',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        cancelBtn.on('pointerover', () => cancelBtn.setColor(C.btnHover));
+        cancelBtn.on('pointerout',  () => cancelBtn.setColor(C.textSecond));
+        cancelBtn.on('pointerdown', () => {
+            c.destroy();
+            this.panels.delete('upgrade-preview');
+            this.showPanel('shipyard');
+        });
+        c.add(cancelBtn);
+
+        this.showPanel('upgrade-preview');
     }
 
     // ── Faction Standings panel ───────────────────────────────────────────
@@ -1810,6 +2083,185 @@ export class HubScene extends Scene {
         }, C.textSecond);
 
         this.showPanel('npc-dialogue');
+    }
+
+    // ── Inventory / Loadout panel ─────────────────────────────────────────
+    private buildInventoryPanel() {
+        const c = this.add.container(0, 0);
+        this.panels.set('inventory', c);
+        this.populateInventoryPanel(c);
+    }
+
+    private populateInventoryPanel(c: Phaser.GameObjects.Container) {
+        c.removeAll(true);
+
+        if (this._inventoryScrollHandler) {
+            this.input.off('wheel', this._inventoryScrollHandler);
+            this._inventoryScrollHandler = null;
+        }
+
+        this.panelHeader(c, 'LOADOUT / INVENTORY', 'Field gear · Consumables · Salvage · Key items');
+
+        const gs = GameState.get();
+        const items = gs.inventory;
+
+        const INV_VIEWPORT_TOP    = 148;
+        const INV_VIEWPORT_HEIGHT = 552;
+        const ROW_H               = 68;
+
+        // ── Summary bar ──────────────────────────────────────────────────
+        const salvageValue = items
+            .filter(i => i.type === 'salvage')
+            .reduce((sum, i) => sum + i.value * i.qty, 0);
+        const totalItems = items.reduce((sum, i) => sum + i.qty, 0);
+
+        c.add(this.add.rectangle(512, 140, 900, 22, C.panelDark).setStrokeStyle(1, C.border));
+        c.add(this.add.text(130, 132, `Items carried: ${totalItems}`, {
+            fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
+        }));
+        c.add(this.add.text(400, 132, `Salvage value: ${salvageValue}c`, {
+            fontFamily: 'Arial', fontSize: 11, color: C.textAccent,
+        }));
+
+        if (items.length === 0) {
+            c.add(this.add.text(512, 400, 'Inventory is empty.\nComplete contracts and explore sites to gather gear and salvage.', {
+                fontFamily: 'Arial', fontSize: 14, color: C.textSecond, align: 'center',
+                wordWrap: { width: 600 },
+            }).setOrigin(0.5));
+            this.makeButton(c, 512, 700, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
+            return;
+        }
+
+        const totalH   = items.length * ROW_H;
+        const maxScroll = Math.max(0, totalH - INV_VIEWPORT_HEIGHT);
+        let   scrollY  = 0;
+
+        const maskGfx = this.make.graphics({ x: 0, y: 0 });
+        maskGfx.fillRect(0, INV_VIEWPORT_TOP, 1024, INV_VIEWPORT_HEIGHT);
+        const mask = maskGfx.createGeometryMask();
+
+        const scrollCt = this.add.container(0, 0);
+        scrollCt.setMask(mask);
+        c.add(scrollCt);
+
+        // Type color map
+        const typeColors: Record<string, string> = {
+            consumable: C.textSuccess,
+            salvage:    C.textAccent,
+            ammo:       C.textWarn,
+            key:        '#a070e0',
+        };
+        const typeLabels: Record<string, string> = {
+            consumable: 'CONSUMABLE',
+            salvage:    'SALVAGE',
+            ammo:       'AMMO',
+            key:        'KEY ITEM',
+        };
+
+        items.forEach((item, i) => {
+            const y    = INV_VIEWPORT_TOP + i * ROW_H;
+            const def  = ITEMS[item.id];
+            const tCol = typeColors[item.type] ?? C.textSecond;
+            const isSecured = item.id === gs.redlineSecuredItemId;
+
+            scrollCt.add(this.add.rectangle(492, y + 30, 900, ROW_H - 6, C.panelBg).setStrokeStyle(1, C.border));
+
+            // Type badge
+            scrollCt.add(this.add.text(80, y + 10, typeLabels[item.type] ?? item.type.toUpperCase(), {
+                fontFamily: 'Arial', fontSize: 9, color: tCol,
+            }).setOrigin(0.5));
+
+            // Qty
+            scrollCt.add(this.add.text(80, y + 30, `×${item.qty}`, {
+                fontFamily: 'Arial Black', fontSize: 16, color: C.textPrimary,
+            }).setOrigin(0.5));
+
+            // Value per unit
+            scrollCt.add(this.add.text(80, y + 50, `${item.value}c ea`, {
+                fontFamily: 'Arial', fontSize: 9, color: C.textSecond,
+            }).setOrigin(0.5));
+
+            // Name
+            const nameColor = isSecured ? C.redlineSecured : C.textPrimary;
+            scrollCt.add(this.add.text(140, y + 6, item.name + (isSecured ? '  [SECURED]' : ''), {
+                fontFamily: 'Arial Black', fontSize: 13, color: nameColor,
+            }));
+
+            // Description from catalog
+            if (def?.description) {
+                const descShort = def.description.length > 100 ? def.description.slice(0, 97) + '…' : def.description;
+                scrollCt.add(this.add.text(140, y + 26, descShort, {
+                    fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
+                    wordWrap: { width: 580 },
+                }));
+            }
+
+            // Action buttons
+            let btnX = 870;
+
+            if (item.type === 'salvage') {
+                const sellAllBtn = this.add.text(btnX, y + 30, `[ SELL ALL (${item.value * item.qty}c) ]`, {
+                    fontFamily: 'Arial Black', fontSize: 11, color: C.textWarn,
+                }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
+                sellAllBtn.on('pointerover', () => sellAllBtn.setColor(C.btnHover));
+                sellAllBtn.on('pointerout',  () => sellAllBtn.setColor(C.textWarn));
+                sellAllBtn.on('pointerdown', () => {
+                    GameState.sellItem(item.id, item.qty);
+                    this.refreshStatusBar();
+                    this.buildInventoryPanel();
+                    this.showPanel('inventory');
+                    this.showToast(`Sold ${item.name} — +${item.value * item.qty}c`, C.textSuccess);
+                });
+                scrollCt.add(sellAllBtn);
+
+            } else if (item.type === 'consumable' && def?.effect) {
+                const useBtn = this.add.text(btnX, y + 30, '[ USE ]', {
+                    fontFamily: 'Arial Black', fontSize: 11, color: C.textSuccess,
+                }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
+                useBtn.on('pointerover', () => useBtn.setColor(C.btnHover));
+                useBtn.on('pointerout',  () => useBtn.setColor(C.textSuccess));
+                useBtn.on('pointerdown', () => {
+                    const used = GameState.useItem(item.id);
+                    if (!used) return;
+                    const fx = def.effect!;
+                    let msg = `Used ${used.name}`;
+                    if (fx.healPilot) {
+                        GameState.healPilot(fx.healPilot);
+                        msg += ` — pilot +${fx.healPilot} HP`;
+                    }
+                    if (fx.healShip) {
+                        GameState.healShip(fx.healShip);
+                        msg += ` — hull +${fx.healShip}`;
+                    }
+                    this.refreshStatusBar();
+                    this.refreshShipBar();
+                    this.buildInventoryPanel();
+                    this.showPanel('inventory');
+                    this.showToast(msg, C.textSuccess);
+                });
+                scrollCt.add(useBtn);
+
+            } else if (item.type === 'key') {
+                scrollCt.add(this.add.text(btnX, y + 30, isSecured ? '[ SECURED ✓ ]' : '[ KEY ITEM ]', {
+                    fontFamily: 'Arial', fontSize: 11,
+                    color: isSecured ? C.redlineSecured : C.textMuted,
+                }).setOrigin(1, 0.5));
+            }
+        });
+
+        if (maxScroll > 0) {
+            c.add(this.add.text(512, INV_VIEWPORT_TOP + INV_VIEWPORT_HEIGHT + 6, '▼ scroll for more', {
+                fontFamily: 'Arial', fontSize: 11, color: C.textMuted, align: 'center',
+            }).setOrigin(0.5));
+
+            this._inventoryScrollHandler = (_pointer: unknown, _gameObjects: unknown, _deltaX: unknown, deltaY: unknown) => {
+                scrollY = Math.max(0, Math.min(maxScroll, scrollY + (deltaY as number) * DIALOGUE_SCROLL_SPEED));
+                scrollCt.setY(-scrollY);
+            };
+            this.input.on('wheel', this._inventoryScrollHandler);
+        }
+
+        this.makeButton(c, 512, 700, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
     }
 
     // ── Debrief panel (post-dungeon) ──────────────────────────────────────

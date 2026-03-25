@@ -155,7 +155,7 @@ export class SectorMapScene extends Scene {
             }).setInteractive({ useHandCursor: true });
             fpBtn.on('pointerover', () => fpBtn.setColor(C.btnHover));
             fpBtn.on('pointerout',  () => fpBtn.setColor(farpointCleared ? C.textSecond : C.textWarn));
-            fpBtn.on('pointerdown', () => this.launchToDungeon('farpoint-waystation'));
+            fpBtn.on('pointerdown', () => this.launchToDungeon('farpoint-outer-ring'));
 
             // ── Phase 4 sector nodes ──────────────────────────────────────
             const kalindraClear = GameState.getFlag('kalindra-cleared');

@@ -172,6 +172,9 @@ export const GameState = {
     refuelShip(amount: number) {
         state.shipFuel = Math.min(state.shipFuel + amount, state.shipMaxFuel);
     },
+    consumeFuel(amount: number) {
+        state.shipFuel = clampMin(state.shipFuel - amount);
+    },
 
     // ── Ship upgrades ──────────────────────────────────────────────────────
     isUpgradeInstalled(upgradeId: string): boolean {
@@ -324,7 +327,7 @@ export const GameState = {
         state.pendingDungeon = dungeonId;
         state.activeRunIsRedline = isRedline;
         state.lastRunRedlineLoss = [];
-        GameState.damageShip(2); // fuel burn to reach site
+        GameState.consumeFuel(2); // fuel burn to reach site
     },
     setReturnFromDungeon(
         loot: InventoryItem[],
