@@ -193,6 +193,7 @@ const DIALOGUE_VIEWPORT_TOP      = 260;  // y where the masked dialogue area beg
 const DIALOGUE_VIEWPORT_HEIGHT   = 316;  // visible height of the dialogue clip region
 const DIALOGUE_SCROLL_SPEED      = 0.3;  // wheel-delta multiplier for NPC dialogue scroll
 const CODEX_SCROLL_SPEED         = 0.3;  // wheel-delta multiplier for codex scroll
+const INVENTORY_SCROLL_SPEED     = 0.3;  // wheel-delta multiplier for inventory scroll
 const CODEX_CONTENT_MAX_LENGTH   = 360;  // max characters shown per lore entry in codex
 
 // Ghost-site contract IDs — only visible when kael-questline-stage-2 flag is set
@@ -2255,7 +2256,7 @@ export class HubScene extends Scene {
             }).setOrigin(0.5));
 
             this._inventoryScrollHandler = (_pointer: unknown, _gameObjects: unknown, _deltaX: unknown, deltaY: unknown) => {
-                scrollY = Math.max(0, Math.min(maxScroll, scrollY + (deltaY as number) * DIALOGUE_SCROLL_SPEED));
+                scrollY = Math.max(0, Math.min(maxScroll, scrollY + (deltaY as number) * INVENTORY_SCROLL_SPEED));
                 scrollCt.setY(-scrollY);
             };
             this.input.on('wheel', this._inventoryScrollHandler);
