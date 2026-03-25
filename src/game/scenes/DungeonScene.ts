@@ -479,7 +479,7 @@ export class DungeonScene extends Scene {
                 fontFamily: 'Arial', fontSize: 13, color: C.textDanger, align: 'center',
             }).setOrigin(0.5);
             this.addActionButton(380, 500, '[ ENGAGE ]', () => this.startCombat(room), C.textDanger);
-            this.addActionButton(700, 500, '[ RETREAT ]', () => this.doRetreat(), C.textSecond);
+            this.addActionButton(700, 500, '[ RETREAT ]', () => this.showRetreatConfirm(), C.textSecond);
         }
     }
 
@@ -735,7 +735,7 @@ export class DungeonScene extends Scene {
             anomalyKits > 0 ? '#88ddff' : C.textSecond, anomalyKits === 0);
         this.addActionButton(700, actionY + 50, '[ SCAN TARGET ]', () => this.combatScan(), C.textAccent);
 
-        this.addActionButton(512, actionY + 104, '[ EMERGENCY RETREAT ]', () => this.doRetreat(), '#445566');
+        this.addActionButton(512, actionY + 104, '[ EMERGENCY RETREAT ]', () => this.showRetreatConfirm(), '#445566');
     }
 
     /**
@@ -862,11 +862,13 @@ export class DungeonScene extends Scene {
         // Anomaly Field Kit suppresses the enemy's targeting this turn (no counter-attack)
         // and cancels any in-progress charge.
         if (itemId === 'anomaly-field-kit') {
-            if (cb.enemyCharging) {
+            if (enemy && cb.enemyCharging) {
                 cb.enemyCharging = false;
                 cb.log.push(`⚡ Signal disruption — ${enemy.name}'s charged special CANCELLED.`);
-            } else {
+            } else if (enemy) {
                 cb.log.push(`Signal disruption from ${item.name} — ${enemy.name} targeting suppressed this turn.`);
+            } else {
+                cb.log.push(`Signal disruption from ${item.name} — targeting suppressed this turn.`);
             }
             this.buildHeader();
             if (!this.checkPlayerDeath()) this.renderCombat();
@@ -1052,13 +1054,15 @@ export class DungeonScene extends Scene {
             cb.log.push(`Loot: ${loot.map(l => l.name).join(', ')}`);
         }
 
-        // Advance to next enemy — reset per-enemy charge/scan state
-        const nextEnemy = cb.enemies.find((e, i) => i > cb.enemyIndex && e.currentHp > 0);
-        if (nextEnemy) {
-            cb.enemyIndex = cb.enemies.indexOf(nextEnemy);
+        // Advance to next enemy — reset per-enemy charge/scan/enrage state
+        const nextEnemyIdx = cb.enemies.findIndex((e, i) => i > cb.enemyIndex && e.currentHp > 0);
+        if (nextEnemyIdx !== -1) {
+            const nextEnemy = cb.enemies[nextEnemyIdx];
+            cb.enemyIndex = nextEnemyIdx;
             cb.enemyCharging = false;
             cb.enemySpecialUsed = false;
             cb.enemyScanned = false;
+            cb.bossEnrageActive = false;
             cb.log.push(`${nextEnemy.name} engages.`);
             this.buildHeader();
             this.renderCombat();
@@ -1318,5 +1322,31 @@ export class DungeonScene extends Scene {
         this.phase = 'complete';
         GameState.setReturnFromDungeon(this.runLoot, this.runCredits, Math.floor(this.runXp * 0.5), false, [], this.dungeonDef?.id);
         this.scene.start('Hub');
+    }
+
+    /** Show a confirmation overlay before retreating — warns about the 50 % XP penalty. */
+    private showRetreatConfirm() {
+        if (this.phase === 'complete' || this.phase === 'dead') return;
+        const wasInCombat = this.phase === 'combat';
+        this.actionContainer.removeAll(true);
+
+        const penaltyXp = Math.floor(this.runXp * 0.5);
+        const penaltyText = penaltyXp > 0
+            ? `You will keep ${penaltyXp} XP (50% penalty applied).`
+            : 'You will lose all XP earned this run.';
+
+        this.contentContainer.add(
+            this.add.rectangle(512, 570, 820, 90, 0x120a0a).setStrokeStyle(1, 0x661111),
+        );
+        this.contentContainer.add(
+            this.add.text(512, 548, `⚠  RETREAT — ${penaltyText}  Loot and credits kept.`, {
+                fontFamily: 'Arial', fontSize: 12, color: C.textWarn, align: 'center',
+            }).setOrigin(0.5),
+        );
+        this.addActionButton(370, 580, '[ CONFIRM RETREAT ]', () => this.doRetreat(), C.textDanger);
+        this.addActionButton(660, 580, '[ CANCEL ]', () => {
+            if (wasInCombat) this.renderCombat();
+            else this.enterRoom(this.currentRoomIdx);
+        }, C.textSecond);
     }
 }
