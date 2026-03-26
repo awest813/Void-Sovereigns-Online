@@ -302,12 +302,12 @@ const CONTRACT_LORE_UNLOCKS: Record<string, string[]> = {
     'robot-suppression-shalehook':    ['lore-rogue-automation'],
     'deep-survey-relay-static':       ['lore-void-relays-overview', 'lore-void-covenant'],
     // ── Phase 4 ────────────────────────────────────────────────────────────
-    'kalindra-deep-salvage':          ['lore-kalindra-collapse'],
-    'aegis-anomaly-assessment':       ['lore-aegis-sealed-notice'],
-    'orin-transit-audit':             ['lore-orins-crossing-history', 'lore-sol-union-jurisdiction'],
-    'orin-classified-recovery':       ['lore-impossible-telemetry-orin'],
-    'frontier-compact-survey-run':    ['lore-frontier-compact-frontier'],
-    'redline-kalindra-signal-core':   ['lore-anomaly-pattern-escalation', 'lore-redline-runs-briefing'],
+    'frontier-salvage-certification':   ['lore-kalindra-collapse'],
+    'aegis-sealed-site-recovery':       ['lore-aegis-sealed-notice'],
+    'sol-union-compliance-check':       ['lore-orins-crossing-history', 'lore-sol-union-jurisdiction'],
+    'aegis-anomaly-trace-orin':         ['lore-impossible-telemetry-orin'],
+    'frontier-route-survey-kalindra':   ['lore-frontier-compact-frontier'],
+    'redline-kalindra-core':            ['lore-anomaly-pattern-escalation', 'lore-redline-runs-briefing'],
     // ── Phase 6 ────────────────────────────────────────────────────────────
     'kael-ping-investigation':      ['kael-personal-record'],
     'kael-zero-second-expedition':  ['transit-node-zero-approach', 'transit-zero-interior-partial'],
@@ -435,12 +435,8 @@ export class HubScene extends Scene {
             }),
         };
 
-        // Show last-run credits if we just returned
-        if (gs.returnFromDungeon && gs.lastRunCredits > 0) {
-            this.add.text(820, 12, `+${gs.lastRunCredits}c`, {
-                fontFamily: 'Arial', fontSize: 13, color: C.textSuccess,
-            });
-        }
+        // Credits earned this run are shown in the debrief panel and already applied to the
+        // total displayed above — no extra label needed here.
     }
 
     private refreshStatusBar() {
@@ -736,6 +732,8 @@ export class HubScene extends Scene {
 
     // ── Contract board ────────────────────────────────────────────────────
     private buildContractPanel() {
+        const old = this.panels.get('contracts');
+        if (old) old.destroy();
         const c = this.add.container(0, 0);
         this.panels.set('contracts', c);
         this.populateContractPanel(c);
@@ -1604,7 +1602,7 @@ export class HubScene extends Scene {
                 if (GameState.spendCredits(item.cost)) {
                     GameState.addItem({
                         id: item.id, name: item.name.split(' (')[0],
-                        qty: 1, type: 'consumable', value: Math.floor(item.cost * 0.5),
+                        qty: 1, type: 'consumable', value: ITEMS[item.id]?.value ?? Math.floor(item.cost * 0.5),
                     });
                     this.refreshStatusBar();
                     this.populateServicesPanel(c);
@@ -2210,6 +2208,8 @@ export class HubScene extends Scene {
 
     // ── Inventory / Loadout panel ─────────────────────────────────────────
     private buildInventoryPanel() {
+        const old = this.panels.get('inventory');
+        if (old) old.destroy();
         const c = this.add.container(0, 0);
         this.panels.set('inventory', c);
         this.populateInventoryPanel(c);
@@ -2408,7 +2408,12 @@ export class HubScene extends Scene {
         } else if (gs.lastRunSuccess) {
             title = 'EXTRACTION SUCCESSFUL';
             titleColor = C.textSuccess;
+        } else if (gs.lastRunCredits > 0 || gs.lastRunLoot.length > 0) {
+            // Player voluntarily extracted early (retreat / early extract) — kept some rewards.
+            title = 'PARTIAL EXTRACTION';
+            titleColor = C.textSuccess;
         } else {
+            // Pilot HP reached zero — true emergency extraction.
             title = 'EMERGENCY EXTRACTION';
             titleColor = C.textWarn;
         }

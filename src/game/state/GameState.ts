@@ -145,9 +145,9 @@ export const GameState = {
     // ── XP / Level ─────────────────────────────────────────────────────────
     addXp(amount: number) {
         state.xp += amount;
-        const threshold = 300 * state.level;
-        if (state.xp >= threshold) {
-            state.xp -= threshold;
+        // Use while so multiple thresholds can be crossed in a single gain (e.g. large boss reward).
+        while (state.xp >= 300 * state.level) {
+            state.xp -= 300 * state.level;
             state.level += 1;
             state.pilotMaxHull += 10;
             state.pilotHull = state.pilotMaxHull;

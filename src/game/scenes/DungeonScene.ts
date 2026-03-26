@@ -485,7 +485,10 @@ export class DungeonScene extends Scene {
         });
 
         if (room.type === 'entrance') {
-            this.addActionButton(512, 500, '[ ADVANCE ]', () => this.enterRoom(idx + 1));
+            this.addActionButton(512, 500, '[ ADVANCE ]', () => {
+                if (idx + 1 < this.rooms.length) this.enterRoom(idx + 1);
+                else this.showCompletion();
+            });
         } else if (room.type === 'loot') {
             this.addActionButton(512, 500, '[ SEARCH ROOM ]', () => this.showLootRoom(room));
         } else if (room.type === 'hazard') {
@@ -661,6 +664,17 @@ export class DungeonScene extends Scene {
             .map(id => ENEMIES[id])
             .filter(Boolean)
             .map(def => ({ ...def, currentHp: def.hp }));
+
+        if (enemyDefs.length === 0) {
+            // No valid enemies — treat room as cleared and advance.
+            room.cleared = true;
+            if (this.currentRoomIdx + 1 < this.rooms.length) {
+                this.enterRoom(this.currentRoomIdx + 1);
+            } else {
+                this.showCompletion();
+            }
+            return;
+        }
 
         this.combat = {
             enemies: enemyDefs,
@@ -1115,7 +1129,7 @@ export class DungeonScene extends Scene {
             if (spec) {
                 this.enemySpecialAttack(spec);
             } else {
-                this.enemyAttack(false);
+                this.enemyAttack();
             }
             return;
         }
@@ -1130,7 +1144,7 @@ export class DungeonScene extends Scene {
             return; // Enemy charges this turn — no normal attack
         }
 
-        this.enemyAttack(false);
+        this.enemyAttack();
     }
 
     /** Fires the enemy's telegraphed special attack and applies any status effect. */
@@ -1300,7 +1314,7 @@ export class DungeonScene extends Scene {
         if (!this.checkPlayerDeath()) this.renderCombat();
     }
 
-    private enemyAttack(logOnly: boolean) {
+    private enemyAttack() {
         const cb = this.combat!;
         const enemy = cb.enemies[cb.enemyIndex];
         const gs = GameState.get();
@@ -1324,11 +1338,9 @@ export class DungeonScene extends Scene {
             cb.playerHitStreak = 0;
         }
 
-        if (!logOnly) {
-            const critLabel = isEnemyCrit ? '  [CRIT]' : '';
-            const enrageLabel = cb.bossEnrageActive ? '  [OVERCHARGE]' : '';
-            cb.log.push(`${enemy.name} attacks for ${dmg} damage.${critLabel}${enrageLabel} Pilot HP: ${GameState.get().pilotHull}`);
-        }
+        const critLabel = isEnemyCrit ? '  [CRIT]' : '';
+        const enrageLabel = cb.bossEnrageActive ? '  [OVERCHARGE]' : '';
+        cb.log.push(`${enemy.name} attacks for ${dmg} damage.${critLabel}${enrageLabel} Pilot HP: ${GameState.get().pilotHull}`);
         this.buildHeader();
         if (this.checkPlayerDeath()) return;
         this.renderCombat();
