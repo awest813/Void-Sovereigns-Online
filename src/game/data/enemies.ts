@@ -115,6 +115,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'power-cell',            chance: 0.9, qty: 2 },
             { itemId: 'drill-component',       chance: 0.8, qty: 2 },
             { itemId: 'salvage-crate-standard', chance: 0.7, qty: 1 },
+            { itemId: 'nano-repair-kit',       chance: 0.35, qty: 1 },
         ],
         specialAbility: {
             name: 'Core Overload',
@@ -176,6 +177,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'cryo-component',        chance: 0.85, qty: 2 },
             { itemId: 'power-cell',            chance: 0.90, qty: 2 },
             { itemId: 'salvage-crate-standard', chance: 0.65, qty: 1 },
+            { itemId: 'combat-stim',           chance: 0.35, qty: 1 },
         ],
         specialAbility: {
             name: 'System Lockdown',
@@ -240,6 +242,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'void-pattern-record',   chance: 0.75, qty: 1 },
             { itemId: 'signal-fragment',       chance: 0.90, qty: 2 },
             { itemId: 'power-cell',            chance: 0.85, qty: 2 },
+            { itemId: 'combat-stim',           chance: 0.30, qty: 1 },
         ],
         specialAbility: {
             name: 'Cascade Discharge',
@@ -288,6 +291,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
             { itemId: 'farpoint-cargo-bundle', chance: 0.80, qty: 2 },
             { itemId: 'power-cell',            chance: 0.85, qty: 2 },
             { itemId: 'signal-fragment',       chance: 0.50, qty: 1 },
+            { itemId: 'nano-repair-kit',       chance: 0.30, qty: 1 },
         ],
         specialAbility: {
             name: 'Emergency Override',
