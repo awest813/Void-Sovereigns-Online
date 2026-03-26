@@ -395,6 +395,15 @@ export const ITEMS: Record<string, ItemDef> = {
 
     // ── Phase 8 items ─────────────────────────────────────────────────────
 
+    'warden-core-extract': {
+        id: 'warden-core-extract',
+        name: 'Warden Core Extract',
+        type: 'key',
+        value: 700,
+        description: 'The extracted core processing unit from the Index Chamber Warden. ' +
+            'It continued running diagnostic cycles for six minutes after the housing was destroyed. ' +
+            'The ICA classifies the architecture as belonging to no known construction lineage.',
+    },
     'index-cycle-fragment': {
         id: 'index-cycle-fragment',
         name: 'Index Cycle Fragment',
@@ -517,5 +526,15 @@ export const ITEMS: Record<string, ItemDef> = {
         description: 'A credential token recovered from the Origin Node gallery. ' +
             'It is the oldest artifact you have encountered — the authorization format is the Architect\'s original, ' +
             'before any revision or update. It opens doors that should not exist in any facility built after it.',
+    },
+    'architect-origin-seal': {
+        id: 'architect-origin-seal',
+        name: 'Architect Origin Seal',
+        type: 'key',
+        value: 1100,
+        description: 'The original authorization seal recovered from the Origin Node Apex. ' +
+            'The Null Architect affixed this to the first cycle-zero record at the moment of creation. ' +
+            'It is the oldest manufactured object you have ever held. ' +
+            'Every faction considers it the most significant recovered artifact in frontier history.',
     },
 };
