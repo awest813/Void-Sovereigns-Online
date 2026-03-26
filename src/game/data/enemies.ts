@@ -1085,6 +1085,9 @@ export function rollLoot(enemyId: string): Array<{ id: string; name: string; qty
         'cryo-component':        { name: 'Cryo Component',        type: 'salvage',    value: 55 },
         'black-box-fragment':    { name: 'Black Box Fragment',    type: 'key',        value: 120 },
         'corrupted-maintenance-log': { name: 'Corrupted Maintenance Log', type: 'key', value: 40 },
+        // Consumable drops
+        'nano-repair-kit':       { name: 'Nano-Repair Kit',       type: 'consumable', value: 55 },
+        'combat-stim':           { name: 'Combat Stimulant',      type: 'consumable', value: 65 },
         // Phase 3 items
         'signal-fragment':       { name: 'Signal Fragment',       type: 'salvage',    value: 80 },
         'relay-data-core':       { name: 'Relay Data Core',       type: 'key',        value: 150 },
@@ -1113,9 +1116,9 @@ export function rollLoot(enemyId: string): Array<{ id: string; name: string; qty
         'deepfrontier-core-signature': { name: 'Deepfrontier Core Signature', type: 'key', value: 520 },
         'null-lattice-segment':     { name: 'Null Lattice Segment',     type: 'key',     value: 500 },
         // Phase 8 items
-        'index-cycle-fragment':     { name: 'Index Cycle Fragment',     type: 'salvage', value: 440 },
-        'architect-response-record':{ name: 'Architect Response Record',type: 'key',     value: 600 },
-        'index-access-token':       { name: 'Index Access Token',       type: 'key',     value: 480 },
+        'index-cycle-fragment':     { name: 'Index Cycle Fragment',     type: 'key',     value: 480 },
+        'architect-response-record':{ name: 'Architect Response Record',type: 'key',     value: 560 },
+        'index-access-token':       { name: 'Index Access Token',       type: 'key',     value: 420 },
         'warden-core-extract':      { name: 'Warden Core Extract',      type: 'key',     value: 700 },
         // Phase 9 items
         'cycle-record-fragment':       { name: 'Cycle Record Fragment',       type: 'salvage', value: 450 },
