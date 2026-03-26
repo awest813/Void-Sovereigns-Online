@@ -1581,9 +1581,11 @@ export class HubScene extends Scene {
         }
 
         const shopItems: Array<{ id: string; name: string; cost: number }> = [
-            { id: 'medical-kit',       name: 'Medical Kit (heal 35 HP)',       cost: 50 },
-            { id: 'repair-kit',        name: 'Repair Kit (repair 30 hull)',    cost: 65 },
-            { id: 'anomaly-field-kit', name: 'Anomaly Field Kit (heal 50 HP)', cost: 120 },
+            { id: 'medical-kit',       name: 'Medical Kit (heal 35 HP)',              cost: 50 },
+            { id: 'repair-kit',        name: 'Repair Kit (repair 30 hull)',           cost: 65 },
+            { id: 'anomaly-field-kit', name: 'Anomaly Field Kit (heal 50 HP)',        cost: 120 },
+            { id: 'nano-repair-kit',   name: 'Nano-Repair Kit (regen 10 HP/turn ×3)', cost: 80 },
+            { id: 'combat-stim',       name: 'Combat Stimulant (+50% ATK for 2t)',    cost: 95 },
         ];
 
         shopItems.forEach((item, i) => {

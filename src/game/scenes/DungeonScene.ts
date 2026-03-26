@@ -56,6 +56,29 @@ const HIGH_TIER_CRIT_CHANCE = 0.08;
 const NORMAL_ENEMY_CRIT_CHANCE = 0.05;
 /** Attack damage multiplier when the player is DISRUPTED (reduces output by 30%). */
 const DISRUPTED_ATTACK_MULT = 0.70;
+/** Number of consecutive attack turns (without taking damage) needed to activate Momentum. */
+const MOMENTUM_THRESHOLD = 3;
+/** Additive damage bonus while Momentum is active. */
+const MOMENTUM_DAMAGE_BONUS = 0.25;
+/** Attack multiplier granted by a Combat Stimulant (+50%). */
+const BOOSTED_ATTACK_MULT = 0.50;
+/** Damage multiplier for the Exploit Scan Data action (+60% damage, no enemy counter). */
+const EXPLOIT_DAMAGE_MULT = 1.60;
+/** Varied hit messages for normal player attacks. */
+const PLAYER_HIT_MSGS = [
+    'You attack for',
+    'Strike connects —',
+    'Direct hit —',
+    'Impact registered —',
+    'Target hit for',
+];
+/** Varied crit messages for player critical hits. */
+const PLAYER_CRIT_MSGS = [
+    '⚡ CRITICAL STRIKE —',
+    '⚡ PRECISION STRIKE —',
+    '⚡ ARMOR BREACH —',
+    '⚡ DIRECT HIT —',
+];
 /**
  * Returns the combat damage reduction provided by the pilot's shielding upgrades.
  * Each 4 points of shielding blocks 1 point of damage.
@@ -63,6 +86,8 @@ const DISRUPTED_ATTACK_MULT = 0.70;
 function shieldDamageReduction(shieldingBonus: number): number {
     return shieldingBonus > 0 ? Math.floor(shieldingBonus / 4) : 0;
 }
+/** Pick a random element from an array. */
+function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 
 // ── DungeonScene ────────────────────────────────────────────────────────────
 type DungeonPhase =
@@ -76,12 +101,13 @@ type DungeonPhase =
 
 /** A persistent status effect applied to the player during combat. */
 interface PlayerStatusEffect {
-    type: 'burning' | 'disrupted';
+    type: 'burning' | 'disrupted' | 'regen' | 'boosted';
     /** Remaining turns this effect lasts. */
     turnsLeft: number;
     /**
      * For burning: HP damage dealt at the start of each player action.
-     * For disrupted: unused (reduction percentage is a fixed constant).
+     * For regen: HP restored at the start of each player action.
+     * For disrupted/boosted: unused (percentage is a fixed constant).
      */
     value: number;
 }
@@ -93,7 +119,9 @@ interface CombatState {
     playerDodging: boolean;
     /** True once a boss drops below 33% HP — increases damage output. */
     bossEnrageActive: boolean;
-    /** Status effects currently active on the player (burning, disrupted). */
+    /** True once the boss has crossed the 50% HP mark (phase-2 warning shown). */
+    bossPhase2Active: boolean;
+    /** Status effects currently active on the player (burning, disrupted, regen, boosted). */
     playerStatus: PlayerStatusEffect[];
     /** True when the current enemy has triggered its special and is charging — fires next turn. */
     enemyCharging: boolean;
@@ -101,6 +129,10 @@ interface CombatState {
     enemySpecialUsed: boolean;
     /** True once the player has used SCAN on the current enemy this combat. */
     enemyScanned: boolean;
+    /** True once the player has used Exploit against the current enemy. */
+    enemyExploitUsed: boolean;
+    /** Consecutive attack turns where the player attacked without taking any damage. */
+    playerHitStreak: number;
     /** Total HP damage dealt to the player during this combat room (used for flawless detection). */
     damageTakenThisRoom: number;
 }
@@ -508,6 +540,48 @@ export class DungeonScene extends Scene {
             yOff += 28;
         });
 
+        // 30% chance for a hidden cache discovery
+        const DISCOVERY_MESSAGES_CREDITS = [
+            'A hidden compartment behind the panel — someone left emergency funds.',
+            'A dead operative\'s stash. Credit chips, untouched.',
+            'Emergency supply cache sealed behind a false wall.',
+        ];
+        const DISCOVERY_MESSAGES_ITEM = [
+            'A sealed med-locker tucked behind the main racks.',
+            'Someone cached field supplies here. Recent, by the look of it.',
+            'A forgotten maintenance kit — newer model, barely used.',
+        ];
+        if (Math.random() < 0.30) {
+            yOff += 8;
+            if (Math.random() < 0.55) {
+                // Credit bonus
+                const bonus = Phaser.Math.Between(20, 60);
+                this.runCredits += bonus;
+                this.buildHeader();
+                this.addContentText(220, yOff, `✦ HIDDEN CACHE — +${bonus}c found`, {
+                    fontFamily: 'Arial Black', fontSize: 13, color: '#ffdd44',
+                });
+                yOff += 20;
+                this.addContentText(220, yOff, `  "${pick(DISCOVERY_MESSAGES_CREDITS)}"`, {
+                    fontFamily: 'Arial', fontSize: 12, color: C.textSecond, fontStyle: 'italic',
+                });
+            } else {
+                // Nano-Repair Kit bonus
+                const bonusDef = ITEMS['nano-repair-kit'];
+                if (bonusDef) {
+                    const bonusItem: InventoryItem = { id: bonusDef.id, name: bonusDef.name, qty: 1, type: bonusDef.type, value: bonusDef.value };
+                    this.runLoot.push(bonusItem);
+                    this.addContentText(220, yOff, `✦ HIDDEN CACHE — Nano-Repair Kit recovered`, {
+                        fontFamily: 'Arial Black', fontSize: 13, color: '#44dd88',
+                    });
+                    yOff += 20;
+                    this.addContentText(220, yOff, `  "${pick(DISCOVERY_MESSAGES_ITEM)}"`, {
+                        fontFamily: 'Arial', fontSize: 12, color: C.textSecond, fontStyle: 'italic',
+                    });
+                }
+            }
+        }
+
         room.cleared = true;
 
         this.addActionButton(512, 560, '[ CONTINUE ]', () => {
@@ -594,10 +668,13 @@ export class DungeonScene extends Scene {
             log: [],
             playerDodging: false,
             bossEnrageActive: false,
+            bossPhase2Active: false,
             playerStatus: [],
             enemyCharging: false,
             enemySpecialUsed: false,
             enemyScanned: false,
+            enemyExploitUsed: false,
+            playerHitStreak: 0,
             damageTakenThisRoom: 0,
         };
 
@@ -707,45 +784,140 @@ export class DungeonScene extends Scene {
         const medKits = GameState.countItem('medical-kit');
         const repairKits = GameState.countItem('repair-kit');
         const anomalyKits = GameState.countItem('anomaly-field-kit');
+        const nanoKits = GameState.countItem('nano-repair-kit');
+        const stimKits = GameState.countItem('combat-stim');
         this.addContentText(610, 348, `Med: ${medKits}  Repair: ${repairKits}  Anomaly: ${anomalyKits}`, {
+            fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
+        });
+        this.addContentText(610, 364, `Nano-Rep: ${nanoKits}  Stim: ${stimKits}`, {
             fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
         });
 
         // Active player status effects
+        let statusY = 392;
         if (cb.playerStatus.length > 0) {
             const parts = cb.playerStatus.map(s => {
-                if (s.type === 'burning')   return `🔥 BURNING ${s.value} dmg/turn (${s.turnsLeft}t)`;
-                if (s.type === 'disrupted') return `⚡ DISRUPTED −30% ATK (${s.turnsLeft}t)`;
+                if (s.type === 'burning')   return `🔥 BURN ${s.value}dmg/t(${s.turnsLeft})`;
+                if (s.type === 'disrupted') return `⚡ DISRUPT −30%ATK(${s.turnsLeft})`;
+                if (s.type === 'regen')     return `💚 REGEN +${s.value}hp/t(${s.turnsLeft})`;
+                if (s.type === 'boosted')   return `💥 BOOSTED +50%ATK(${s.turnsLeft})`;
                 return '';
             }).filter(Boolean);
-            this.addContentText(80, 392, `STATUS: ${parts.join('  |  ')}`, {
+            this.addContentText(80, statusY, `STATUS: ${parts.join('  |  ')}`, {
                 fontFamily: 'Arial', fontSize: 12, color: '#ff8844',
+            });
+            statusY += 20;
+        }
+
+        // Momentum indicator — show when one hit away from or at threshold
+        if (cb.playerHitStreak >= MOMENTUM_THRESHOLD - 1) {
+            const bonusLabel = cb.playerHitStreak >= MOMENTUM_THRESHOLD
+                ? `⚡ MOMENTUM ×${cb.playerHitStreak} — +25% DAMAGE ACTIVE`
+                : `⚡ MOMENTUM ×${cb.playerHitStreak} — building… (1 more)`;
+            this.addContentText(80, statusY, bonusLabel, {
+                fontFamily: 'Arial', fontSize: 12, color: '#ffdd44',
             });
         }
 
-        // ── Action buttons (shifted down to accommodate status row) ──────────
+        // ── Action buttons ───────────────────────────────────────────────────
         const actionY = 440;
-        this.addActionButton(180, actionY, '[ ATTACK ]', () => this.combatAttack(), C.textDanger);
-        this.addActionButton(380, actionY, '[ DODGE ]', () => this.combatDodge(), C.textWarn);
-        this.addActionButton(570, actionY, '[ USE MED KIT ]', () => this.combatUseItem('medical-kit'),
+        // Row 1 — core combat
+        this.addActionButton(170, actionY, '[ ATTACK ]', () => this.combatAttack(), C.textDanger);
+        this.addActionButton(360, actionY, '[ DODGE ]', () => this.combatDodge(), C.textWarn);
+        this.addActionButton(560, actionY, '[ MED KIT ]', () => this.combatUseItem('medical-kit'),
             medKits > 0 ? C.textSuccess : C.textSecond, medKits === 0);
-        this.addActionButton(780, actionY, '[ USE REPAIR KIT ]', () => this.combatUseItem('repair-kit'),
+        this.addActionButton(760, actionY, '[ REPAIR KIT ]', () => this.combatUseItem('repair-kit'),
             repairKits > 0 ? C.textAccent : C.textSecond, repairKits === 0);
 
-        this.addActionButton(350, actionY + 50, '[ USE ANOMALY KIT ]', () => this.combatUseItem('anomaly-field-kit'),
+        // Row 2 — advanced consumables
+        this.addActionButton(190, actionY + 48, '[ NANO-REPAIR ]', () => this.combatUseItem('nano-repair-kit'),
+            nanoKits > 0 ? '#44dd88' : C.textSecond, nanoKits === 0);
+        this.addActionButton(410, actionY + 48, '[ COMBAT STIM ]', () => this.combatUseItem('combat-stim'),
+            stimKits > 0 ? '#ffdd44' : C.textSecond, stimKits === 0);
+        this.addActionButton(650, actionY + 48, '[ ANOMALY KIT ]', () => this.combatUseItem('anomaly-field-kit'),
             anomalyKits > 0 ? '#88ddff' : C.textSecond, anomalyKits === 0);
-        this.addActionButton(700, actionY + 50, '[ SCAN TARGET ]', () => this.combatScan(), C.textAccent);
 
-        this.addActionButton(512, actionY + 104, '[ EMERGENCY RETREAT ]', () => this.showRetreatConfirm(), '#445566');
+        // Row 3 — intel / exploit
+        this.addActionButton(300, actionY + 96, '[ SCAN TARGET ]', () => this.combatScan(), C.textAccent);
+        if (cb.enemyScanned && !cb.enemyExploitUsed) {
+            this.addActionButton(660, actionY + 96, '[ EXPLOIT SCAN DATA ]',
+                () => this.combatExploit(), '#ffaa00');
+        }
+
+        // Row 4 — retreat
+        this.addActionButton(512, actionY + 148, '[ EMERGENCY RETREAT ]', () => this.showRetreatConfirm(), '#445566');
+    }
+
+    // ── Combat helpers ────────────────────────────────────────────────────
+
+    /**
+     * Increment the hit streak and log when momentum activates.
+     * Call after any player action that doesn't trigger an enemy counter-attack for damage.
+     */
+    private incrementMomentum() {
+        const cb = this.combat!;
+        cb.playerHitStreak++;
+        if (cb.playerHitStreak === MOMENTUM_THRESHOLD) {
+            cb.log.push(`⚡ MOMENTUM ×${cb.playerHitStreak} — +25% damage bonus activated!`);
+        }
     }
 
     /**
-     * Processes burning and other persistent status effects at the start of the
+     * Check and update boss phase milestones (Phase 2 at 50 %, enrage at 33 %).
+     * Call after dealing damage to a boss-room enemy.
+     */
+    private checkBossPhases(enemy: EnemyDef & { currentHp: number }) {
+        const cb = this.combat!;
+        const room = this.rooms[this.currentRoomIdx];
+        if (room.type !== 'boss') return;
+        const hpPct = enemy.currentHp / enemy.hp;
+        if (!cb.bossPhase2Active && enemy.currentHp > 0 && hpPct < 0.50) {
+            cb.bossPhase2Active = true;
+            cb.log.push(`⚠  ${enemy.name}: PHASE 2 — secondary systems engaged. Threat level rising.`);
+        }
+        if (!cb.bossEnrageActive && enemy.currentHp > 0 && hpPct < BOSS_ENRAGE_THRESHOLD) {
+            cb.bossEnrageActive = true;
+            cb.log.push(`⚠  ${enemy.name}: OVERCHARGE INITIATED — critical systems engaged.`);
+        }
+    }
+
+    /**
+     * Refresh or apply a duration-based status effect.
+     * If the effect type already exists, extends duration to the maximum of the two values.
+     */
+    private applyStatusEffect(type: PlayerStatusEffect['type'], turns: number, value: number) {
+        const cb = this.combat!;
+        const existing = cb.playerStatus.find(s => s.type === type);
+        if (existing) {
+            existing.turnsLeft = Math.max(existing.turnsLeft, turns);
+            return existing;
+        }
+        const effect: PlayerStatusEffect = { type, turnsLeft: turns, value };
+        cb.playerStatus.push(effect);
+        return effect;
+    }
+
+    /**
+     * Processes burning, regen, and other persistent status effects at the start of the
      * player's turn, BEFORE their chosen action resolves.
      * @returns true if the player died from status-effect damage (caller should return early).
      */
     private processPlayerTurnStart(): boolean {
         const cb = this.combat!;
+
+        // Regen: heal the pilot before anything else
+        const regen = cb.playerStatus.find(s => s.type === 'regen');
+        if (regen) {
+            GameState.healPilot(regen.value);
+            cb.log.push(`💚 REGEN — +${regen.value} HP restored. Pilot HP: ${GameState.get().pilotHull}`);
+            regen.turnsLeft--;
+            if (regen.turnsLeft <= 0) {
+                cb.playerStatus = cb.playerStatus.filter(s => s.type !== 'regen');
+                cb.log.push('Nano-repair sequence complete.');
+            }
+            this.buildHeader();
+        }
+
         const burning = cb.playerStatus.find(s => s.type === 'burning');
         if (burning) {
             GameState.damagePilot(burning.value);
@@ -780,23 +952,43 @@ export class DungeonScene extends Scene {
             }
         }
 
+        // Apply BOOSTED status if active (+50% attack output)
+        const boosted = cb.playerStatus.find(s => s.type === 'boosted');
+        const boostMult = boosted ? (1.0 + BOOSTED_ATTACK_MULT) : 1.0;
+        if (boosted) {
+            boosted.turnsLeft--;
+            if (boosted.turnsLeft <= 0) {
+                cb.playerStatus = cb.playerStatus.filter(s => s.type !== 'boosted');
+                cb.log.push('Combat stim wearing off — attack boost fading.');
+            }
+        }
+
+        // Apply Momentum bonus if streak threshold reached
+        const momentumMult = cb.playerHitStreak >= MOMENTUM_THRESHOLD ? (1.0 + MOMENTUM_DAMAGE_BONUS) : 1.0;
+
         // Player attack — base damage scales +PLAYER_LEVEL_DAMAGE_BONUS per level above 1
         const levelBonus = (gs.level - 1) * PLAYER_LEVEL_DAMAGE_BONUS;
         const rawRoll = Phaser.Math.Between(PLAYER_BASE_DMG_MIN + levelBonus, PLAYER_BASE_DMG_MAX + levelBonus);
         const isPlayerCrit = Math.random() < PLAYER_CRIT_CHANCE;
-        const playerDmg = Math.max(1, Math.floor(rawRoll * (isPlayerCrit ? CRIT_MULTIPLIER : 1.0) * disruptMult) - enemy.defense);
+        const playerDmg = Math.max(1, Math.floor(
+            rawRoll * (isPlayerCrit ? CRIT_MULTIPLIER : 1.0) * disruptMult * boostMult * momentumMult,
+        ) - enemy.defense);
         enemy.currentHp = Math.max(0, enemy.currentHp - playerDmg);
 
-        const critPrefix = isPlayerCrit ? '⚡ CRITICAL STRIKE — ' : '';
-        const disruptSuffix = (disrupted && disruptMult < 1.0) ? ' [disrupted]' : '';
-        cb.log.push(`${critPrefix}You attack for ${playerDmg} damage.${disruptSuffix} (${enemy.currentHp}/${enemy.hp} HP)`);
+        // Build combat log message
+        const hitMsg  = isPlayerCrit ? pick(PLAYER_CRIT_MSGS) : pick(PLAYER_HIT_MSGS);
+        const suffixes: string[] = [];
+        if (disrupted && disruptMult < 1.0) suffixes.push('[disrupted]');
+        if (boosted) suffixes.push('[stimmed]');
+        if (momentumMult > 1.0) suffixes.push('[momentum]');
+        const suffix = suffixes.length > 0 ? `  ${suffixes.join(' ')}` : '';
+        cb.log.push(`${hitMsg} ${playerDmg} damage.${suffix} (${enemy.currentHp}/${enemy.hp} HP)`);
 
-        // Check for boss enrage (boss room, HP drops below BOSS_ENRAGE_THRESHOLD)
-        const room = this.rooms[this.currentRoomIdx];
-        if (room.type === 'boss' && !cb.bossEnrageActive && enemy.currentHp > 0 && enemy.currentHp / enemy.hp < BOSS_ENRAGE_THRESHOLD) {
-            cb.bossEnrageActive = true;
-            cb.log.push(`⚠  ${enemy.name}: OVERCHARGE INITIATED — critical systems engaged.`);
-        }
+        // Increment hit streak — will be reset by enemyAttack() if the enemy deals damage
+        this.incrementMomentum();
+
+        // Check boss phase milestones
+        this.checkBossPhases(enemy);
 
         if (enemy.currentHp <= 0) {
             this.onEnemyDefeated();
@@ -818,6 +1010,8 @@ export class DungeonScene extends Scene {
         if (cb.enemyCharging) {
             cb.log.push('You attempt to dodge — but the charged attack cannot be fully avoided!');
             cb.playerDodging = false;
+            // Reset streak — a charged special will definitely deal damage
+            cb.playerHitStreak = 0;
             this.processEnemyTurn();
             return;
         }
@@ -826,12 +1020,16 @@ export class DungeonScene extends Scene {
         const isEvade = Math.random() < PERFECT_EVASION_CHANCE;
         if (isEvade) {
             cb.log.push('Perfect evasion — you slipped past the attack entirely. No damage taken.');
+            // Perfect evasion: streak is maintained (player took no damage)
         } else {
             cb.log.push('You brace and dodge — reduced incoming damage this turn.');
             const rawDmg = Phaser.Math.Between(enemy.attackMin, enemy.attackMax);
             const reduced = Math.max(1, Math.floor(rawDmg * 0.35) - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus));
             GameState.damagePilot(reduced);
             cb.damageTakenThisRoom += reduced;
+            // Taking damage breaks the streak
+            if (cb.playerHitStreak >= MOMENTUM_THRESHOLD) cb.log.push('Momentum broken.');
+            cb.playerHitStreak = 0;
             cb.log.push(`${enemy.name} attacks for ${reduced} damage (reduced). Pilot HP: ${GameState.get().pilotHull}`);
         }
         cb.playerDodging = false;
@@ -856,6 +1054,26 @@ export class DungeonScene extends Scene {
         } else if (def?.effect?.healShip) {
             GameState.healShip(def.effect.healShip);
             cb.log.push(`Used ${item.name} — repaired ${def.effect.healShip} ship HP. (${GameState.get().shipHull}/${GameState.get().shipMaxHull})`);
+        } else if (def?.effect?.regenPilot) {
+            // Nano-Repair Kit: apply a regen status effect
+            const turns = def.effect.regenTurns ?? 3;
+            const hadRegen = cb.playerStatus.some(s => s.type === 'regen');
+            this.applyStatusEffect('regen', turns, def.effect.regenPilot);
+            if (hadRegen) {
+                cb.log.push(`${item.name} refreshes regen — +${def.effect.regenPilot} HP/turn extended.`);
+            } else {
+                cb.log.push(`💚 ${item.name} — nano-repair active: +${def.effect.regenPilot} HP/turn for ${turns} turns.`);
+            }
+        } else if (def?.effect?.boostAttack) {
+            // Combat Stim: apply a boosted status effect
+            const turns = def.effect.boostTurns ?? 2;
+            const hadBoost = cb.playerStatus.some(s => s.type === 'boosted');
+            this.applyStatusEffect('boosted', turns, 0);
+            if (hadBoost) {
+                cb.log.push(`${item.name} refreshes boost — +50% attack extended.`);
+            } else {
+                cb.log.push(`💥 ${item.name} — attack output boosted by 50% for ${turns} turns.`);
+            }
         } else {
             cb.log.push(`Used ${item.name}.`);
         }
@@ -957,6 +1175,53 @@ export class DungeonScene extends Scene {
     }
 
     /**
+     * EXPLOIT action: use scan data for a targeted high-damage strike.
+     * Deals +60% damage with no enemy counter-attack. One-time use per enemy.
+     */
+    private combatExploit() {
+        const cb = this.combat!;
+        const enemy = cb.enemies[cb.enemyIndex];
+        const gs = GameState.get();
+
+        if (this.processPlayerTurnStart()) return;
+
+        cb.enemyExploitUsed = true;
+
+        // Apply DISRUPTED penalty if active
+        const disrupted = cb.playerStatus.find(s => s.type === 'disrupted');
+        const disruptMult = disrupted ? DISRUPTED_ATTACK_MULT : 1.0;
+        if (disrupted) {
+            disrupted.turnsLeft--;
+            if (disrupted.turnsLeft <= 0) {
+                cb.playerStatus = cb.playerStatus.filter(s => s.type !== 'disrupted');
+                cb.log.push('Disruption cleared.');
+            }
+        }
+
+        const levelBonus = (gs.level - 1) * PLAYER_LEVEL_DAMAGE_BONUS;
+        const rawRoll = Phaser.Math.Between(PLAYER_BASE_DMG_MIN + levelBonus, PLAYER_BASE_DMG_MAX + levelBonus);
+        const playerDmg = Math.max(1, Math.floor(rawRoll * EXPLOIT_DAMAGE_MULT * disruptMult) - enemy.defense);
+        enemy.currentHp = Math.max(0, enemy.currentHp - playerDmg);
+
+        cb.log.push(`🎯 EXPLOIT — scan data leveraged for a precision strike! ${playerDmg} damage. (${enemy.currentHp}/${enemy.hp} HP)`);
+
+        // Increment streak — exploit doesn't trigger enemy counter-attack
+        this.incrementMomentum();
+
+        // Check boss phase milestones
+        this.checkBossPhases(enemy);
+
+        if (enemy.currentHp <= 0) {
+            this.onEnemyDefeated();
+            return;
+        }
+
+        // No enemy counter-attack — just re-render
+        this.buildHeader();
+        this.renderCombat();
+    }
+
+    /**
      * SCAN action: reveals detailed enemy intel in the combat log.
      * The enemy fires back at 50% damage (player is distracted by scanning).
      */
@@ -1015,6 +1280,14 @@ export class DungeonScene extends Scene {
         GameState.damagePilot(dmg);
         cb.damageTakenThisRoom += dmg;
 
+        // Break the momentum streak when the player takes damage
+        if (dmg > 0) {
+            if (cb.playerHitStreak >= MOMENTUM_THRESHOLD) {
+                cb.log.push('Momentum broken.');
+            }
+            cb.playerHitStreak = 0;
+        }
+
         if (!logOnly) {
             const critLabel = isEnemyCrit ? '  [CRIT]' : '';
             const enrageLabel = cb.bossEnrageActive ? '  [OVERCHARGE]' : '';
@@ -1063,7 +1336,9 @@ export class DungeonScene extends Scene {
             cb.enemyCharging = false;
             cb.enemySpecialUsed = false;
             cb.enemyScanned = false;
+            cb.enemyExploitUsed = false;
             cb.bossEnrageActive = false;
+            cb.bossPhase2Active = false;
             cb.log.push(`${nextEnemy.name} engages.`);
             this.buildHeader();
             this.renderCombat();

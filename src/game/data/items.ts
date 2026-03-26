@@ -9,6 +9,12 @@ export interface ItemDef {
     effect?: {
         healPilot?: number;
         healShip?: number;
+        /** Regenerate this many pilot HP per turn for regenTurns turns. */
+        regenPilot?: number;
+        regenTurns?: number;
+        /** Multiply the player's attack output by (1 + boostAttack) for boostTurns turns. */
+        boostAttack?: number;
+        boostTurns?: number;
     };
 }
 
@@ -321,6 +327,24 @@ export const ITEMS: Record<string, ItemDef> = {
             'Treats standard injuries plus void-exposure symptoms. Restores 50 pilot HP. ' +
             'The integrated signal disruptor suppresses enemy targeting for one turn — no counter-attack.',
         effect: { healPilot: 50 },
+    },
+    'nano-repair-kit': {
+        id: 'nano-repair-kit',
+        name: 'Nano-Repair Kit',
+        type: 'consumable',
+        value: 55,
+        description: 'A canister of autonomous repair nano-bots. Injected mid-combat, they work over several turns ' +
+            'rather than providing instant healing. Regenerates 10 pilot HP per turn for 3 turns.',
+        effect: { regenPilot: 10, regenTurns: 3 },
+    },
+    'combat-stim': {
+        id: 'combat-stim',
+        name: 'Combat Stimulant',
+        type: 'consumable',
+        value: 65,
+        description: 'A military-grade neuro-stimulant that sharpens reflexes and amplifies strike force. ' +
+            'Boosts all attack output by 50% for 2 turns. Heavy crash afterward — handle with caution.',
+        effect: { boostAttack: 0.5, boostTurns: 2 },
     },
 
     // ── Phase 6 items ─────────────────────────────────────────────────────
