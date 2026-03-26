@@ -1149,6 +1149,14 @@ export class DungeonScene extends Scene {
         GameState.damagePilot(dmg);
         cb.damageTakenThisRoom += dmg;
 
+        // Break momentum streak when the player takes damage from a special
+        if (dmg > 0) {
+            if (cb.playerHitStreak >= MOMENTUM_THRESHOLD) {
+                cb.log.push('Momentum broken.');
+            }
+            cb.playerHitStreak = 0;
+        }
+
         cb.log.push(`💥 ${enemy.name}: ${spec.executeMsg} — ${dmg} damage!`);
 
         // Apply status effect
@@ -1198,12 +1206,31 @@ export class DungeonScene extends Scene {
             }
         }
 
+        // Apply BOOSTED status if active (+50% attack output)
+        const boosted = cb.playerStatus.find(s => s.type === 'boosted');
+        const boostMult = boosted ? (1.0 + BOOSTED_ATTACK_MULT) : 1.0;
+        if (boosted) {
+            boosted.turnsLeft--;
+            if (boosted.turnsLeft <= 0) {
+                cb.playerStatus = cb.playerStatus.filter(s => s.type !== 'boosted');
+                cb.log.push('Combat stim wearing off — attack boost fading.');
+            }
+        }
+
+        // Apply Momentum bonus if streak threshold reached
+        const momentumMult = cb.playerHitStreak >= MOMENTUM_THRESHOLD ? (1.0 + MOMENTUM_DAMAGE_BONUS) : 1.0;
+
         const levelBonus = (gs.level - 1) * PLAYER_LEVEL_DAMAGE_BONUS;
         const rawRoll = Phaser.Math.Between(PLAYER_BASE_DMG_MIN + levelBonus, PLAYER_BASE_DMG_MAX + levelBonus);
-        const playerDmg = Math.max(1, Math.floor(rawRoll * EXPLOIT_DAMAGE_MULT * disruptMult) - enemy.defense);
+        const playerDmg = Math.max(1, Math.floor(rawRoll * EXPLOIT_DAMAGE_MULT * disruptMult * boostMult * momentumMult) - enemy.defense);
         enemy.currentHp = Math.max(0, enemy.currentHp - playerDmg);
 
-        cb.log.push(`🎯 EXPLOIT — scan data leveraged for a precision strike! ${playerDmg} damage. (${enemy.currentHp}/${enemy.hp} HP)`);
+        const suffixes: string[] = [];
+        if (disrupted && disruptMult < 1.0) suffixes.push('[disrupted]');
+        if (boosted) suffixes.push('[stimmed]');
+        if (momentumMult > 1.0) suffixes.push('[momentum]');
+        const suffix = suffixes.length > 0 ? `  ${suffixes.join(' ')}` : '';
+        cb.log.push(`🎯 EXPLOIT — scan data leveraged for a precision strike! ${playerDmg} damage.${suffix} (${enemy.currentHp}/${enemy.hp} HP)`);
 
         // Increment streak — exploit doesn't trigger enemy counter-attack
         this.incrementMomentum();
@@ -1258,6 +1285,15 @@ export class DungeonScene extends Scene {
         );
         GameState.damagePilot(dmg);
         cb.damageTakenThisRoom += dmg;
+
+        // Break momentum streak when the player takes damage during a scan
+        if (dmg > 0) {
+            if (cb.playerHitStreak >= MOMENTUM_THRESHOLD) {
+                cb.log.push('Momentum broken.');
+            }
+            cb.playerHitStreak = 0;
+        }
+
         cb.log.push(`${enemy.name} fires during scan — ${dmg} damage (reduced). Pilot HP: ${GameState.get().pilotHull}`);
 
         this.buildHeader();
