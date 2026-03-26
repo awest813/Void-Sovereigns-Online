@@ -884,6 +884,13 @@ export class HubScene extends Scene {
                 fontFamily: 'Arial', fontSize: 11, color: rewardColor,
             }));
 
+            // Lore-unlock badge — shown when this contract unlocks codex entries
+            if (CONTRACT_LORE_UNLOCKS[ct.id]) {
+                scrollCt.add(this.add.text(556, y + 60, '◉ LORE', {
+                    fontFamily: 'Arial Black', fontSize: 9, color: C.textAccent,
+                }));
+            }
+
             // Detail button (always available, opens full contract info overlay)
             const detailBtn = this.add.text(625, y + 60, '[ ▶ DETAILS ]', {
                 fontFamily: 'Arial', fontSize: 10, color: C.textSecond,

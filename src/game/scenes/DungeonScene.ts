@@ -612,6 +612,7 @@ export class DungeonScene extends Scene {
         const gs = GameState.get();
         const cb = this.combat!;
         const enemy = cb.enemies[cb.enemyIndex];
+        if (!enemy) return;
 
         // Panel background
         this.contentContainer.add(

@@ -1113,6 +1113,10 @@ export function rollLoot(enemyId: string): Array<{ id: string; name: string; qty
         'architect-response-record':{ name: 'Architect Response Record',type: 'key',     value: 600 },
         'index-access-token':       { name: 'Index Access Token',       type: 'key',     value: 480 },
         'warden-core-extract':      { name: 'Warden Core Extract',      type: 'key',     value: 700 },
+        // Phase 9 items
+        'cycle-record-fragment':       { name: 'Cycle Record Fragment',       type: 'salvage', value: 450 },
+        'archive-classification-core': { name: 'Archive Classification Core', type: 'key',     value: 640 },
+        'cycle-terminal-record':       { name: 'Cycle Terminal Record',       type: 'key',     value: 850 },
         // Phase 10 items
         'threshold-resonance-record': { name: 'Threshold Resonance Record', type: 'key',     value: 620 },
         'forced-sovereignty-record':  { name: 'Forced Sovereignty Record',  type: 'key',     value: 780 },
