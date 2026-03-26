@@ -37,6 +37,8 @@ export interface DungeonDef {
     contractCompletions: ContractCompletion[];
     /** Flag to set when full-clearing the dungeon. */
     clearFlag?: string;
+    /** Whether this dungeon is a Redline run (equipment loss on death). */
+    isRedline?: boolean;
 }
 
 // ── Shalehook Dig Site ───────────────────────────────────────────────────────
@@ -954,9 +956,8 @@ export const DUNGEON_REGISTRY: Record<string, DungeonDef> = {
         id: 'index-chamber-null-prime',
         name: 'The Index Chamber',
         tier: 5,
-        description:
-            'The Null Architect transmitted these coordinates. ' +
-            'The site has been prepared. The entities inside are not deterrence units.',
+        location: 'Deep Frontier  ·  Null Architect Transmission Coordinates',
+        tagline: 'Tier 5  ·  Endgame  ·  Index Protocol  ·  Entity Class: Unknown',
         isRedline: true,
         introText:
             'The approach corridor is clean — almost too clean for deep frontier space. ' +
@@ -1034,10 +1035,8 @@ export const DUNGEON_REGISTRY: Record<string, DungeonDef> = {
         id: 'cycle-archive-sanctum',
         name: 'The Cycle Archive',
         tier: 5,
-        description:
-            'The Null Architect opened this site forty-eight hours after the Index Chamber was cleared. ' +
-            'The archive contains records of every civilization that has entered this space. ' +
-            'Yours is the forty-second entry. It is currently open.',
+        location: 'Deep Frontier  ·  Null Architect Archive  ·  Post-Index Access',
+        tagline: 'Tier 5  ·  Endgame  ·  Cycle Archive  ·  Terminal Witness Active',
         isRedline: true,
         introText:
             'The second approach corridor is even cleaner than the first. ' +
@@ -1121,10 +1120,8 @@ export const DUNGEON_REGISTRY: Record<string, DungeonDef> = {
         id: 'sovereign-threshold-main',
         name: 'The Sovereign Threshold',
         tier: 5,
-        description:
-            'The Null Architect transmitted the final coordinates when the Cycle Archive was cleared. ' +
-            'This site is where cycles are resolved. Where civilizations become Void Sovereigns — or do not. ' +
-            'The forty-second cycle is open. The Threshold Sovereign is waiting.',
+        location: 'Deep Frontier  ·  Terminal Resolution Zone  ·  Cycle 42',
+        tagline: 'Tier 5  ·  Endgame  ·  Sovereignty Protocol  ·  Resolution Pending',
         isRedline: true,
         introText:
             'The approach corridor is the cleanest you have ever transited. ' +
@@ -1208,11 +1205,8 @@ export const DUNGEON_REGISTRY: Record<string, DungeonDef> = {
         id: 'origin-node-prime',
         name: 'The Origin Node',
         tier: 5,
-        description:
-            'The site where the Null Architect recorded the first cycle entry. ' +
-            'It predates every known Architect installation by centuries and has been active, ' +
-            'unmaintained and unwatched, since the first civilization chose to be witnessed. ' +
-            'The Origin Node Apex is not a guardian. It is the first record, manifested as enforcement.',
+        location: 'Deep Frontier  ·  Origin Node  ·  Cycle-Zero Site',
+        tagline: 'Tier 5  ·  Endgame  ·  First Record  ·  Centuries Active',
         isRedline: true,
         introText:
             'The approach corridor is the oldest infrastructure you have ever transited. ' +
