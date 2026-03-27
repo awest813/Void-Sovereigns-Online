@@ -7,6 +7,7 @@ import { DUNGEON_REGISTRY as _DUNGEON_REGISTRY, DungeonDef, Room, RoomInteractab
 import { generateAsciiMap } from '../data/asciiMapGenerator';
 import { renderAsciiRoom, AsciiRenderResult } from '../ui/AsciiRoomRenderer';
 import { handleTileInteraction, InteractionResult } from '../ui/TileInteractionHandler';
+import { getZoneTheme, ZoneTheme } from '../data/AsciiZoneThemes';
 import { starterContracts } from '../../../content/contracts/starter-contracts';
 import { phase2Contracts } from '../../../content/contracts/phase2-contracts';
 import { phase3Contracts } from '../../../content/contracts/phase3-contracts';
@@ -159,6 +160,8 @@ export class DungeonScene extends Scene {
     private asciiRender: AsciiRenderResult | null = null;
     /** Interaction log messages shown below the ASCII map. */
     private interactionLog: { message: string; color: string }[] = [];
+    /** Zone-specific color theme for the current dungeon. */
+    private zoneTheme: ZoneTheme | undefined;
 
     constructor() {
         super('Dungeon');
@@ -180,6 +183,9 @@ export class DungeonScene extends Scene {
         for (const room of this.rooms) {
             generateAsciiMap(room);
         }
+
+        // Determine zone-specific color theme
+        this.zoneTheme = getZoneTheme(dungeonId);
 
         // Reset run state
         this.currentRoomIdx = 0;
@@ -581,6 +587,7 @@ export class DungeonScene extends Scene {
             this.asciiRender = renderAsciiRoom(
                 this, room, 30, 100,
                 (ia: RoomInteractable) => this.onTileInteract(ia, room),
+                this.zoneTheme,
             );
             this.contentContainer.add(this.asciiRender.container);
 

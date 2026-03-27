@@ -13,39 +13,40 @@
 import Phaser from 'phaser';
 import { T } from './UITheme';
 import { Room, RoomInteractable } from '../data/dungeons';
+import { ZoneTheme } from '../data/AsciiZoneThemes';
 
 // ── Symbol → colour mapping ──────────────────────────────────────────────────
 
-/** Returns the terminal color string for a given ASCII map symbol. */
-function symbolColor(ch: string): string {
+/** Returns the terminal color string for a given ASCII map symbol, optionally themed. */
+function symbolColor(ch: string, theme?: ZoneTheme): string {
     switch (ch) {
-        // Structural
-        case '#': return T.termWall;
-        case '.': return T.termFloor;
-        case '+': return T.termCyan;
-        case '=': return T.termFloor;
+        // Structural — use zone theme colors when available
+        case '#': return theme?.wallColor ?? T.termWall;
+        case '.': return theme?.floorColor ?? T.termFloor;
+        case '+': return theme?.doorColor ?? T.termCyan;
+        case '=': return theme?.floorColor ?? T.termFloor;
         case '>': return T.termGreen;
         case '<': return T.termAmber;
         case '@': return T.termWhite;
 
-        // Interactables
-        case 'T': return T.termCyan;
+        // Interactables — use zone theme
+        case 'T': return theme?.interactColor ?? T.termCyan;
         case 'C': return T.termGold;
-        case 'R': return T.termCyan;
+        case 'R': return theme?.interactColor ?? T.termCyan;
         case 'V': return T.termViolet;
 
-        // Hazards / pickups
-        case '^': return T.termAmber;
+        // Hazards / pickups — use zone theme
+        case '^': return theme?.hazardColor ?? T.termAmber;
         case '!': return T.termGreen;
         case '$': return T.termGold;
         case '?': return T.termViolet;
 
-        // Enemies — lower-case standard, upper-case elite/boss
-        case 'd': return T.termRed;
-        case 'r': return T.termRed;
-        case 's': return T.termRed;
-        case 'A': return T.termRed;
-        case 'B': return T.termRed;
+        // Enemies — use zone theme
+        case 'd': return theme?.enemyColor ?? T.termRed;
+        case 'r': return theme?.enemyColor ?? T.termRed;
+        case 's': return theme?.enemyColor ?? T.termRed;
+        case 'A': return theme?.enemyColor ?? T.termRed;
+        case 'B': return theme?.enemyColor ?? T.termRed;
 
         // Whitespace / unknown
         case ' ': return 'transparent';
@@ -112,6 +113,7 @@ export interface AsciiRenderResult {
  * @param x      Top-left X position for the terminal frame.
  * @param y      Top-left Y position for the terminal frame.
  * @param onInteract  Optional callback when a player clicks an interactable symbol.
+ * @param zoneTheme   Optional zone-specific color palette.
  * @returns An AsciiRenderResult with the container and dimensions.
  */
 export function renderAsciiRoom(
@@ -120,6 +122,7 @@ export function renderAsciiRoom(
     x: number,
     y: number,
     onInteract?: (interactable: RoomInteractable) => void,
+    zoneTheme?: ZoneTheme,
 ): AsciiRenderResult {
     const container = scene.add.container(x, y);
     const grid = room.asciiMap ?? [];
@@ -152,7 +155,7 @@ export function renderAsciiRoom(
             legendEntries.push({
                 symbol: sym,
                 label: customLegend[sym] ?? defaultLegend(sym),
-                color: symbolColor(sym),
+                color: symbolColor(sym, zoneTheme),
             });
         }
     }
@@ -162,7 +165,7 @@ export function renderAsciiRoom(
             legendEntries.push({
                 symbol: sym,
                 label: customLegend[sym] ?? sym,
-                color: symbolColor(sym),
+                color: symbolColor(sym, zoneTheme),
             });
         }
     }
@@ -216,7 +219,7 @@ export function renderAsciiRoom(
 
             const cx = FRAME_PAD + c * CELL_SIZE + CELL_SIZE / 2;
             const cy = FRAME_PAD + r * CELL_SIZE + CELL_SIZE / 2;
-            const color = symbolColor(ch);
+            const color = symbolColor(ch, zoneTheme);
 
             const txt = scene.add.text(cx, cy, ch, {
                 fontFamily: MONO_FONT,
