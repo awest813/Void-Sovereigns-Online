@@ -146,4 +146,30 @@ export const T = {
     originText:     '#ff6622',
     /** Origin Node dim text — muted dark copper. */
     originTextDim:  '#cc4400',
+
+    // ── ASCII Dungeon Terminal ────────────────────────────────────────────
+    /** Terminal grid cell background — charcoal-black. */
+    termBg:          0x080a0e,
+    /** Terminal grid frame border — gunmetal. */
+    termFrame:       0x1a2838,
+    /** Terminal floor tile — dark teal. */
+    termFloor:       '#1a2828',
+    /** Terminal wall tile — steel blue-gray. */
+    termWall:        '#2a3848',
+    /** Terminal default symbol — green terminal text. */
+    termGreen:       '#00ee77',
+    /** Terminal amber — hazards, warnings. */
+    termAmber:       '#ffaa22',
+    /** Terminal cyan — interactables, relays, info. */
+    termCyan:        '#00c8ff',
+    /** Terminal red — enemies, danger. */
+    termRed:         '#ff2244',
+    /** Terminal white — player, highlighted. */
+    termWhite:       '#e0f0ff',
+    /** Terminal dim — unexplored, faded. */
+    termDim:         '#1a2838',
+    /** Terminal violet — anomalies, void fractures. */
+    termViolet:      '#aa44dd',
+    /** Terminal gold — loot, credits, salvage. */
+    termGold:        '#ffdd44',
 } as const;

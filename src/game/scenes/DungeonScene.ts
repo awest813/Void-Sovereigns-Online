@@ -3,7 +3,10 @@ import { Scene } from 'phaser';
 import { GameState, InventoryItem } from '../state/GameState';
 import { ENEMIES, EnemyDef, EnemySpecialAbility, rollLoot, rollCredits } from '../data/enemies';
 import { ITEMS } from '../data/items';
-import { DUNGEON_REGISTRY as _DUNGEON_REGISTRY, DungeonDef, Room, loadDungeon } from '../data/dungeons';
+import { DUNGEON_REGISTRY as _DUNGEON_REGISTRY, DungeonDef, Room, RoomInteractable, loadDungeon } from '../data/dungeons';
+import { generateAsciiMap } from '../data/asciiMapGenerator';
+import { renderAsciiRoom, AsciiRenderResult } from '../ui/AsciiRoomRenderer';
+import { handleTileInteraction, InteractionResult } from '../ui/TileInteractionHandler';
 import { starterContracts } from '../../../content/contracts/starter-contracts';
 import { phase2Contracts } from '../../../content/contracts/phase2-contracts';
 import { phase3Contracts } from '../../../content/contracts/phase3-contracts';
@@ -152,6 +155,11 @@ export class DungeonScene extends Scene {
     private contentContainer!: Phaser.GameObjects.Container;
     private actionContainer!: Phaser.GameObjects.Container;
 
+    /** Last ASCII render result — used to manage the terminal display. */
+    private asciiRender: AsciiRenderResult | null = null;
+    /** Interaction log messages shown below the ASCII map. */
+    private interactionLog: { message: string; color: string }[] = [];
+
     constructor() {
         super('Dungeon');
     }
@@ -168,6 +176,11 @@ export class DungeonScene extends Scene {
         }
         this.rooms = this.dungeonDef.rooms;
 
+        // Generate ASCII maps for rooms that don't have hand-authored ones
+        for (const room of this.rooms) {
+            generateAsciiMap(room);
+        }
+
         // Reset run state
         this.currentRoomIdx = 0;
         this.combat = null;
@@ -175,6 +188,8 @@ export class DungeonScene extends Scene {
         this.runCredits = 0;
         this.runXp = 0;
         this.phase = 'intro';
+        this.asciiRender = null;
+        this.interactionLog = [];
 
         // Starfield
         for (let i = 0; i < 60; i++) {
@@ -258,6 +273,7 @@ export class DungeonScene extends Scene {
     private clearContent() {
         this.contentContainer.removeAll(true);
         this.actionContainer.removeAll(true);
+        this.asciiRender = null;
     }
 
     private addContentText(
@@ -292,6 +308,54 @@ export class DungeonScene extends Scene {
         }
         this.actionContainer.add(btn);
         return btn;
+    }
+
+    /**
+     * Handle a tile interaction from the ASCII room grid.
+     * Shows a message in the interaction log area and applies any game-state effects.
+     */
+    private onTileInteract(ia: RoomInteractable, room: Room) {
+        const result: InteractionResult = handleTileInteraction(ia, room.id);
+        if (!result.message) return;
+
+        // Track credits gained from tile interactions in the run total
+        if (result.creditsGained > 0) {
+            this.runCredits += result.creditsGained;
+            this.buildHeader();
+        }
+
+        // Add to interaction log (keep last 3)
+        this.interactionLog.push({ message: result.message, color: result.color });
+        if (this.interactionLog.length > 3) {
+            this.interactionLog.shift();
+        }
+
+        // Render interaction log below the ASCII map
+        this.renderInteractionLog();
+    }
+
+    /** Render the tile interaction log below the ASCII room map. */
+    private renderInteractionLog() {
+        // Remove old log text objects (tagged with 'ia-log')
+        this.contentContainer.getAll().forEach((obj: Phaser.GameObjects.GameObject) => {
+            if ((obj as { name?: string }).name === 'ia-log') {
+                obj.destroy();
+            }
+        });
+
+        const baseY = this.asciiRender
+            ? 120 + this.asciiRender.height
+            : 420;
+
+        this.interactionLog.forEach((entry, i) => {
+            const alpha = 0.5 + (i / Math.max(this.interactionLog.length - 1, 1)) * 0.5;
+            const t = this.add.text(40, baseY + i * 18, entry.message, {
+                fontFamily: 'Arial', fontSize: 11, color: entry.color,
+                wordWrap: { width: 920 },
+            }).setAlpha(alpha);
+            (t as { name?: string }).name = 'ia-log';
+            this.contentContainer.add(t);
+        });
     }
 
     /**
@@ -497,51 +561,84 @@ export class DungeonScene extends Scene {
         this.buildHeader();
         this.phase = 'room-enter';
         this.clearContent();
+        this.interactionLog = [];
 
+        // Wider panel to accommodate ASCII map + description side-by-side
         this.contentContainer.add(
-            this.add.rectangle(512, 300, 900, 340, C.panelBg).setStrokeStyle(1, C.border),
+            this.add.rectangle(512, 340, 980, 460, C.panelBg).setStrokeStyle(1, C.border),
         );
 
-        this.addContentText(512, 130, room.name.toUpperCase(), {
+        // Room title
+        this.addContentText(512, 80, room.name.toUpperCase(), {
             fontFamily: 'Arial Black', fontSize: 20, color: room.type === 'boss' ? C.textDanger : C.textWarn,
             align: 'center',
         }).setOrigin(0.5);
 
-        this.addContentText(80, 168, room.description, {
-            fontFamily: 'Arial', fontSize: 14, color: C.textPrimary, lineSpacing: 5,
-        });
+        // ── ASCII tactical terminal view ─────────────────────────────────
+        const hasAsciiMap = room.asciiMap && room.asciiMap.length > 0;
+        if (hasAsciiMap) {
+            // Render ASCII map on the left side
+            this.asciiRender = renderAsciiRoom(
+                this, room, 30, 100,
+                (ia: RoomInteractable) => this.onTileInteract(ia, room),
+            );
+            this.contentContainer.add(this.asciiRender.container);
+
+            // Room description on the right side, beside the map
+            const descX = 40 + this.asciiRender.width;
+            this.addContentText(descX, 104, room.description, {
+                fontFamily: 'Arial', fontSize: 13, color: C.textPrimary, lineSpacing: 4,
+                wordWrap: { width: 980 - this.asciiRender.width - 60 },
+            });
+
+            // Interaction log area (below the map, updates when tiles are clicked)
+            const logY = 108 + this.asciiRender.height;
+            this.addContentText(40, logY, 'TACTICAL SCAN — click highlighted symbols to interact', {
+                fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
+            });
+        } else {
+            // Fallback: text-only presentation for rooms without maps
+            this.addContentText(80, 120, room.description, {
+                fontFamily: 'Arial', fontSize: 14, color: C.textPrimary, lineSpacing: 5,
+            });
+        }
+
+        // ── Room-type-specific actions ───────────────────────────────────
+        const actionY = hasAsciiMap ? 570 : 500;
 
         if (room.type === 'entrance') {
-            this.addActionButton(512, 500, '[ ADVANCE ]', () => {
+            this.addActionButton(512, actionY, '[ ADVANCE ]', () => {
                 if (idx + 1 < this.rooms.length) this.enterRoom(idx + 1);
                 else this.showCompletion();
             });
         } else if (room.type === 'loot') {
-            this.addActionButton(512, 500, '[ SEARCH ROOM ]', () => this.showLootRoom(room));
+            this.addActionButton(512, actionY, '[ SEARCH ROOM ]', () => this.showLootRoom(room));
         } else if (room.type === 'hazard') {
             const hazardDamage = room.hazardDamage ?? 15;
             const lootNames = (room.lootItems ?? []).map(id => ITEMS[id]?.name ?? id).join(', ');
-            this.addContentText(512, 390, `⚠ ENVIRONMENTAL HAZARD — Breaching this zone costs ${hazardDamage} pilot HP`, {
+            const warnY = hasAsciiMap ? 530 : 390;
+            this.addContentText(512, warnY, `⚠ ENVIRONMENTAL HAZARD — Breaching this zone costs ${hazardDamage} pilot HP`, {
                 fontFamily: 'Arial', fontSize: 13, color: C.textDanger, align: 'center',
             }).setOrigin(0.5);
             if (lootNames) {
-                this.addContentText(512, 412, `Potential salvage: ${lootNames}`, {
+                this.addContentText(512, warnY + 22, `Potential salvage: ${lootNames}`, {
                     fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
                 }).setOrigin(0.5);
             }
-            this.addActionButton(340, 500, '[ BYPASS — ADVANCE SAFELY ]', () => {
+            this.addActionButton(340, actionY, '[ BYPASS — ADVANCE SAFELY ]', () => {
                 if (idx + 1 < this.rooms.length) this.enterRoom(idx + 1);
                 else this.showCompletion();
             }, C.textSecond);
-            this.addActionButton(720, 500, `[ BRAVE HAZARD (−${hazardDamage} HP) ]`,
+            this.addActionButton(720, actionY, `[ BRAVE HAZARD (−${hazardDamage} HP) ]`,
                 () => this.showHazardRoom(room), C.textWarn);
         } else if (room.type === 'combat' || room.type === 'boss') {
             const enemyNames = room.enemies.map(e => ENEMIES[e]?.name ?? e).join(', ');
-            this.addContentText(512, 390, `THREATS DETECTED: ${enemyNames}`, {
+            const threatY = hasAsciiMap ? 530 : 390;
+            this.addContentText(512, threatY, `THREATS DETECTED: ${enemyNames}`, {
                 fontFamily: 'Arial', fontSize: 13, color: C.textDanger, align: 'center',
             }).setOrigin(0.5);
-            this.addActionButton(380, 500, '[ ENGAGE ]', () => this.startCombat(room), C.textDanger);
-            this.addActionButton(700, 500, '[ RETREAT ]', () => this.showRetreatConfirm(), C.textSecond);
+            this.addActionButton(380, actionY, '[ ENGAGE ]', () => this.startCombat(room), C.textDanger);
+            this.addActionButton(700, actionY, '[ RETREAT ]', () => this.showRetreatConfirm(), C.textSecond);
         }
     }
 
