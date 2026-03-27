@@ -1,6 +1,7 @@
 import { Boot } from './scenes/Boot';
 import { Preloader } from './scenes/Preloader';
 import { MainMenu } from './scenes/MainMenu';
+import { TutorialScene } from './scenes/TutorialScene';
 import { HubScene } from './scenes/HubScene';
 import { SectorMapScene } from './scenes/SectorMapScene';
 import { DungeonScene } from './scenes/DungeonScene';
@@ -20,6 +21,7 @@ const config: Phaser.Types.Core.GameConfig = {
         Boot,
         Preloader,
         MainMenu,
+        TutorialScene,
         HubScene,
         SectorMapScene,
         DungeonScene,

@@ -401,6 +401,16 @@ export class HubScene extends Scene {
             GameState.clearReturnFromDungeon();
         } else {
             this.showPanel('main');
+            // Show a one-time first-visit hint after arriving for the first time (no contracts yet).
+            if (gs.contracts.length === 0 && !GameState.getFlag('hub-first-hint-shown')) {
+                GameState.setFlag('hub-first-hint-shown', true);
+                this.time.delayedCall(600, () => {
+                    this.showToast(
+                        '▶  Start with CONTRACT BOARD — accept a job, then visit SECTOR MAP to launch a dungeon.',
+                        C.textAccent,
+                    );
+                });
+            }
         }
 
         new DebugPanel(this);
