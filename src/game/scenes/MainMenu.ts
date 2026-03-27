@@ -22,39 +22,109 @@ export class MainMenu extends Scene
         const cx = w / 2;
         const cy = h / 2;
 
-        this.add.image(cx, cy, 'background').setAlpha(0.6);
+        // Visual layer depth constants
+        const DEPTH_UI        = 100;
+        const DEPTH_VIGNETTE  = 150;
+        const DEPTH_SCANLINES = 200;
+
+        // Scan-line parameters
+        const SCANLINE_INTERVAL_PX   = 3;
+        const PROMPT_PULSE_DURATION_MS = 1100;
+
+        this.add.image(cx, cy, 'background').setAlpha(0.45);
+
+        // Subtle scan-line overlay (every SCANLINE_INTERVAL_PX horizontal line at low opacity)
+        const scanlines = this.add.graphics().setDepth(DEPTH_SCANLINES).setAlpha(0.10);
+        scanlines.fillStyle(0x000000, 1);
+        for (let y = 0; y < h; y += SCANLINE_INTERVAL_PX) {
+            scanlines.fillRect(0, y, w, 1);
+        }
+
+        // Vignette — dark gradient corners
+        const vignette = this.add.graphics().setDepth(DEPTH_VIGNETTE).setAlpha(0.55);
+        vignette.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.9, 0.9, 0, 0);
+        vignette.fillRect(0, 0, w, h * 0.25);
+        vignette.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.9, 0.9);
+        vignette.fillRect(0, h * 0.75, w, h * 0.25);
 
         // Game title treatment
-        const gfx = this.add.graphics().setDepth(100);
-        gfx.lineStyle(1, T.border, 0.45);
+        const gfx = this.add.graphics().setDepth(DEPTH_UI);
         const titleTopY = Math.round(h * 0.32);
-        const titleBottomY = titleTopY + 92;
-        const titleLineW = Math.min(440, Math.round(w * 0.7));
-        gfx.lineBetween(cx - titleLineW / 2, titleTopY, cx + titleLineW / 2, titleTopY);
-        gfx.lineBetween(cx - titleLineW / 2, titleBottomY, cx + titleLineW / 2, titleBottomY);
+        const titleBottomY = titleTopY + 96;
+        const titleLineW = Math.min(460, Math.round(w * 0.72));
+        const bracketSize = 14;
 
-        this.add.text(cx, titleTopY + 46, 'VOID SOVEREIGNS', {
+        // Corner brackets — top-left, top-right, bottom-left, bottom-right
+        const bx0 = cx - titleLineW / 2;
+        const bx1 = cx + titleLineW / 2;
+        const by0 = titleTopY - 6;
+        const by1 = titleBottomY + 6;
+
+        // Cyan outer brackets
+        gfx.lineStyle(1, 0x00c8ff, 0.55);
+        // Top-left
+        gfx.lineBetween(bx0, by0, bx0 + bracketSize, by0);
+        gfx.lineBetween(bx0, by0, bx0, by0 + bracketSize);
+        // Top-right
+        gfx.lineBetween(bx1 - bracketSize, by0, bx1, by0);
+        gfx.lineBetween(bx1, by0, bx1, by0 + bracketSize);
+        // Bottom-left
+        gfx.lineBetween(bx0, by1, bx0 + bracketSize, by1);
+        gfx.lineBetween(bx0, by1 - bracketSize, bx0, by1);
+        // Bottom-right
+        gfx.lineBetween(bx1 - bracketSize, by1, bx1, by1);
+        gfx.lineBetween(bx1, by1 - bracketSize, bx1, by1);
+
+        // Centre horizontal rules (faint)
+        gfx.lineStyle(1, 0x1a2d48, 0.70);
+        gfx.lineBetween(bx0 + bracketSize + 8, by0, bx1 - bracketSize - 8, by0);
+        gfx.lineBetween(bx0 + bracketSize + 8, by1, bx1 - bracketSize - 8, by1);
+
+        // Title glow layer (wider, transparent — gives neon-bloom feel)
+        this.add.text(cx, titleTopY + 48, 'VOID SOVEREIGNS', {
             fontFamily: 'Arial Black',
-            fontSize: 52,
+            fontSize: 54,
+            color: '#003c4a',
+            stroke: '#00c8ff',
+            strokeThickness: 18,
+            align: 'center',
+        }).setOrigin(0.5).setDepth(DEPTH_UI - 1).setAlpha(0.35);
+
+        // Title main layer
+        this.add.text(cx, titleTopY + 48, 'VOID SOVEREIGNS', {
+            fontFamily: 'Arial Black',
+            fontSize: 54,
             color: T.textPrimary,
             stroke: '#000000',
-            strokeThickness: 8,
+            strokeThickness: 6,
             align: 'center',
-        }).setOrigin(0.5).setDepth(100);
+        }).setOrigin(0.5).setDepth(DEPTH_UI);
 
-        this.add.text(cx, titleBottomY + 6, 'O  N  L  I  N  E', {
+        // Sub-title
+        this.add.text(cx, titleBottomY + 8, 'O  N  L  I  N  E', {
             fontFamily: 'Arial',
             fontSize: 18,
             color: T.textAccent,
             align: 'center',
-        }).setOrigin(0.5).setDepth(100);
+        }).setOrigin(0.5).setDepth(DEPTH_UI);
 
-        this.add.text(cx, Math.round(h * 0.56), 'Press any key to dock at Meridian Station', {
+        // Prompt — with pulsing alpha tween
+        const prompt = this.add.text(cx, Math.round(h * 0.57), 'PRESS ANY KEY TO DOCK AT MERIDIAN STATION', {
             fontFamily: 'Arial',
-            fontSize: 16,
+            fontSize: 14,
             color: T.textSecond,
             align: 'center',
-        }).setOrigin(0.5).setDepth(100);
+            letterSpacing: 2,
+        }).setOrigin(0.5).setDepth(DEPTH_UI);
+
+        this.tweens.add({
+            targets: prompt,
+            alpha: { from: 1, to: 0.25 },
+            duration: PROMPT_PULSE_DURATION_MS,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+        });
 
         this.debugPanel = new DebugPanel(this);
 

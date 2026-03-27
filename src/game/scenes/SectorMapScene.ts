@@ -20,12 +20,14 @@ export class SectorMapScene extends Scene {
         GameState.setCurrentHub('meridian');
         this.cameras.main.setBackgroundColor(C.bg);
 
-        // Star field
-        for (let i = 0; i < 120; i++) {
+        // Star field — varied sizes, cool-tinted colors for depth
+        const starColors = [0xffffff, 0xaaccff, 0xaaccff, 0x88bbff, 0xddeeff, 0x6699cc];
+        for (let i = 0; i < 200; i++) {
             const x = Phaser.Math.Between(0, 1024);
             const y = Phaser.Math.Between(0, 768);
-            const size = Math.random() < 0.1 ? 2 : 1;
-            this.add.rectangle(x, y, size, size, 0xffffff).setAlpha(0.12 + Math.random() * 0.28);
+            const size = Math.random() < 0.06 ? 2 : 1;
+            const color = starColors[Math.floor(Math.random() * starColors.length)];
+            this.add.rectangle(x, y, size, size, color).setAlpha(0.08 + Math.random() * 0.35);
         }
 
         // Header
@@ -83,7 +85,7 @@ export class SectorMapScene extends Scene {
         if (relayJumped) {
             // Connection line from relay toward Farpoint
             for (let x = 920; x < 1010; x += 14) {
-                this.add.rectangle(x, 340, 9, 2, 0x2a3018);
+                this.add.rectangle(x, 340, 9, 2, 0x0e1c30);
             }
             this.add.text(870, 416, '▶ FARPOINT — see sites list', {
                 fontFamily: 'Arial', fontSize: 11, color: C.textWarn, align: 'center',
@@ -138,7 +140,7 @@ export class SectorMapScene extends Scene {
                     : '◆ Void Relay 7-9  ·  Tier 2  ·  Anomaly Site  ★ RELAY JUMP',
                 btnLabel:   relayDungeonCleared ? '[ TRANSITED ]' : '[ INITIATE RELAY JUMP ]',
                 cleared:    relayDungeonCleared,
-                rowBg:      0x080b08, rowBorder: 0x283820,
+                rowBg:      0x080d14, rowBorder: 0x0a3020,
                 labelColor: relayDungeonCleared ? C.textSecond : C.textSuccess,
                 btnColor:   relayDungeonCleared ? C.textSecond : C.textSuccess,
                 onLaunch:   () => this.confirmRelayJump(),
@@ -151,7 +153,7 @@ export class SectorMapScene extends Scene {
                 label:      '◆ Farpoint Waystation  ·  Post-Relay Hub  ·  Contacts · Contracts',
                 btnLabel:   '[ ENTER HUB ]',
                 cleared:    false,
-                rowBg:      0x08090c, rowBorder: 0x263a22,
+                rowBg:      0x070c14, rowBorder: 0x0d2040,
                 labelColor: C.textAccent,
                 btnColor:   C.textAccent,
                 onLaunch:   () => this.enterFarpointHub(),
@@ -163,7 +165,7 @@ export class SectorMapScene extends Scene {
                 label:      `◆ Farpoint Outer Ring  ·  Tier 3  ·  Frontier Salvage${farpointCleared ? '  [CLEARED]' : '  ★ NEW'}`,
                 btnLabel:   '[ LAUNCH ]',
                 cleared:    farpointCleared,
-                rowBg:      0x08090c, rowBorder: 0x263a22,
+                rowBg:      0x070c14, rowBorder: 0x0d2040,
                 labelColor: farpointCleared ? C.textSecond : C.textWarn,
                 btnColor:   farpointCleared ? C.textSecond : C.textWarn,
                 onLaunch:   () => this.launchToDungeon('farpoint-outer-ring'),
@@ -175,7 +177,7 @@ export class SectorMapScene extends Scene {
                 label:      `◆ Kalindra Drift  ·  Tier 3  ·  Salvage / Anomaly${kalindraClear ? '  [CLEARED]' : '  ★ NEW'}`,
                 btnLabel:   '[ LAUNCH ]',
                 cleared:    kalindraClear,
-                rowBg:      0x090c09, rowBorder: 0x2a3018,
+                rowBg:      0x080d14, rowBorder: 0x0a3020,
                 labelColor: kalindraClear ? C.textSecond : C.textSuccess,
                 btnColor:   kalindraClear ? C.textSecond : C.textSuccess,
                 onLaunch:   () => this.launchToDungeon('kalindra-processing-hub'),
@@ -186,7 +188,7 @@ export class SectorMapScene extends Scene {
                 label:      `◆ Orin's Crossing  ·  Tier 4  ·  Military Checkpoint${orinsClear ? '  [CLEARED]' : '  ★ NEW'}`,
                 btnLabel:   '[ LAUNCH ]',
                 cleared:    orinsClear,
-                rowBg:      0x0a0909, rowBorder: 0x2c2030,
+                rowBg:      0x0a0810, rowBorder: 0x2a0838,
                 labelColor: orinsClear ? C.textSecond : C.textDanger,
                 btnColor:   orinsClear ? C.textSecond : C.textDanger,
                 onLaunch:   () => this.launchToDungeon('orins-crossing-locked-sector'),

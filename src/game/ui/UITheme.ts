@@ -1,7 +1,7 @@
 // UITheme.ts — Shared design tokens for all Phaser scenes in Void Sovereigns Online.
 //
-// Art direction: 90s anime space opera · NASA-industrial hardware · analog tactical UI
-//                worn militarized future · quiet melancholy · restrained palette
+// Art direction: cold void terminus · electric signal noise · neon noir transit
+//                deep-space isolation · sharp contrast · electric derelict
 //
 // Import at the top of each scene:
 //   import { T } from '../ui/UITheme';
@@ -12,137 +12,138 @@
 
 export const T = {
     // ── Backgrounds (Phaser numeric) ──────────────────────────────────────
-    /** Station interior — warm near-black with faint olive undertone. */
-    bg:           0x08070a,
-    /** Deep-space void — warmer pitch-black for dungeon / sector-map scenes. */
-    bgDeep:       0x050403,
-    panelBg:      0x0e0c09,  // panel / card fill — dark worn charcoal
-    panelDark:    0x0b0a08,  // inner rows — near-black charcoal
-    panelMid:     0x0d0c0a,  // mid-dark panel (Dungeon scene panels)
+    /** Station interior — cold near-black with faint blue undertone. */
+    bg:           0x04060e,
+    /** Deep-space void — cold pitch-black for dungeon / sector-map scenes. */
+    bgDeep:       0x020308,
+    panelBg:      0x080d18,  // panel / card fill — dark cold navy
+    panelDark:    0x050911,  // inner rows — near-black cold navy
+    panelMid:     0x060a14,  // mid-dark panel (Dungeon scene panels)
 
     // ── Debug overlay ─────────────────────────────────────────────────────
     /** Near-black — used for the debug overlay background. */
-    debugBg:       0x020100,
+    debugBg:       0x020306,
     /** Dark navy — used for the debug panel title bar. */
-    debugTitleBg:  0x0a0a22,
-    border:        0x2c2818,  // weathered bronze-olive panel border
-    borderFaint:   0x1e1c14,  // dark olive faint border (Dungeon atmosphere)
-    borderSuccess: 0x283820,  // muted tactical-green border
+    debugTitleBg:  0x050a20,
+    border:        0x1a2d48,  // steel-blue panel border
+    borderFaint:   0x0e1c2e,  // faint cold border (Dungeon atmosphere)
+    borderSuccess: 0x0a3020,  // dark teal border
 
     // ── Text colours (hex strings for Phaser Text objects) ────────────────
-    textPrimary:  '#cfc5a8',  // aged paper — warm off-white
-    textSecond:   '#7a7160',  // warm olive-gray
-    textMuted:    '#4a4438',  // dark warm-gray
-    textAccent:   '#c89040',  // amber — analog CRT phosphor / NASA panel
-    textWarn:     '#b8722a',  // burnt orange — worn hazard marking
-    textDanger:   '#a03428',  // muted brick red
-    textSuccess:  '#607a48',  // tactical olive-green
+    textPrimary:  '#c0d8f0',  // ice white — cool off-white
+    textSecond:   '#4a6880',  // steel blue-gray
+    textMuted:    '#243040',  // dark cool gray
+    textAccent:   '#00c8ff',  // electric cyan — primary UI accent
+    textWarn:     '#ff9922',  // vivid amber-orange — hazard marking
+    textDanger:   '#ff2244',  // hot neon red — critical threat
+    textSuccess:  '#00ee77',  // neon green — healthy / success
 
     // ── Button colours ────────────────────────────────────────────────────
-    btnNormal:    '#908070',  // warm weathered gray
-    btnHover:     '#ddd0b4',  // warm cream
-    btnAccent:    '#c89040',  // amber — matches textAccent
+    btnNormal:    '#4a6880',  // steel blue-gray
+    btnHover:     '#c0e8ff',  // ice blue
+    btnAccent:    '#00c8ff',  // electric cyan — matches textAccent
 
     // ── Status bars (Phaser numeric) ──────────────────────────────────────
-    barFull:      0x4a7a3c,  // muted tactical olive-green — alias for barHull
-    barHull:      0x4a7a3c,  // hull bar full health
-    barDamaged:   0x8a4820,  // burnt sienna — damaged hull
-    barCritical:  0x7a2820,  // muted dark red — critical hull
-    barFuel:      0x3a5870,  // muted steel blue — fuel / energy
-    barEnemy:     0x8a3020,  // muted threat red — enemy HP
+    barFull:      0x00aa66,  // neon tactical green — alias for barHull
+    barHull:      0x00aa66,  // hull bar full health
+    barDamaged:   0xcc4400,  // bright orange-red — damaged hull
+    barCritical:  0xcc0030,  // neon red — critical hull
+    barFuel:      0x0077bb,  // electric blue — fuel / energy
+    barEnemy:     0xaa1a00,  // threat red — enemy HP
 
     // ── Progress bar tracks (Phaser numeric) ─────────────────────────────
-    /** Default progress bar track — dark warm charcoal. */
-    barBg:          0x110f0c,
-    /** Hull bar track — warm dark brown. */
-    barBgHull:      0x1e1a10,
-    /** Fuel bar track — dark navy. */
-    barBgFuel:      0x101820,
-    /** Upgrade path progress fill — warm bronze. */
-    upgradeProgress: 0x9a6818,
+    /** Default progress bar track — dark cold charcoal. */
+    barBg:          0x080c14,
+    /** Hull bar track — dark cold green-black. */
+    barBgHull:      0x071008,
+    /** Fuel bar track — dark cold blue-black. */
+    barBgFuel:      0x060a14,
+    /** Upgrade path progress fill — electric blue. */
+    upgradeProgress: 0x0088cc,
 
     // ── Status highlights (Phaser numeric) ───────────────────────────────
-    /** Active milestone / relay-unlocked highlight fill — dark tactical green. */
-    highlightActiveBg:     0x0a100a,
-    /** Active milestone border — muted tactical green. */
-    highlightActiveBorder: 0x3a6030,
+    /** Active milestone / relay-unlocked highlight fill — dark teal-black. */
+    highlightActiveBg:     0x040e10,
+    /** Active milestone border — muted electric teal. */
+    highlightActiveBorder: 0x0a4830,
 
     // ── Redline system (high-risk contracts / runs) ───────────────────────
-    /** Redline modal / panel background — deep blood-tinted black. */
-    redlinePanelBg:  0x0b0808,
-    /** Redline contract row tint — lighter blood-tinted charcoal. */
-    redlineRowBg:    0x130808,
-    /** Redline border — muted threat red. */
-    redlineBorder:   0x702020,
-    /** Redline label text — muted brick red. */
-    redlineText:     '#c03028',
-    /** Redline subdued text — darker muted orange-brown. */
-    redlineTextDim:  '#a05038',
-    /** Redline launch / confirm button — bright warm red. */
-    redlineBtn:      '#ff4422',
-    /** Secured / extracted-alive status — bright tactical green. */
-    redlineSecured:  '#44ff88',
-    /** Insurance active indicator — bright teal. */
-    redlineInsure:   '#44ffaa',
-    /** Item-lost indicator — bright orange-red. */
-    redlineLoss:     '#ff5533',
+    /** Redline modal / panel background — deep crimson-tinted black. */
+    redlinePanelBg:  0x0c0508,
+    /** Redline contract row tint — lighter crimson-tinted charcoal. */
+    redlineRowBg:    0x160810,
+    /** Redline border — vivid threat magenta-red. */
+    redlineBorder:   0x880030,
+    /** Redline label text — hot neon red. */
+    redlineText:     '#ff1155',
+    /** Redline subdued text — darker neon red. */
+    redlineTextDim:  '#cc2244',
+    /** Redline launch / confirm button — electric red. */
+    redlineBtn:      '#ff0044',
+    /** Secured / extracted-alive status — neon green. */
+    redlineSecured:  '#00ffaa',
+    /** Insurance active indicator — neon teal. */
+    redlineInsure:   '#00ffcc',
+    /** Item-lost indicator — vivid orange-red. */
+    redlineLoss:     '#ff3322',
 
     // ── Ghost site — Transit Node Zero (Phase 6) ──────────────────────────
     /** Ghost site panel background — deep void-purple black. */
-    ghostPanelBg:  0x070408,
-    /** Ghost site border — deep purple. */
-    ghostBorder:   0x401860,
-    /** Ghost site label text — medium purple. */
-    ghostText:     '#8860a8',
-    /** Ghost site dim text — dark purple. */
-    ghostTextDim:  '#6840a0',
+    ghostPanelBg:  0x060408,
+    /** Ghost site border — bright deep purple. */
+    ghostBorder:   0x5a1888,
+    /** Ghost site label text — vivid neon purple. */
+    ghostText:     '#aa44dd',
+    /** Ghost site dim text — muted purple. */
+    ghostTextDim:  '#7a2299',
 
     // ── Ashveil Observation Post — void-adjacent Redline (Phase 5) ────────
-    /** Ashveil panel background — very dark void-purple. */
-    ashveilPanelBg: 0x090608,
-    /** Ashveil border — purple-red. */
-    ashveilBorder:  0x601830,
-    /** Ashveil label text — muted rose-purple. */
-    ashveilText:    '#904060',
-    /** Ashveil dim text — dark rose-purple. */
-    ashveilTextDim: '#783050',
+    /** Ashveil panel background — very dark crimson-void. */
+    ashveilPanelBg: 0x080406,
+    /** Ashveil border — vivid rose-red. */
+    ashveilBorder:  0x881040,
+    /** Ashveil label text — bright neon rose. */
+    ashveilText:    '#cc2266',
+    /** Ashveil dim text — muted dark rose. */
+    ashveilTextDim: '#aa1055',
 
     // ── Index Chamber — Null Architect contact site (Phase 8) ─────────────
     /** Index Chamber panel background — deep void-teal black. */
-    indexPanelBg:  0x040b0a,
-    /** Index Chamber border — cold dark teal. */
-    indexBorder:   0x1a4838,
-    /** Index Chamber label text — cool teal. */
-    indexText:     '#3a9878',
-    /** Index Chamber dim text — muted dark teal. */
-    indexTextDim:  '#2a7058',
+    indexPanelBg:  0x040c0e,
+    /** Index Chamber border — bright electric teal. */
+    indexBorder:   0x0a5a48,
+    /** Index Chamber label text — neon teal. */
+    indexText:     '#00ccaa',
+    /** Index Chamber dim text — muted teal. */
+    indexTextDim:  '#009977',
 
     // ── Cycle Archive — Null Architect terminal site (Phase 9) ────────────
     /** Cycle Archive panel background — deep void-violet black. */
-    cyclePanelBg:  0x070408,
-    /** Cycle Archive border — deep violet. */
-    cycleBorder:   0x3a1858,
-    /** Cycle Archive label text — medium violet. */
-    cycleText:     '#7048a8',
-    /** Cycle Archive dim text — dark violet. */
-    cycleTextDim:  '#583890',
-// ── Sovereign Threshold — Null Architect final resolution site (Phase 10) ──
+    cyclePanelBg:  0x060408,
+    /** Cycle Archive border — bright electric violet. */
+    cycleBorder:   0x4a1078,
+    /** Cycle Archive label text — vivid neon violet. */
+    cycleText:     '#9944ee',
+    /** Cycle Archive dim text — muted violet. */
+    cycleTextDim:  '#7722bb',
+
+    // ── Sovereign Threshold — Null Architect final resolution site (Phase 10) ──
     /** Sovereign Threshold panel background — near-black with gold undertone. */
     sovereignPanelBg:  0x080700,
-    /** Sovereign Threshold border — deep amber-gold. */
-    sovereignBorder:   0x5a3c00,
-    /** Sovereign Threshold label text — warm gold. */
-    sovereignText:     '#c8960a',
+    /** Sovereign Threshold border — vivid amber-gold. */
+    sovereignBorder:   0x664400,
+    /** Sovereign Threshold label text — bright gold. */
+    sovereignText:     '#ffaa00',
     /** Sovereign Threshold dim text — muted amber. */
-    sovereignTextDim:  '#906800',
+    sovereignTextDim:  '#cc8800',
 
     // ── Origin Node — Null Architect first record site (Phase 11) ─────────
     /** Origin Node panel background — near-black with rust undertone. */
     originPanelBg:  0x080400,
-    /** Origin Node border — deep rust-copper. */
-    originBorder:   0x5c2200,
-    /** Origin Node label text — warm copper. */
-    originText:     '#c06020',
+    /** Origin Node border — vivid rust-copper. */
+    originBorder:   0x662a00,
+    /** Origin Node label text — bright copper-orange. */
+    originText:     '#ff6622',
     /** Origin Node dim text — muted dark copper. */
-    originTextDim:  '#8a4418',
+    originTextDim:  '#cc4400',
 } as const;

@@ -22,12 +22,12 @@ import { DebugPanel } from '../ui/DebugPanel';
 const C = {
     ...T,
     bg:        T.bgDeep,     // deeper void
-    panelBg:   T.panelMid,   // worn-charcoal panels
-    border:    T.borderFaint, // dark olive border
-    textSecond:'#5e5a50',     // dimmer warm-gray secondary text
-    barHull:   0x3d6830,      // slightly deeper tactical green
-    barDamaged:0x7a3e18,      // darker burnt sienna
-    barFuel:   0x2e4e64,      // darker muted steel blue
+    panelBg:   T.panelMid,   // cold-navy panels
+    border:    T.borderFaint, // faint cold border
+    textSecond:'#334d66',     // dimmer steel-blue secondary text
+    barHull:   0x009955,      // slightly deeper neon green
+    barDamaged:0xbb3800,      // deeper orange-red
+    barFuel:   0x006699,      // deeper electric blue
 };
 
 // All contracts from all phases — used for ID→title lookups in completion screen.
