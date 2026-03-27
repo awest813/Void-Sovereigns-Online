@@ -64,8 +64,8 @@ interface State {
      * Not used yet but reserved so multiplayer can be layered on without state migration.
      */
     sessionId: string | null;
-    /** Which hub the player is currently visiting ('meridian' or 'farpoint'). */
-    currentHubId: 'meridian' | 'farpoint';
+    /** Whether the new-player tutorial has been seen/completed. */
+    tutorialSeen: boolean;
     /** IDs of lore entries the player has unlocked (shown in Codex panel). */
     unlockedLoreIds: string[];
 }
@@ -121,6 +121,7 @@ const state: State = {
     redlineInsuranceActive: false,
     lastRunRedlineLoss: [],
     sessionId: null,
+    tutorialSeen: false,
     currentHubId: 'meridian',
     unlockedLoreIds: [],
 };
@@ -409,6 +410,11 @@ export const GameState = {
     // ── Hub navigation ─────────────────────────────────────────────────────
     setCurrentHub(hub: 'meridian' | 'farpoint') {
         state.currentHubId = hub;
+    },
+
+    // ── Tutorial ───────────────────────────────────────────────────────────
+    markTutorialSeen() {
+        state.tutorialSeen = true;
     },
 
     // ── Lore codex ─────────────────────────────────────────────────────────

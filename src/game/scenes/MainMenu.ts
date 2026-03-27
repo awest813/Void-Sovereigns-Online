@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
+import { GameState } from '../state/GameState';
 import { T } from '../ui/UITheme';
 import { DebugPanel } from '../ui/DebugPanel';
 
@@ -67,6 +68,14 @@ export class MainMenu extends Scene
     {
         if (this.sceneChanging) return;
         this.sceneChanging = true;
-        this.scene.start('Hub');
+        // First-time players get the tutorial; returning players go straight to the Hub.
+        if (!GameState.get().tutorialSeen) {
+            this.cameras.main.fadeOut(300, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start('Tutorial');
+            });
+        } else {
+            this.scene.start('Hub');
+        }
     }
 }

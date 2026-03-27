@@ -1620,7 +1620,8 @@ export class DungeonScene extends Scene {
                 }
             }
 
-            const insuranceWasUsed = insuranceWasActive && lossItems.length <= 1;
+            // insuranceWasActive was captured before resolveRedlineDeath() cleared it.
+            const insuranceWasUsed = insuranceWasActive;
             if (insuranceWasUsed) {
                 this.addContentText(200, 320 + lossItems.length * 20 + 20, '✓ INSURANCE APPLIED — Loss reduced.', {
                     fontFamily: 'Arial Black', fontSize: 12, color: C.redlineInsure,
