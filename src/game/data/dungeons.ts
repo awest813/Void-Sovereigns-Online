@@ -2,6 +2,39 @@
 // Phase 2 adds Coldframe Station-B alongside the existing Shalehook Dig Site.
 // Phase 3 adds Void Relay 7-9 and Farpoint Waystation — Outer Ring.
 
+/**
+ * A single interactable element placed on the ASCII room grid.
+ * Symbols: T=terminal, C=crate, R=relay, V=void-fracture, ^=hazard, !=consumable, $=salvage, ?=anomaly
+ */
+export interface RoomInteractable {
+    /** Symbol character rendered on the grid. */
+    symbol: string;
+    /** Grid row (0-based from top). */
+    row: number;
+    /** Grid column (0-based from left). */
+    col: number;
+    /** Short label shown in the legend / tooltip. */
+    label: string;
+    /** Interaction type that triggers when clicked/tapped. */
+    action: 'hack-terminal' | 'open-cache' | 'avoid-hazard' | 'take-cover' | 'trigger-alarm' | 'inspect' | 'none';
+    /** Whether this interactable has already been used this run. */
+    used?: boolean;
+}
+
+/**
+ * An enemy placement on the ASCII room grid.
+ */
+export interface RoomEnemyPlacement {
+    /** Enemy ID (references ENEMIES registry). */
+    enemyId: string;
+    /** Display symbol on the grid (e.g. 'd', 'r', 's', 'A', 'B'). */
+    symbol: string;
+    /** Grid row. */
+    row: number;
+    /** Grid column. */
+    col: number;
+}
+
 export interface Room {
     id: string;
     name: string;
@@ -17,6 +50,26 @@ export interface Room {
      */
     hazardDamage?: number;
     cleared: boolean;
+
+    // ── ASCII dungeon layer ──────────────────────────────────────────────
+    /**
+     * Small ASCII grid representing the room layout.
+     * Each string is one row. Typical size: 8×8 to 12×10.
+     * Symbol key:
+     *   . = open floor    # = wall/structure    + = door/hatch
+     *   = = corridor      > = exit/descent      < = fallback
+     *   @ = player spawn  ^ = hazard/trap       ! = consumable
+     *   $ = salvage       ? = anomaly            T = terminal
+     *   C = crate         R = relay node         V = void fracture
+     *   d/r/s/A/B = enemies (drone/raider/sentinel/elite/boss)
+     */
+    asciiMap?: string[];
+    /** Custom legend entries for symbols used in this room's asciiMap. */
+    legend?: Record<string, string>;
+    /** Interactable elements placed on the grid. */
+    interactables?: RoomInteractable[];
+    /** Enemy placements on the grid (overrides generic enemies list for display). */
+    enemyPlacements?: RoomEnemyPlacement[];
 }
 
 export interface ContractCompletion {
@@ -54,6 +107,20 @@ const shalehookRooms: Room[] = [
             'Deeper in, you can hear the grind of machinery that should have been silent for years.',
         enemies: [],
         cleared: false,
+        asciiMap: [
+            '##########',
+            '#..=.....#',
+            '#..=..T..#',
+            '#..=.....#',
+            '#........#',
+            '#..@..!..#',
+            '####++####',
+        ],
+        legend: { 'T': 'Shaft terminal', '!': 'Emergency ration' },
+        interactables: [
+            { symbol: 'T', row: 2, col: 6, label: 'Shaft terminal', action: 'inspect', used: false },
+            { symbol: '!', row: 5, col: 6, label: 'Emergency ration', action: 'open-cache', used: false },
+        ],
     },
     {
         id: 'upper-gallery',
@@ -65,6 +132,21 @@ const shalehookRooms: Room[] = [
             'Someone has scratched a tally into the rock face — fourteen marks, crossed in groups of five.',
         enemies: ['mining-drone-mk1', 'mining-drone-mk1'],
         cleared: false,
+        asciiMap: [
+            '####++####',
+            '#........#',
+            '#..d.....#',
+            '#........#',
+            '#.....d..#',
+            '#........#',
+            '#..@.....#',
+            '####++####',
+        ],
+        legend: { 'd': 'Mining Drone Mk.I' },
+        enemyPlacements: [
+            { enemyId: 'mining-drone-mk1', symbol: 'd', row: 2, col: 3 },
+            { enemyId: 'mining-drone-mk1', symbol: 'd', row: 4, col: 6 },
+        ],
     },
     {
         id: 'equipment-depot',
@@ -77,6 +159,22 @@ const shalehookRooms: Room[] = [
         enemies: [],
         lootItems: ['survey-kit-damaged', 'scrap-metal', 'power-cell'],
         cleared: false,
+        asciiMap: [
+            '####++####',
+            '#...##...#',
+            '#.C.##.$.#',
+            '#........#',
+            '#..C.....#',
+            '#........#',
+            '#..@.....#',
+            '##########',
+        ],
+        legend: { 'C': 'Equipment crate', '$': 'Salvage components' },
+        interactables: [
+            { symbol: 'C', row: 2, col: 2, label: 'Survey kit crate', action: 'open-cache', used: false },
+            { symbol: '$', row: 2, col: 7, label: 'Salvage pile', action: 'open-cache', used: false },
+            { symbol: 'C', row: 4, col: 3, label: 'Component crate', action: 'open-cache', used: false },
+        ],
     },
     {
         id: 'lower-drill-chamber',
@@ -88,6 +186,22 @@ const shalehookRooms: Room[] = [
             'The Sentinel turns its bore-head toward you.',
         enemies: ['mining-drone-mk2', 'drill-sentinel'],
         cleared: false,
+        asciiMap: [
+            '####++####',
+            '#........#',
+            '#..####..#',
+            '#..#d.#..#',
+            '#..####..#',
+            '#.....s..#',
+            '#.^......#',
+            '#..@.....#',
+            '####++####',
+        ],
+        legend: { 'd': 'Mining Drone Mk.II', 's': 'Drill Sentinel', '^': 'Bore debris' },
+        enemyPlacements: [
+            { enemyId: 'mining-drone-mk2', symbol: 'd', row: 3, col: 4, },
+            { enemyId: 'drill-sentinel', symbol: 's', row: 5, col: 6, },
+        ],
     },
     {
         id: 'core-access',
@@ -99,6 +213,22 @@ const shalehookRooms: Room[] = [
             'It seems to be running a task loop that has been cycling since the site went dark.',
         enemies: ['excavator-prime'],
         cleared: false,
+        asciiMap: [
+            '####++####',
+            '#........#',
+            '#..^..^..#',
+            '#........#',
+            '#....B...#',
+            '#........#',
+            '#..^..^..#',
+            '#........#',
+            '#...@....#',
+            '####><####',
+        ],
+        legend: { 'B': 'Excavator Prime', '^': 'Unstable ground', '>': 'Core descent', '<': 'Emergency exit' },
+        enemyPlacements: [
+            { enemyId: 'excavator-prime', symbol: 'B', row: 4, col: 5 },
+        ],
     },
 ];
 
@@ -116,6 +246,19 @@ const coldframeRooms: Room[] = [
             'The "last check-in" column has been left blank for forty-two days.',
         enemies: [],
         cleared: false,
+        asciiMap: [
+            '##########',
+            '#........#',
+            '#..T.....#',
+            '#........#',
+            '#..@..!..#',
+            '####++####',
+        ],
+        legend: { 'T': 'Airlock terminal', '!': 'Emergency oxygen' },
+        interactables: [
+            { symbol: 'T', row: 2, col: 3, label: 'Airlock terminal', action: 'hack-terminal', used: false },
+            { symbol: '!', row: 4, col: 6, label: 'Emergency oxygen', action: 'open-cache', used: false },
+        ],
     },
     {
         id: 'cryo-corridor',
@@ -127,6 +270,21 @@ const coldframeRooms: Room[] = [
             'A maintenance tag on the wall reads: UNIT FAULT — DO NOT RESTART. The unit has been restarted.',
         enemies: ['atmo-hazard-unit', 'atmo-hazard-unit'],
         cleared: false,
+        asciiMap: [
+            '####++####',
+            '#==......#',
+            '#==.d....#',
+            '#==......#',
+            '#==...d..#',
+            '#==......#',
+            '#..@.....#',
+            '####++####',
+        ],
+        legend: { 'd': 'Atmo Hazard Unit', '=': 'Cryo-pod bay' },
+        enemyPlacements: [
+            { enemyId: 'atmo-hazard-unit', symbol: 'd', row: 2, col: 4 },
+            { enemyId: 'atmo-hazard-unit', symbol: 'd', row: 4, col: 6 },
+        ],
     },
     {
         id: 'operations-bay',
@@ -140,6 +298,22 @@ const coldframeRooms: Room[] = [
         enemies: [],
         lootItems: ['cryo-component', 'corrupted-maintenance-log', 'power-cell'],
         cleared: false,
+        asciiMap: [
+            '####++####',
+            '#.T..T...#',
+            '#........#',
+            '#..C..C..#',
+            '#........#',
+            '#...@....#',
+            '##########',
+        ],
+        legend: { 'T': 'Operations console', 'C': 'Supply crate' },
+        interactables: [
+            { symbol: 'T', row: 1, col: 2, label: 'Primary console', action: 'hack-terminal', used: false },
+            { symbol: 'T', row: 1, col: 5, label: 'Log terminal', action: 'inspect', used: false },
+            { symbol: 'C', row: 3, col: 3, label: 'Kit rack', action: 'open-cache', used: false },
+            { symbol: 'C', row: 3, col: 6, label: 'Cryo crate', action: 'open-cache', used: false },
+        ],
     },
     {
         id: 'habitat-ring',
@@ -152,6 +326,22 @@ const coldframeRooms: Room[] = [
             'The cryo unit moves wrong — stiff, lurching, as if it does not understand its own joints.',
         enemies: ['mining-drone-mk2', 'cryo-locked-unit'],
         cleared: false,
+        asciiMap: [
+            '####++####',
+            '#........#',
+            '#.##..##.#',
+            '#.#d..#..#',
+            '#.##..##.#',
+            '#......s.#',
+            '#........#',
+            '#..@.....#',
+            '####++####',
+        ],
+        legend: { 'd': 'Mining Drone Mk.II', 's': 'Cryo-Locked Unit' },
+        enemyPlacements: [
+            { enemyId: 'mining-drone-mk2', symbol: 'd', row: 3, col: 3 },
+            { enemyId: 'cryo-locked-unit', symbol: 's', row: 5, col: 7 },
+        ],
     },
     {
         id: 'facility-control',
@@ -164,6 +354,27 @@ const coldframeRooms: Room[] = [
             'Steady. Regular. Something is still broadcasting from here.',
         enemies: ['facility-controller-alpha'],
         cleared: false,
+        asciiMap: [
+            '####++####',
+            '#.T....T.#',
+            '#........#',
+            '#...B....#',
+            '#........#',
+            '#.T....T.#',
+            '#........#',
+            '#...@....#',
+            '####><####',
+        ],
+        legend: { 'B': 'Controller Alpha', 'T': 'Active terminal', '>': 'Signal source', '<': 'Emergency exit' },
+        enemyPlacements: [
+            { enemyId: 'facility-controller-alpha', symbol: 'B', row: 3, col: 4 },
+        ],
+        interactables: [
+            { symbol: 'T', row: 1, col: 2, label: 'Broadcast terminal', action: 'hack-terminal', used: false },
+            { symbol: 'T', row: 1, col: 7, label: 'Waveform monitor', action: 'inspect', used: false },
+            { symbol: 'T', row: 5, col: 2, label: 'Systems console', action: 'hack-terminal', used: false },
+            { symbol: 'T', row: 5, col: 7, label: 'Signal analyzer', action: 'inspect', used: false },
+        ],
     },
 ];
 
