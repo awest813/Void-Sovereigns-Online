@@ -254,6 +254,91 @@ export class AsciiGridState {
         return this.enemies.filter(e => e.aggrod);
     }
 
+    /**
+     * Returns true if the player is currently adjacent (4-directional) to a wall tile.
+     * Used to grant the cover damage-reduction bonus in combat.
+     */
+    isInCover(): boolean {
+        const dirs: [number, number][] = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+        for (const [dr, dc] of dirs) {
+            const r = this.playerPos.row + dr;
+            const c = this.playerPos.col + dc;
+            if (this.isInBounds({ row: r, col: c }) && this.grid[r][c] === '#') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Move a specific enemy one step toward the player using BFS pathfinding.
+     * The enemy will not step onto the player's tile or onto another enemy.
+     * Returns true if the enemy moved.
+     */
+    stepEnemyToward(enemyId: string): boolean {
+        const enemy = this.enemies.find(e => e.id === enemyId);
+        if (!enemy) return false;
+
+        const target = this.playerPos;
+        const start = enemy.pos;
+
+        // Already adjacent — no need to move closer
+        const dist = Math.abs(start.row - target.row) + Math.abs(start.col - target.col);
+        if (dist <= 1) return false;
+
+        // BFS from enemy to player to find the shortest path
+        const visited = Array.from({ length: this.rows }, () =>
+            Array.from({ length: this.cols }, () => false),
+        );
+        const parent = new Map<string, GridPos | null>();
+        const queue: GridPos[] = [start];
+        visited[start.row][start.col] = true;
+        parent.set(`${start.row},${start.col}`, null);
+
+        const dirs: [number, number][] = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+        let found = false;
+
+        outer: while (queue.length > 0) {
+            const curr = queue.shift()!;
+            for (const [dr, dc] of dirs) {
+                const nr = curr.row + dr;
+                const nc = curr.col + dc;
+                const key = `${nr},${nc}`;
+                if (!this.isInBounds({ row: nr, col: nc }) || visited[nr][nc]) continue;
+                visited[nr][nc] = true;
+                parent.set(key, curr);
+                if (nr === target.row && nc === target.col) { found = true; break outer; }
+                const ch = this.grid[nr][nc];
+                if (isPassable(ch) &&
+                    !this.enemies.some(e => e.id !== enemyId && e.pos.row === nr && e.pos.col === nc)
+                ) {
+                    queue.push({ row: nr, col: nc });
+                }
+            }
+        }
+
+        if (!found) return false;
+
+        // Trace back from target to find the first step after start
+        let step: GridPos = target;
+        let prev = parent.get(`${target.row},${target.col}`) ?? null;
+        while (prev && !(prev.row === start.row && prev.col === start.col)) {
+            step = prev;
+            prev = parent.get(`${prev.row},${prev.col}`) ?? null;
+        }
+        if (!prev) return false; // Path reconstruction failed
+
+        // Never actually step onto the player's tile
+        if (step.row === target.row && step.col === target.col) return false;
+
+        // Move the enemy on the grid
+        this.grid[enemy.pos.row][enemy.pos.col] = '.';
+        enemy.pos = { ...step };
+        this.grid[step.row][step.col] = enemy.symbol;
+
+        return true;
+    }
+
     // ── Utilities ────────────────────────────────────────────────────────
 
     private isInBounds(pos: GridPos): boolean {

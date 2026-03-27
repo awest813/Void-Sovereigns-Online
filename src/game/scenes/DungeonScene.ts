@@ -5,9 +5,10 @@ import { ENEMIES, EnemyDef, EnemySpecialAbility, rollLoot, rollCredits } from '.
 import { ITEMS } from '../data/items';
 import { DUNGEON_REGISTRY as _DUNGEON_REGISTRY, DungeonDef, Room, RoomInteractable, loadDungeon } from '../data/dungeons';
 import { generateAsciiMap } from '../data/asciiMapGenerator';
-import { renderAsciiRoom, AsciiRenderResult } from '../ui/AsciiRoomRenderer';
+import { renderAsciiRoom, AsciiRenderResult, AsciiRenderOptions } from '../ui/AsciiRoomRenderer';
 import { handleTileInteraction, InteractionResult } from '../ui/TileInteractionHandler';
 import { getZoneTheme, ZoneTheme } from '../data/AsciiZoneThemes';
+import { AsciiGridState, GridPos } from '../data/AsciiGridState';
 import { starterContracts } from '../../../content/contracts/starter-contracts';
 import { phase2Contracts } from '../../../content/contracts/phase2-contracts';
 import { phase3Contracts } from '../../../content/contracts/phase3-contracts';
@@ -68,6 +69,14 @@ const MOMENTUM_DAMAGE_BONUS = 0.25;
 const BOOSTED_ATTACK_MULT = 0.50;
 /** Damage multiplier for the Exploit Scan Data action (+60% damage, no enemy counter). */
 const EXPLOIT_DAMAGE_MULT = 1.60;
+/** Fraction of incoming damage blocked when the player is in a cover position (adjacent wall). */
+const COVER_DAMAGE_REDUCTION = 0.15;
+/** Max movement steps available during room exploration (before combat). */
+const EXPLORATION_MOVE_RANGE = 3;
+/** Max movement steps available when repositioning during combat. */
+const COMBAT_REPOSITION_RANGE = 2;
+/** Damage multiplier applied to enemy attacks when the player successfully dodges (not a full evade). */
+const DODGE_DAMAGE_MULT = 0.35;
 /** Varied hit messages for normal player attacks. */
 const PLAYER_HIT_MSGS = [
     'You attack for',
@@ -162,6 +171,11 @@ export class DungeonScene extends Scene {
     private interactionLog: { message: string; color: string }[] = [];
     /** Zone-specific color theme for the current dungeon. */
     private zoneTheme: ZoneTheme | undefined;
+    /**
+     * Active grid state for the current room — tracks player position, fog-of-war,
+     * and enemy positions on the ASCII map. Reset each time a new room is entered.
+     */
+    private gridState: AsciiGridState | null = null;
 
     constructor() {
         super('Dungeon');
@@ -569,6 +583,19 @@ export class DungeonScene extends Scene {
         this.clearContent();
         this.interactionLog = [];
 
+        // ── Initialise grid state for this room ──────────────────────────
+        this.gridState = null;
+        const hasAsciiMap = room.asciiMap && room.asciiMap.length > 0;
+        if (hasAsciiMap) {
+            this.gridState = new AsciiGridState(room.asciiMap!);
+            // Register enemy positions so they can be tracked during exploration
+            if (room.enemyPlacements) {
+                for (const ep of room.enemyPlacements) {
+                    this.gridState.addEnemy(ep.enemyId, ep.symbol, { row: ep.row, col: ep.col });
+                }
+            }
+        }
+
         // Wider panel to accommodate ASCII map + description side-by-side
         this.contentContainer.add(
             this.add.rectangle(512, 340, 980, 460, C.panelBg).setStrokeStyle(1, C.border),
@@ -581,26 +608,19 @@ export class DungeonScene extends Scene {
         }).setOrigin(0.5);
 
         // ── ASCII tactical terminal view ─────────────────────────────────
-        const hasAsciiMap = room.asciiMap && room.asciiMap.length > 0;
         if (hasAsciiMap) {
-            // Render ASCII map on the left side
-            this.asciiRender = renderAsciiRoom(
-                this, room, 30, 100,
-                (ia: RoomInteractable) => this.onTileInteract(ia, room),
-                this.zoneTheme,
-            );
-            this.contentContainer.add(this.asciiRender.container);
+            this.renderAsciiGrid(room);
 
             // Room description on the right side, beside the map
-            const descX = 40 + this.asciiRender.width;
+            const descX = 40 + (this.asciiRender?.width ?? 0);
             this.addContentText(descX, 104, room.description, {
                 fontFamily: 'Arial', fontSize: 13, color: C.textPrimary, lineSpacing: 4,
-                wordWrap: { width: 980 - this.asciiRender.width - 60 },
+                wordWrap: { width: 980 - (this.asciiRender?.width ?? 0) - 60 },
             });
 
             // Interaction log area (below the map, updates when tiles are clicked)
-            const logY = 108 + this.asciiRender.height;
-            this.addContentText(40, logY, 'TACTICAL SCAN — click highlighted symbols to interact', {
+            const logY = 108 + (this.asciiRender?.height ?? 0);
+            this.addContentText(40, logY, 'TACTICAL SCAN — click highlighted symbols to interact  ·  green tiles: click to move', {
                 fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
             });
         } else {
@@ -647,6 +667,99 @@ export class DungeonScene extends Scene {
             this.addActionButton(380, actionY, '[ ENGAGE ]', () => this.startCombat(room), C.textDanger);
             this.addActionButton(700, actionY, '[ RETREAT ]', () => this.showRetreatConfirm(), C.textSecond);
         }
+    }
+
+    // ── ASCII grid helpers ─────────────────────────────────────────────────
+
+    /**
+     * (Re-)render the ASCII grid for a room using the current gridState.
+     * Called on initial room entry and again whenever the player moves.
+     * Only swaps the asciiRender container — other content items are unaffected.
+     */
+    private renderAsciiGrid(room: Room) {
+        if (!this.gridState) return;
+
+        // Remove previous render from the container without clearing other content
+        if (this.asciiRender) {
+            this.contentContainer.remove(this.asciiRender.container, true);
+            this.asciiRender = null;
+        }
+
+        // Build the proxy map from the live grid state (preserves '@' movement)
+        const proxyRoom: Room = { ...room, asciiMap: this.gridState.toAsciiMap() };
+        const movableCells = this.getMovableCells(EXPLORATION_MOVE_RANGE);
+
+        const opts: AsciiRenderOptions = {
+            revealed:     this.gridState.revealed,
+            movableCells,
+            onMove: (r: number, c: number) => this.onMovePlayer(r, c, room),
+        };
+
+        this.asciiRender = renderAsciiRoom(
+            this, proxyRoom, 30, 100,
+            (ia: RoomInteractable) => this.onTileInteract(ia, room),
+            this.zoneTheme,
+            opts,
+        );
+        this.contentContainer.add(this.asciiRender.container);
+    }
+
+    /**
+     * BFS from the player's current position, returning a Set of "row,col" strings
+     * for every floor cell reachable within `maxSteps` steps.
+     * Excludes interactable positions (player must click symbols, not walk onto them)
+     * and enemy positions.
+     */
+    private getMovableCells(maxSteps: number): Set<string> {
+        if (!this.gridState) return new Set();
+        const room = this.rooms[this.currentRoomIdx];
+
+        // Positions occupied by an unused interactable (don't walk onto them)
+        const iaKeys = new Set(
+            (room.interactables ?? [])
+                .filter(ia => !ia.used)
+                .map(ia => `${ia.row},${ia.col}`),
+        );
+        // Enemy positions
+        const enemyKeys = new Set(
+            this.gridState.enemies.map(e => `${e.pos.row},${e.pos.col}`),
+        );
+
+        const reachable = new Set<string>();
+        const visited   = new Set<string>();
+        const queue: { pos: GridPos; steps: number }[] = [
+            { pos: this.gridState.playerPos, steps: 0 },
+        ];
+        visited.add(`${this.gridState.playerPos.row},${this.gridState.playerPos.col}`);
+
+        const dirs: [number, number][] = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+        while (queue.length > 0) {
+            const { pos, steps } = queue.shift()!;
+            if (steps > 0) reachable.add(`${pos.row},${pos.col}`);
+            if (steps >= maxSteps) continue;
+            for (const [dr, dc] of dirs) {
+                const nr = pos.row + dr;
+                const nc = pos.col + dc;
+                const key = `${nr},${nc}`;
+                if (visited.has(key)) continue;
+                const ch = this.gridState.getCell({ row: nr, col: nc });
+                if (ch === '#' || ch === ' ') continue;
+                if (iaKeys.has(key) || enemyKeys.has(key)) continue;
+                visited.add(key);
+                queue.push({ pos: { row: nr, col: nc }, steps: steps + 1 });
+            }
+        }
+        return reachable;
+    }
+
+    /** Handle a player movement click during room exploration — update grid, re-render. */
+    private onMovePlayer(row: number, col: number, room: Room) {
+        if (!this.gridState) return;
+        if (!this.gridState.movePlayer({ row, col })) return;
+        // Re-render the grid with the new position and updated fog-of-war
+        this.renderAsciiGrid(room);
+        // Also refresh the interaction log so it stays at the correct Y position
+        this.renderInteractionLog();
     }
 
     // ── Loot room ─────────────────────────────────────────────────────────
@@ -805,6 +918,13 @@ export class DungeonScene extends Scene {
                 this.showCompletion();
             }
             return;
+        }
+
+        // Populate gridState with enemy positions if they weren't already added during room-enter
+        if (this.gridState && room.enemyPlacements && this.gridState.enemies.length === 0) {
+            for (const ep of room.enemyPlacements) {
+                this.gridState.addEnemy(ep.enemyId, ep.symbol, { row: ep.row, col: ep.col });
+            }
         }
 
         this.combat = {
@@ -987,6 +1107,15 @@ export class DungeonScene extends Scene {
             statusY += 20;
         }
 
+        // Cover indicator — shown when the player is adjacent to a wall on the grid
+        const inCover = this.gridState?.isInCover() ?? false;
+        if (inCover) {
+            this.addContentText(80, statusY, `🛡 COVER — incoming damage −${Math.round(COVER_DAMAGE_REDUCTION * 100)}%`, {
+                fontFamily: 'Arial', fontSize: 12, color: '#44aaff',
+            });
+            statusY += 20;
+        }
+
         // Momentum indicator — show when one hit away from or at threshold
         if (cb.playerHitStreak >= MOMENTUM_THRESHOLD - 1) {
             const bonusLabel = cb.playerHitStreak >= MOMENTUM_THRESHOLD
@@ -1015,10 +1144,14 @@ export class DungeonScene extends Scene {
         this.addActionButton(650, actionY + 48, '[ ANOMALY KIT ]', () => this.combatUseItem('anomaly-field-kit'),
             anomalyKits > 0 ? '#88ddff' : C.textSecond, anomalyKits === 0);
 
-        // Row 3 — intel / exploit
-        this.addActionButton(300, actionY + 96, '[ SCAN TARGET ]', () => this.combatScan(), C.textAccent);
+        // Row 3 — intel / reposition / exploit
+        this.addActionButton(210, actionY + 96, '[ SCAN TARGET ]', () => this.combatScan(), C.textAccent);
+        if (this.gridState) {
+            this.addActionButton(490, actionY + 96, '[ REPOSITION ]',
+                () => this.combatReposition(this.rooms[this.currentRoomIdx]), '#44aaff');
+        }
         if (cb.enemyScanned && !cb.enemyExploitUsed) {
-            this.addActionButton(660, actionY + 96, '[ EXPLOIT SCAN DATA ]',
+            this.addActionButton(790, actionY + 96, '[ EXPLOIT SCAN DATA ]',
                 () => this.combatExploit(), '#ffaa00');
         }
 
@@ -1026,7 +1159,72 @@ export class DungeonScene extends Scene {
         this.addActionButton(512, actionY + 148, '[ EMERGENCY RETREAT ]', () => this.showRetreatConfirm(), '#445566');
     }
 
-    // ── Combat helpers ────────────────────────────────────────────────────
+    // ── Cover helper ──────────────────────────────────────────────────────
+
+    /**
+     * Apply the cover damage-reduction bonus to a final damage value.
+     * Returns the adjusted damage and a flag indicating whether cover was active.
+     */
+    private applyCoverReduction(dmg: number): { dmg: number; covered: boolean } {
+        if (!this.gridState?.isInCover()) return { dmg, covered: false };
+        return { dmg: Math.max(1, Math.floor(dmg * (1 - COVER_DAMAGE_REDUCTION))), covered: true };
+    }
+
+    // ── Combat reposition ─────────────────────────────────────────────────
+
+    /**
+     * Show the grid with movement options during combat.
+     * Moving costs a turn — the enemy will attack after the player repositions.
+     * The player can also cancel to stay in their current position.
+     */
+    private combatReposition(room: Room) {
+        if (!this.gridState || !this.combat) return;
+        const cb = this.combat;
+
+        // Cannot reposition while the enemy is mid-charge
+        if (cb.enemyCharging) {
+            cb.log.push('Cannot reposition — enemy attack is mid-charge!');
+            this.renderCombat();
+            return;
+        }
+
+        this.clearContent();
+        this.contentContainer.add(
+            this.add.rectangle(512, 340, 980, 460, C.panelBg).setStrokeStyle(1, C.border),
+        );
+
+        this.addContentText(512, 80, 'REPOSITION — SELECT TARGET TILE', {
+            fontFamily: 'Arial Black', fontSize: 18, color: '#44aaff', align: 'center',
+        }).setOrigin(0.5);
+
+        const inCover = this.gridState.isInCover();
+        const positionLabel = inCover
+            ? 'Current: IN COVER (−15% dmg)  ·  Move to a green tile to reposition  ·  Enemy will counterattack'
+            : 'Current: exposed  ·  Move adjacent to a wall (█) for cover  ·  Enemy will counterattack';
+        this.addContentText(512, 108, positionLabel, {
+            fontFamily: 'Arial', fontSize: 12, color: C.textSecond, align: 'center',
+        }).setOrigin(0.5);
+
+        const movableCells = this.getMovableCells(COMBAT_REPOSITION_RANGE);
+        const proxyRoom: Room = { ...room, asciiMap: this.gridState.toAsciiMap() };
+
+        const opts: AsciiRenderOptions = {
+            revealed:     this.gridState.revealed,
+            movableCells,
+            onMove: (r: number, c: number) => {
+                if (!this.gridState || !this.combat) return;
+                this.gridState.movePlayer({ row: r, col: c });
+                this.combat.log.push('You reposition.' + (this.gridState.isInCover() ? ' Cover secured.' : ''));
+                if (this.processPlayerTurnStart()) return;
+                this.processEnemyTurn();
+            },
+        };
+
+        const render = renderAsciiRoom(this, proxyRoom, 30, 130, undefined, this.zoneTheme, opts);
+        this.contentContainer.add(render.container);
+
+        this.addActionButton(512, 590, '[ CANCEL — HOLD POSITION ]', () => this.renderCombat(), C.textSecond);
+    }
 
     /**
      * Increment the hit streak and log when momentum activates.
@@ -1202,13 +1400,15 @@ export class DungeonScene extends Scene {
         } else {
             cb.log.push('You brace and dodge — reduced incoming damage this turn.');
             const rawDmg = Phaser.Math.Between(enemy.attackMin, enemy.attackMax);
-            const reduced = Math.max(1, Math.floor(rawDmg * 0.35) - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus));
+            const dodgeDmg = Math.max(1, Math.floor(rawDmg * DODGE_DAMAGE_MULT) - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus));
+            const { dmg: reduced, covered } = this.applyCoverReduction(dodgeDmg);
             GameState.damagePilot(reduced);
             cb.damageTakenThisRoom += reduced;
             // Taking damage breaks the streak
             if (cb.playerHitStreak >= MOMENTUM_THRESHOLD) cb.log.push('Momentum broken.');
             cb.playerHitStreak = 0;
-            cb.log.push(`${enemy.name} attacks for ${reduced} damage (reduced). Pilot HP: ${GameState.get().pilotHull}`);
+            const coverLabel = covered ? ' [cover]' : '';
+            cb.log.push(`${enemy.name} attacks for ${reduced} damage (reduced${coverLabel}). Pilot HP: ${GameState.get().pilotHull}`);
         }
         cb.playerDodging = false;
 
@@ -1280,11 +1480,17 @@ export class DungeonScene extends Scene {
      * - Executes the queued special attack if charging.
      * - Triggers a new charge if HP is below the special threshold (enemy skips attack).
      * - Falls back to a normal attack.
+     * Also steps the active enemy one tile toward the player on the grid.
      */
     private processEnemyTurn() {
         const cb = this.combat!;
         const enemy = cb.enemies[cb.enemyIndex];
         const spec = (enemy as EnemyDef & { specialAbility?: EnemySpecialAbility }).specialAbility;
+
+        // Move the active enemy one step toward the player on the grid
+        if (this.gridState) {
+            this.gridState.stepEnemyToward(enemy.id);
+        }
 
         // Fire the queued special — spec is guaranteed because enemyCharging is only set
         // when spec exists (see the trigger check below). Guard defensively in case.
@@ -1319,11 +1525,12 @@ export class DungeonScene extends Scene {
 
         const rawDmg = Phaser.Math.Between(enemy.attackMin, enemy.attackMax);
         const enrageMult = cb.bossEnrageActive ? BOSS_ENRAGE_MULTIPLIER : 1.0;
-        const dmg = Math.max(1,
+        const baseDmg = Math.max(1,
             Math.floor(rawDmg * spec.damageMult * enrageMult)
             - 2
             - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus),
         );
+        const { dmg, covered } = this.applyCoverReduction(baseDmg);
         GameState.damagePilot(dmg);
         cb.damageTakenThisRoom += dmg;
 
@@ -1335,7 +1542,8 @@ export class DungeonScene extends Scene {
             cb.playerHitStreak = 0;
         }
 
-        cb.log.push(`💥 ${enemy.name}: ${spec.executeMsg} — ${dmg} damage!`);
+        const coverLabel = covered ? '  [cover]' : '';
+        cb.log.push(`💥 ${enemy.name}: ${spec.executeMsg} — ${dmg} damage!${coverLabel}`);
 
         // Apply status effect
         if (spec.appliesEffect) {
@@ -1456,11 +1664,12 @@ export class DungeonScene extends Scene {
         // Enemy fires at 50% damage during the scan
         const rawDmg = Phaser.Math.Between(enemy.attackMin, enemy.attackMax);
         const enrageMult = cb.bossEnrageActive ? BOSS_ENRAGE_MULTIPLIER : 1.0;
-        const dmg = Math.max(1,
+        const scanDmg = Math.max(1,
             Math.floor(rawDmg * 0.5 * enrageMult)
             - 2
             - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus),
         );
+        const { dmg, covered } = this.applyCoverReduction(scanDmg);
         GameState.damagePilot(dmg);
         cb.damageTakenThisRoom += dmg;
 
@@ -1472,7 +1681,8 @@ export class DungeonScene extends Scene {
             cb.playerHitStreak = 0;
         }
 
-        cb.log.push(`${enemy.name} fires during scan — ${dmg} damage (reduced). Pilot HP: ${GameState.get().pilotHull}`);
+        const coverLabel = covered ? ' [cover]' : '';
+        cb.log.push(`${enemy.name} fires during scan — ${dmg} damage (reduced${coverLabel}). Pilot HP: ${GameState.get().pilotHull}`);
 
         this.buildHeader();
         if (!this.checkPlayerDeath()) this.renderCombat();
@@ -1490,7 +1700,8 @@ export class DungeonScene extends Scene {
         // Boss enrage multiplier kicks in once the enrage flag is set
         const enrageMult = cb.bossEnrageActive ? BOSS_ENRAGE_MULTIPLIER : 1.0;
 
-        const dmg = Math.max(1, Math.floor(rawDmg * (isEnemyCrit ? CRIT_MULTIPLIER : 1.0) * enrageMult) - 2 - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus));
+        const baseDmg = Math.max(1, Math.floor(rawDmg * (isEnemyCrit ? CRIT_MULTIPLIER : 1.0) * enrageMult) - 2 - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus));
+        const { dmg, covered } = this.applyCoverReduction(baseDmg);
         GameState.damagePilot(dmg);
         cb.damageTakenThisRoom += dmg;
 
@@ -1502,9 +1713,10 @@ export class DungeonScene extends Scene {
             cb.playerHitStreak = 0;
         }
 
-        const critLabel = isEnemyCrit ? '  [CRIT]' : '';
+        const critLabel   = isEnemyCrit ? '  [CRIT]' : '';
         const enrageLabel = cb.bossEnrageActive ? '  [OVERCHARGE]' : '';
-        cb.log.push(`${enemy.name} attacks for ${dmg} damage.${critLabel}${enrageLabel} Pilot HP: ${GameState.get().pilotHull}`);
+        const coverLabel  = covered ? '  [cover]' : '';
+        cb.log.push(`${enemy.name} attacks for ${dmg} damage.${critLabel}${enrageLabel}${coverLabel} Pilot HP: ${GameState.get().pilotHull}`);
         this.buildHeader();
         if (this.checkPlayerDeath()) return;
         this.renderCombat();
@@ -1538,6 +1750,15 @@ export class DungeonScene extends Scene {
         cb.log.push(`${enemy.name} destroyed. +${credits}c  +${enemy.xpReward} XP`);
         if (loot.length > 0) {
             cb.log.push(`Loot: ${loot.map(l => l.name).join(', ')}`);
+        }
+
+        // Remove the defeated enemy from the grid state
+        if (this.gridState) {
+            const ge = this.gridState.enemies.find(e => e.id === enemy.id);
+            if (ge) {
+                this.gridState.grid[ge.pos.row][ge.pos.col] = '.';
+                this.gridState.enemies = this.gridState.enemies.filter(e => e.id !== enemy.id);
+            }
         }
 
         // Advance to next enemy — reset per-enemy charge/scan/enrage state
