@@ -279,9 +279,11 @@ export class DungeonScene extends Scene {
         color: string = C.btnNormal,
         disabled = false,
     ): Phaser.GameObjects.Text {
+        // Disabled buttons use a clearly muted color so players can tell at a glance
+        // that the action is unavailable, vs an enabled button they haven't hovered yet.
         const btn = this.add.text(x, y, label, {
-            fontFamily: 'Arial Black', fontSize: 16, color: disabled ? '#555566' : color,
-        }).setOrigin(0.5);
+            fontFamily: 'Arial Black', fontSize: 16, color: disabled ? '#1e2d3e' : color,
+        }).setOrigin(0.5).setAlpha(disabled ? 0.5 : 1);
         if (!disabled) {
             btn.setInteractive({ useHandCursor: true });
             btn.on('pointerover', () => btn.setColor(C.btnHover));
@@ -290,6 +292,31 @@ export class DungeonScene extends Scene {
         }
         this.actionContainer.add(btn);
         return btn;
+    }
+
+    /**
+     * Returns an appropriate highlight color for a combat-log line based on its content.
+     * Crits, heals, burns, boss events, etc. each get a distinct tint so the log is
+     * scannable at a glance rather than a wall of identical grey text.
+     * Uses prefix/includes checks before falling back to regex to minimize overhead.
+     */
+    private logLineColor(line: string): string {
+        // Prefix-based checks (cheapest path)
+        if (line.startsWith('⚡ MOMENTUM'))                 return '#ffdd44'; // momentum — yellow
+        if (line.startsWith('⚡'))                           return '#ffdd00'; // player crit — gold
+        if (line.startsWith('⚠'))                           return C.textWarn; // generic warning — amber
+        if (line.startsWith('💚'))                           return C.textSuccess; // healing/regen — green
+        if (line.startsWith('🔥') || line.includes('BURNING')) return '#ff8844'; // burn — orange-red
+        if (line.startsWith('💥'))                           return '#ffdd44'; // combat stim — yellow
+        // Substring checks
+        if (line.includes('PHASE 2') || line.includes('OVERCHARGE INITIATED')) return '#ff6622'; // boss escalation
+        if (line.includes('CANCELLED') || line.includes('Signal disruption'))  return C.textAccent; // disruption/cancel
+        if (line.includes('SCAN') || line.includes('EXPLOIT'))                  return C.textAccent; // intel actions
+        if (line.includes('perfect evasion') || line.includes('slipped past'))  return C.textSuccess; // full evade
+        if (line.includes('Momentum broken'))                                    return C.textWarn; // streak break
+        // Damage-taken patterns (regex only as last resort; called on at most 5 lines per render)
+        if (/attacks? for|damage\. \(|damage \(reduced\)/i.test(line))          return '#ff5566'; // incoming damage — red
+        return C.textSecond;
     }
 
     // ── Phases ────────────────────────────────────────────────────────────
@@ -751,7 +778,7 @@ export class DungeonScene extends Scene {
             }).setOrigin(0.5);
         }
 
-        // Combat log
+        // Combat log — last 5 entries, oldest faded, each line tinted by message type
         this.contentContainer.add(
             this.add.rectangle(512, 258, 940, 150, 0x09080a).setStrokeStyle(1, C.border),
         );
@@ -759,7 +786,7 @@ export class DungeonScene extends Scene {
         logLines.forEach((line, i) => {
             const alpha = 0.4 + (i / Math.max(logLines.length - 1, 1)) * 0.6;
             const logText = this.addContentText(60, 192 + i * 24, `▶ ${line}`, {
-                fontFamily: 'Arial', fontSize: 13, color: C.textSecond,
+                fontFamily: 'Arial', fontSize: 13, color: this.logLineColor(line),
             });
             logText.setAlpha(alpha);
         });
@@ -781,6 +808,17 @@ export class DungeonScene extends Scene {
             fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
         });
 
+        // Pulsing critical warning when pilot HP is dangerously low (≤25%)
+        if (pilotPct <= 0.25 && gs.pilotHull > 0) {
+            const critWarn = this.addContentText(316, 349, '⚠ CRITICAL', {
+                fontFamily: 'Arial Black', fontSize: 10, color: '#ff2244',
+            });
+            this.tweens.add({
+                targets: critWarn, alpha: { from: 1, to: 0.2 },
+                duration: 380, yoyo: true, repeat: -1,
+            });
+        }
+
         this.addContentText(340, 348, `SHIP HP:`, {
             fontFamily: 'Arial', fontSize: 13, color: C.textSecond,
         });
@@ -794,18 +832,40 @@ export class DungeonScene extends Scene {
             fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
         });
 
-        // Inventory
+        // Inventory — tint counts green when available so players can see at a glance
+        // what they have left without reading the numbers closely.
         const medKits = GameState.countItem('medical-kit');
         const repairKits = GameState.countItem('repair-kit');
         const anomalyKits = GameState.countItem('anomaly-field-kit');
         const nanoKits = GameState.countItem('nano-repair-kit');
         const stimKits = GameState.countItem('combat-stim');
-        this.addContentText(610, 348, `Med: ${medKits}  Repair: ${repairKits}  Anomaly: ${anomalyKits}`, {
-            fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
-        });
-        this.addContentText(610, 364, `Nano-Rep: ${nanoKits}  Stim: ${stimKits}`, {
-            fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
-        });
+
+        const kitsLine1 = [
+            { label: 'Med:', val: medKits },
+            { label: 'Repair:', val: repairKits },
+            { label: 'Anomaly:', val: anomalyKits },
+        ];
+        const kitsLine2 = [
+            { label: 'Nano-Rep:', val: nanoKits },
+            { label: 'Stim:', val: stimKits },
+        ];
+        const drawKitLine = (x: number, y: number, kits: {label: string; val: number}[]) => {
+            let curX = x;
+            kits.forEach(({ label, val }, ki) => {
+                const sep = ki > 0 ? '  ' : '';
+                const labelObj = this.addContentText(curX, y, sep + label, {
+                    fontFamily: 'Arial', fontSize: 12, color: C.textSecond,
+                });
+                curX += labelObj.width;
+                const valObj = this.addContentText(curX, y, ` ${val}`, {
+                    fontFamily: 'Arial', fontSize: 12,
+                    color: val > 0 ? C.textSuccess : C.textMuted,
+                });
+                curX += valObj.width;
+            });
+        };
+        drawKitLine(610, 348, kitsLine1);
+        drawKitLine(610, 364, kitsLine2);
 
         // Active player status effects
         let statusY = 392;

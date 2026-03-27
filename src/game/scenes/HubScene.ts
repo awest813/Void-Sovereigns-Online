@@ -535,8 +535,19 @@ export class HubScene extends Scene {
 
     // ── Panel utilities ───────────────────────────────────────────────────
     private showPanel(name: string) {
+        let incoming: Phaser.GameObjects.Container | undefined;
         for (const [key, container] of this.panels) {
-            container.setVisible(key === name);
+            if (key === name) {
+                container.setVisible(true);
+                incoming = container;
+            } else {
+                container.setVisible(false);
+            }
+        }
+        // Brief fade-in so panel transitions feel intentional rather than instant jumps.
+        if (incoming) {
+            incoming.setAlpha(0);
+            this.tweens.add({ targets: incoming, alpha: 1, duration: 150, ease: 'Sine.easeOut' });
         }
         // Tear down the NPC dialogue scroll handler whenever we leave that panel.
         if (name !== 'npc-dialogue' && this._npcScrollHandler) {
@@ -767,6 +778,23 @@ export class HubScene extends Scene {
             (!POST_RELAY_CONTRACT_IDS.has(ct.id) || relayJumped) &&
             (!GHOST_SITE_CONTRACT_IDS.has(ct.id) || kaelStage2),
         );
+
+        // Contract count summary — single pass for efficiency; quick scan of what needs attention
+        const stateContracts = gs.contracts;
+        let readyN = 0, activeN = 0;
+        for (const ct of contracts) {
+            const stEntry = stateContracts.find(e => e.id === ct.id);
+            if (stEntry?.completed && !stEntry.turnedIn) readyN++;
+            else if (stEntry?.accepted && !stEntry.completed) activeN++;
+        }
+        const countParts: string[] = [];
+        if (readyN > 0)  countParts.push(`${readyN} ready to turn in`);
+        if (activeN > 0) countParts.push(`${activeN} active`);
+        const countColor = readyN > 0 ? C.textSuccess : activeN > 0 ? C.textAccent : C.textMuted;
+        c.add(this.add.text(512, 134, countParts.length > 0 ? countParts.join('  ·  ') : `${contracts.length} contracts available`, {
+            fontFamily: 'Arial', fontSize: 11, color: countColor, align: 'center',
+        }).setOrigin(0.5));
+
         const rowH = 86;
         const startY = 148;
 
