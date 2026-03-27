@@ -1,12 +1,12 @@
 /* Void Sovereigns Online — base styles */
 :root {
-    --color-bg:       #050510;
-    --color-accent:   #5599ee;
-    --color-warn:     #dd9944;
-    --color-success:  #44cc88;
-    --color-danger:   #dd4444;
-    --color-text:     rgba(232, 224, 204, 0.87);
-    --color-text-dim: rgba(136, 136, 153, 0.87);
+    --color-bg:       #04060e;
+    --color-accent:   #00c8ff;
+    --color-warn:     #ff9922;
+    --color-success:  #00ee77;
+    --color-danger:   #ff2244;
+    --color-text:     rgba(192, 216, 240, 0.90);
+    --color-text-dim: rgba(74, 104, 128, 0.87);
     --font-ui:        'Arial', 'Helvetica Neue', sans-serif;
 }
 
@@ -56,7 +56,7 @@ body {
     }
 
     &:active {
-        background-color: rgba(85, 153, 238, 0.15);
+        background-color: rgba(0, 200, 255, 0.12);
         color: #ffffff;
     }
 
