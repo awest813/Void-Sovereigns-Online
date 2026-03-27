@@ -535,8 +535,19 @@ export class HubScene extends Scene {
 
     // ── Panel utilities ───────────────────────────────────────────────────
     private showPanel(name: string) {
+        let incoming: Phaser.GameObjects.Container | undefined;
         for (const [key, container] of this.panels) {
-            container.setVisible(key === name);
+            if (key === name) {
+                container.setVisible(true);
+                incoming = container;
+            } else {
+                container.setVisible(false);
+            }
+        }
+        // Brief fade-in so panel transitions feel intentional rather than instant jumps.
+        if (incoming) {
+            incoming.setAlpha(0);
+            this.tweens.add({ targets: incoming, alpha: 1, duration: 150, ease: 'Sine.easeOut' });
         }
         // Tear down the NPC dialogue scroll handler whenever we leave that panel.
         if (name !== 'npc-dialogue' && this._npcScrollHandler) {
@@ -767,6 +778,18 @@ export class HubScene extends Scene {
             (!POST_RELAY_CONTRACT_IDS.has(ct.id) || relayJumped) &&
             (!GHOST_SITE_CONTRACT_IDS.has(ct.id) || kaelStage2),
         );
+
+        // Contract count summary — quick scan of what needs attention
+        const readyN = contracts.filter(ct => GameState.isContractCompleted(ct.id) && !GameState.get().contracts.find(c2 => c2.id === ct.id && c2.turnedIn)).length;
+        const activeN = contracts.filter(ct => GameState.isContractAccepted(ct.id) && !GameState.isContractCompleted(ct.id)).length;
+        const countParts: string[] = [];
+        if (readyN > 0)  countParts.push(`${readyN} ready to turn in`);
+        if (activeN > 0) countParts.push(`${activeN} active`);
+        const countColor = readyN > 0 ? C.textSuccess : activeN > 0 ? C.textAccent : C.textMuted;
+        c.add(this.add.text(512, 134, countParts.length > 0 ? countParts.join('  ·  ') : `${contracts.length} contracts available`, {
+            fontFamily: 'Arial', fontSize: 11, color: countColor, align: 'center',
+        }).setOrigin(0.5));
+
         const rowH = 86;
         const startY = 148;
 
