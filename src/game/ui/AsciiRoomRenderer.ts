@@ -93,6 +93,8 @@ const MONO_FONT = '"Courier New", Courier, monospace';
 const FRAME_PAD = 10;
 /** Legend font size. */
 const LEGEND_FONT = 11;
+/** Hex color for movable-cell highlights (green). */
+const MOVABLE_CELL_COLOR = 0x00ee77;
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
@@ -106,6 +108,25 @@ export interface AsciiRenderResult {
 }
 
 /**
+ * Optional rendering extensions for movement and fog-of-war.
+ */
+export interface AsciiRenderOptions {
+    /**
+     * Fog-of-war state indexed [row][col].
+     * Cells where revealed[r][c] is false are rendered dim and unidentified.
+     * If omitted, all cells render at full visibility.
+     */
+    revealed?: boolean[][];
+    /**
+     * Set of "row,col" keys for floor cells the player can move to.
+     * These cells receive a subtle green highlight and a click handler.
+     */
+    movableCells?: Set<string>;
+    /** Called with the row and column when the player clicks a movable cell. */
+    onMove?: (row: number, col: number) => void;
+}
+
+/**
  * Render an ASCII room grid inside a Phaser scene.
  *
  * @param scene  The active Phaser scene.
@@ -114,6 +135,7 @@ export interface AsciiRenderResult {
  * @param y      Top-left Y position for the terminal frame.
  * @param onInteract  Optional callback when a player clicks an interactable symbol.
  * @param zoneTheme   Optional zone-specific color palette.
+ * @param options     Optional fog-of-war and movement configuration.
  * @returns An AsciiRenderResult with the container and dimensions.
  */
 export function renderAsciiRoom(
@@ -123,6 +145,7 @@ export function renderAsciiRoom(
     y: number,
     onInteract?: (interactable: RoomInteractable) => void,
     zoneTheme?: ZoneTheme,
+    options?: AsciiRenderOptions,
 ): AsciiRenderResult {
     const container = scene.add.container(x, y);
     const grid = room.asciiMap ?? [];
@@ -219,20 +242,46 @@ export function renderAsciiRoom(
 
             const cx = FRAME_PAD + c * CELL_SIZE + CELL_SIZE / 2;
             const cy = FRAME_PAD + r * CELL_SIZE + CELL_SIZE / 2;
-            const color = symbolColor(ch, zoneTheme);
 
-            const txt = scene.add.text(cx, cy, ch, {
+            // ── Fog-of-war visibility ─────────────────────────────────────
+            const isRevealed = !options?.revealed || (options.revealed[r]?.[c] ?? false);
+            // Unrevealed cells: render at very low opacity in a near-black tint.
+            // Structural tiles (walls, floors) faintly visible so the room shape is hinted.
+            const color  = isRevealed ? symbolColor(ch, zoneTheme) : '#1e2232';
+            const alpha  = isRevealed ? 1.0 : 0.20;
+
+            const txt = scene.add.text(cx, cy, isRevealed ? ch : (ch === '#' ? '#' : '?'), {
                 fontFamily: MONO_FONT,
                 fontSize: CELL_FONT,
                 color,
                 align: 'center',
-            }).setOrigin(0.5);
+            }).setOrigin(0.5).setAlpha(alpha);
 
             container.add(txt);
 
-            // Check if this cell is an interactable
-            const ia = interactableMap.get(`${r},${c}`);
-            if (ia && !ia.used && onInteract) {
+            // ── Click-to-move highlight (only on revealed floor tiles) ────
+            const cellKey = `${r},${c}`;
+            const isMovable = isRevealed && options?.movableCells?.has(cellKey) && options.onMove;
+            if (isMovable) {
+                const moveHighlight = scene.add.rectangle(cx, cy, CELL_SIZE - 2, CELL_SIZE - 2, MOVABLE_CELL_COLOR)
+                    .setAlpha(0.08);
+                container.add(moveHighlight);
+                scene.tweens.add({
+                    targets: moveHighlight,
+                    alpha: { from: 0.05, to: 0.18 },
+                    duration: 600,
+                    yoyo: true,
+                    repeat: -1,
+                });
+                txt.setInteractive({ useHandCursor: true });
+                txt.on('pointerover', () => txt.setStyle({ color: `#${MOVABLE_CELL_COLOR.toString(16).padStart(6, '0')}` }));
+                txt.on('pointerout',  () => txt.setStyle({ color }));
+                txt.on('pointerdown', () => options.onMove!(r, c));
+            }
+
+            // ── Interactable highlight (only on revealed, unused interactables) ─
+            const ia = interactableMap.get(cellKey);
+            if (ia && !ia.used && onInteract && isRevealed) {
                 // Highlight interactable cells with a subtle pulsing background
                 const highlight = scene.add.rectangle(cx, cy, CELL_SIZE - 2, CELL_SIZE - 2, 0x00c8ff)
                     .setAlpha(0.08);
