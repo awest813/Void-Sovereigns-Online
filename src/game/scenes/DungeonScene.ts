@@ -298,21 +298,24 @@ export class DungeonScene extends Scene {
      * Returns an appropriate highlight color for a combat-log line based on its content.
      * Crits, heals, burns, boss events, etc. each get a distinct tint so the log is
      * scannable at a glance rather than a wall of identical grey text.
+     * Uses prefix/includes checks before falling back to regex to minimize overhead.
      */
     private logLineColor(line: string): string {
-        if (/^⚡ (CRITICAL|PRECISION|ARMOR|DIRECT)/.test(line))              return '#ffdd00'; // player crit — gold
-        if (/^⚡ MOMENTUM/.test(line))                                        return '#ffdd44'; // momentum — yellow
-        if (/PHASE 2|OVERCHARGE INITIATED/.test(line))                        return '#ff6622'; // boss escalation — hot orange
-        if (/^⚠/.test(line))                                                  return C.textWarn; // generic warning — amber
-        if (/💚 REGEN|restored.*HP|nano-repair/i.test(line))                  return C.textSuccess; // healing — green
-        if (/🔥 BURN|BURNING/i.test(line))                                    return '#ff8844'; // burn — orange-red
-        if (/^💥/.test(line))                                                  return '#ffdd44'; // combat stim — yellow
-        if (/CANCELLED|Signal disruption/i.test(line))                        return C.textAccent; // disruption/cancel — cyan
-        if (/SCAN|EXPLOIT/i.test(line))                                        return C.textAccent; // intel actions — cyan
-        if (/[Pp]erfect evasion|slipped past/i.test(line))                    return C.textSuccess; // full evade — green
-        if (/[Aa]ttack(s)? for|damage\. \(|damage \(reduced\)/i.test(line))   return '#ff5566'; // incoming damage — red
-        if (/[Mm]omentum broken/.test(line))                                   return C.textWarn; // streak break — amber
-        if (/[Cc]leared\.|[Cc]omplete\.|[Ss]ystems armed/i.test(line))        return C.textSecond; // system messages — grey
+        // Prefix-based checks (cheapest path)
+        if (line.startsWith('⚡ MOMENTUM'))                 return '#ffdd44'; // momentum — yellow
+        if (line.startsWith('⚡'))                           return '#ffdd00'; // player crit — gold
+        if (line.startsWith('⚠'))                           return C.textWarn; // generic warning — amber
+        if (line.startsWith('💚'))                           return C.textSuccess; // healing/regen — green
+        if (line.startsWith('🔥') || line.includes('BURNING')) return '#ff8844'; // burn — orange-red
+        if (line.startsWith('💥'))                           return '#ffdd44'; // combat stim — yellow
+        // Substring checks
+        if (line.includes('PHASE 2') || line.includes('OVERCHARGE INITIATED')) return '#ff6622'; // boss escalation
+        if (line.includes('CANCELLED') || line.includes('Signal disruption'))  return C.textAccent; // disruption/cancel
+        if (line.includes('SCAN') || line.includes('EXPLOIT'))                  return C.textAccent; // intel actions
+        if (line.includes('perfect evasion') || line.includes('slipped past'))  return C.textSuccess; // full evade
+        if (line.includes('Momentum broken'))                                    return C.textWarn; // streak break
+        // Damage-taken patterns (regex only as last resort; called on at most 5 lines per render)
+        if (/attacks? for|damage\. \(|damage \(reduced\)/i.test(line))          return '#ff5566'; // incoming damage — red
         return C.textSecond;
     }
 
@@ -846,7 +849,7 @@ export class DungeonScene extends Scene {
             { label: 'Nano-Rep:', val: nanoKits },
             { label: 'Stim:', val: stimKits },
         ];
-        const renderKitLine = (x: number, y: number, kits: {label: string; val: number}[]) => {
+        const drawKitLine = (x: number, y: number, kits: {label: string; val: number}[]) => {
             let curX = x;
             kits.forEach(({ label, val }, ki) => {
                 const sep = ki > 0 ? '  ' : '';
@@ -861,8 +864,8 @@ export class DungeonScene extends Scene {
                 curX += valObj.width;
             });
         };
-        renderKitLine(610, 348, kitsLine1);
-        renderKitLine(610, 364, kitsLine2);
+        drawKitLine(610, 348, kitsLine1);
+        drawKitLine(610, 364, kitsLine2);
 
         // Active player status effects
         let statusY = 392;

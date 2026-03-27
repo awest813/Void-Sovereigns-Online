@@ -779,9 +779,14 @@ export class HubScene extends Scene {
             (!GHOST_SITE_CONTRACT_IDS.has(ct.id) || kaelStage2),
         );
 
-        // Contract count summary — quick scan of what needs attention
-        const readyN = contracts.filter(ct => GameState.isContractCompleted(ct.id) && !GameState.get().contracts.find(c2 => c2.id === ct.id && c2.turnedIn)).length;
-        const activeN = contracts.filter(ct => GameState.isContractAccepted(ct.id) && !GameState.isContractCompleted(ct.id)).length;
+        // Contract count summary — single pass for efficiency; quick scan of what needs attention
+        const stateContracts = gs.contracts;
+        let readyN = 0, activeN = 0;
+        for (const ct of contracts) {
+            const stEntry = stateContracts.find(e => e.id === ct.id);
+            if (stEntry?.completed && !stEntry.turnedIn) readyN++;
+            else if (stEntry?.accepted && !stEntry.completed) activeN++;
+        }
         const countParts: string[] = [];
         if (readyN > 0)  countParts.push(`${readyN} ready to turn in`);
         if (activeN > 0) countParts.push(`${activeN} active`);
