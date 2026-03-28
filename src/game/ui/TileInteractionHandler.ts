@@ -95,7 +95,8 @@ export function handleTileInteraction(
     interactable: RoomInteractable,
     roomId: string,
 ): InteractionResult {
-    const seed = simpleHash(roomId + interactable.row + interactable.col);
+    // Include row+col in the seed so each interactable in the same room gets a different pick.
+    const seed = simpleHash(roomId + ':' + interactable.row + ':' + interactable.col);
     const pick = <T>(arr: T[]): T => arr[seed % arr.length];
 
     switch (interactable.action) {

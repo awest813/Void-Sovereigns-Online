@@ -15,7 +15,7 @@
 
 /** Whether a cell blocks movement / LOS. */
 function isBlocking(ch: string): boolean {
-    return ch === '#' || ch === ' ';
+    return ch === '#';
 }
 
 /** Whether a cell blocks movement but not LOS (e.g. doors when closed). */
@@ -72,10 +72,12 @@ export class AsciiGridState {
         // Find player position from grid or use provided start
         this.playerPos = playerStart ?? { row: 0, col: 0 };
         if (!playerStart) {
+            outer:
             for (let r = 0; r < this.rows; r++) {
                 for (let c = 0; c < this.cols; c++) {
                     if (this.grid[r][c] === '@') {
                         this.playerPos = { row: r, col: c };
+                        break outer;
                     }
                 }
             }
@@ -236,10 +238,12 @@ export class AsciiGridState {
 
     /**
      * Update aggro state for all enemies based on Manhattan distance and LOS to player.
+     * Aggro can only be gained (never lost) once triggered — persistent until combat ends.
      */
     updateAggro(): void {
         for (const enemy of this.enemies) {
-            if (AsciiGridState.manhattanDist(enemy.pos, this.playerPos) <= enemy.aggroRange
+            if (!enemy.aggrod &&
+                AsciiGridState.manhattanDist(enemy.pos, this.playerPos) <= enemy.aggroRange
                 && this.hasLineOfSight(enemy.pos, this.playerPos)) {
                 enemy.aggrod = true;
             }
