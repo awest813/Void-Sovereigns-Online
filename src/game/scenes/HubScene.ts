@@ -690,6 +690,7 @@ export class HubScene extends Scene {
             { label: '[ SHIP STATUS ]',       badge: '',            badgeColor: C.textSecond,       sub: 'Current ship + relay goal',          target: 'shipstatus' },
             { label: '[ SHIPYARD ]',          badge: '',            badgeColor: C.textSecond,       sub: 'Upgrades from Ilya, Oziel & Jasso',  target: 'shipyard' },
             { label: '[ CODEX ]',             badge: codexBadge,    badgeColor: C.textAccent,       sub: 'Unlocked lore entries',              target: 'codex' },
+            { label: '[ PILOT BRIEFING ]',    badge: '',            badgeColor: C.textSecond,       sub: 'Replay new-recruit tutorial',        target: 'briefing' },
         ];
 
         items.forEach((item, i) => {
@@ -705,6 +706,9 @@ export class HubScene extends Scene {
                 if (item.target === 'sectormap') {
                     this.cameras.main.fadeOut(SCENE_TRANSITION_FADE_MS, 0, 0, 0);
                     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('SectorMap'));
+                } else if (item.target === 'briefing') {
+                    this.cameras.main.fadeOut(SCENE_TRANSITION_FADE_MS, 0, 0, 0);
+                    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Tutorial'));
                 } else {
                     this.showPanel(item.target);
                 }
