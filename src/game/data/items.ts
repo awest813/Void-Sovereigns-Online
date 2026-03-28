@@ -346,6 +346,15 @@ export const ITEMS: Record<string, ItemDef> = {
             'Boosts all attack output by 50% for 2 turns. Heavy crash afterward — handle with caution.',
         effect: { boostAttack: 0.5, boostTurns: 2 },
     },
+    'frag-charge': {
+        id: 'frag-charge',
+        name: 'Fragmentation Charge',
+        type: 'consumable',
+        value: 75,
+        description: 'A compact shaped-charge detonated at close range. Deals 30–50 direct damage, ' +
+            'completely bypassing enemy armor. The concussive shock leaves the target WEAKENED for 2 turns — ' +
+            'reducing their defensive resistance by 8.',
+    },
 
     // ── Phase 6 items ─────────────────────────────────────────────────────
 
