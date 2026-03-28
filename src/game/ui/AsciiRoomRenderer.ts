@@ -170,28 +170,63 @@ export function renderAsciiRoom(
     usedSymbols.add('#');
 
     const customLegend = room.legend ?? {};
-    const legendEntries: { symbol: string; label: string; color: string }[] = [];
-    // Deterministic order — structural first, then interactables, enemies, misc
-    const orderedSymbols = ['@', '.', '#', '+', '=', '>', '<', 'T', 'C', 'R', '!', '$', '^', '?', 'V', 'd', 'r', 's', 'A', 'B'];
-    for (const sym of orderedSymbols) {
-        if (usedSymbols.has(sym)) {
-            legendEntries.push({
-                symbol: sym,
+
+    // Interactable symbols for legend click-indicator (► marker).
+    // Each distinct ASCII symbol is assumed to represent one interactable type —
+    // if a symbol appears at any interactable position it is marked as clickable in the legend.
+    const interactableSymbols = new Set<string>(
+        (room.interactables ?? []).map(ia => {
+            const row = room.asciiMap?.[ia.row] ?? '';
+            return row[ia.col] ?? '';
+        }).filter(Boolean),
+    );
+
+    interface LegendEntry { symbol: string; label: string; color: string; clickable?: boolean }
+    interface LegendSection { header: string; entries: LegendEntry[] }
+
+    // Symbol groups — structural, interactive, threats
+    const STRUCTURAL_SYMS  = ['@', '.', '#', '+', '=', '>', '<'];
+    const TACTICAL_SYMS    = ['T', 'C', 'R', '!', '$', '^', '?', 'V'];
+    const THREAT_SYMS      = ['d', 'r', 's', 'A', 'B'];
+
+    const buildSection = (syms: string[]): LegendEntry[] => {
+        const entries: LegendEntry[] = [];
+        for (const sym of syms) {
+            if (!usedSymbols.has(sym)) continue;
+            // Use zone-theme symbol overrides for the visual symbol in legend
+            let displaySym = sym;
+            if (sym === '#' && zoneTheme?.wallSymbol) displaySym = zoneTheme.wallSymbol;
+            if (sym === '.' && zoneTheme?.floorSymbol) displaySym = zoneTheme.floorSymbol;
+            entries.push({
+                symbol: displaySym,
                 label: customLegend[sym] ?? defaultLegend(sym),
                 color: symbolColor(sym, zoneTheme),
+                clickable: interactableSymbols.has(sym),
             });
         }
-    }
-    // Any custom symbols not in the standard set
+        return entries;
+    };
+
+    // Custom symbols not in any standard group
+    const allStandardSyms = [...STRUCTURAL_SYMS, ...TACTICAL_SYMS, ...THREAT_SYMS];
+    const extraEntries: LegendEntry[] = [];
     for (const sym of usedSymbols) {
-        if (!orderedSymbols.includes(sym)) {
-            legendEntries.push({
+        if (!allStandardSyms.includes(sym)) {
+            extraEntries.push({
                 symbol: sym,
                 label: customLegend[sym] ?? sym,
                 color: symbolColor(sym, zoneTheme),
+                clickable: interactableSymbols.has(sym),
             });
         }
     }
+
+    const legendSections: LegendSection[] = [
+        { header: 'STRUCTURAL', entries: buildSection(STRUCTURAL_SYMS) },
+        { header: 'TACTICAL',   entries: buildSection(TACTICAL_SYMS) },
+        { header: 'THREATS',    entries: buildSection(THREAT_SYMS) },
+    ].filter(s => s.entries.length > 0);
+    if (extraEntries.length > 0) legendSections.push({ header: 'OTHER', entries: extraEntries });
 
     const legendW = 160;
     const totalW = gridW + FRAME_PAD * 3 + legendW;
@@ -279,11 +314,11 @@ export function renderAsciiRoom(
             const isMovable = isRevealed && options?.movableCells?.has(cellKey) && options.onMove;
             if (isMovable) {
                 const moveHighlight = scene.add.rectangle(cx, cy, CELL_SIZE - 2, CELL_SIZE - 2, MOVABLE_CELL_COLOR)
-                    .setAlpha(0.08);
+                    .setAlpha(0.14);
                 container.add(moveHighlight);
                 scene.tweens.add({
                     targets: moveHighlight,
-                    alpha: { from: 0.05, to: 0.18 },
+                    alpha: { from: 0.12, to: 0.30 },
                     duration: 600,
                     yoyo: true,
                     repeat: -1,
@@ -297,13 +332,13 @@ export function renderAsciiRoom(
             // ── Interactable highlight (only on revealed, unused interactables) ─
             const ia = interactableMap.get(cellKey);
             if (ia && !ia.used && onInteract && isRevealed) {
-                // Highlight interactable cells with a subtle pulsing background
+                // Highlight interactable cells with a pulsing cyan background
                 const highlight = scene.add.rectangle(cx, cy, CELL_SIZE - 2, CELL_SIZE - 2, 0x00c8ff)
-                    .setAlpha(0.08);
+                    .setAlpha(0.14);
                 container.add(highlight);
                 scene.tweens.add({
                     targets: highlight,
-                    alpha: { from: 0.05, to: 0.18 },
+                    alpha: { from: 0.12, to: 0.30 },
                     duration: 800,
                     yoyo: true,
                     repeat: -1,
@@ -347,23 +382,65 @@ export function renderAsciiRoom(
         }),
     );
 
-    legendEntries.forEach((entry, i) => {
-        const ey = legendY + 18 + i * 16;
+    // Clickable indicator note
+    container.add(
+        scene.add.text(legendX, legendY + 12, '► = clickable', {
+            fontFamily: 'Arial',
+            fontSize: LEGEND_FONT - 1,
+            color: T.termCyan,
+            fontStyle: 'italic',
+        }),
+    );
+
+    let legendCursorY = legendY + 26;
+    const LEGEND_SECTION_GAP = 4;
+    const LEGEND_ENTRY_H     = 15;
+    const LEGEND_HEADER_H    = 14;
+
+    for (const section of legendSections) {
+        // Section separator + header
         container.add(
-            scene.add.text(legendX, ey, entry.symbol, {
-                fontFamily: MONO_FONT,
-                fontSize: LEGEND_FONT + 1,
-                color: entry.color,
+            scene.add.rectangle(legendX + 70, legendCursorY + 1, 140, 1, T.borderFaint).setOrigin(0.5, 0),
+        );
+        legendCursorY += LEGEND_SECTION_GAP;
+        container.add(
+            scene.add.text(legendX, legendCursorY, section.header, {
+                fontFamily: 'Arial Black',
+                fontSize: LEGEND_FONT - 1,
+                color: T.textMuted,
             }),
         );
-        container.add(
-            scene.add.text(legendX + 16, ey, entry.label, {
-                fontFamily: 'Arial',
-                fontSize: LEGEND_FONT,
-                color: T.textSecond,
-            }),
-        );
-    });
+        legendCursorY += LEGEND_HEADER_H;
+
+        for (const entry of section.entries) {
+            container.add(
+                scene.add.text(legendX, legendCursorY, entry.symbol, {
+                    fontFamily: MONO_FONT,
+                    fontSize: LEGEND_FONT + 1,
+                    color: entry.color,
+                }),
+            );
+            // Show ► indicator for clickable interactable symbols
+            const labelX = legendX + (entry.clickable ? 28 : 16);
+            if (entry.clickable) {
+                container.add(
+                    scene.add.text(legendX + 14, legendCursorY, '►', {
+                        fontFamily: 'Arial',
+                        fontSize: LEGEND_FONT - 1,
+                        color: T.termCyan,
+                    }),
+                );
+            }
+            container.add(
+                scene.add.text(labelX, legendCursorY, entry.label, {
+                    fontFamily: 'Arial',
+                    fontSize: LEGEND_FONT,
+                    color: T.textSecond,
+                }),
+            );
+            legendCursorY += LEGEND_ENTRY_H;
+        }
+    }
 
     return { container, width: totalW, height: totalH };
 }
