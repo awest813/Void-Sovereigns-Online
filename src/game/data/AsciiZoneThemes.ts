@@ -69,6 +69,7 @@ export const ZONE_THEMES: Record<string, ZoneTheme> = {
             'A faint electronic hum permeates everything.',
             'Clean surfaces. This infrastructure was maintained recently.',
         ],
+        floorSymbol: ':',
     },
     redline: {
         wallColor: '#2a0808',
@@ -97,6 +98,8 @@ export const ZONE_THEMES: Record<string, ZoneTheme> = {
             'A low-frequency vibration you feel more than hear.',
             'Something here is not right. The geometry seems wrong.',
         ],
+        wallSymbol: '%',
+        floorSymbol: ',',
     },
     ashveil: {
         wallColor: '#281018',
@@ -167,6 +170,7 @@ export const ZONE_THEMES: Record<string, ZoneTheme> = {
             'Symbols you don\'t recognize mark every surface.',
             'The Origin Node vibrates with primordial energy.',
         ],
+        floorSymbol: '~',
     },
     frontier: {
         wallColor: '#0a2808',

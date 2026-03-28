@@ -118,6 +118,38 @@ const COMBAT_TEMPLATES: RoomTemplate[] = [
         interactSlots: [[1, 1], [1, 8], [6, 4]],
         playerSpawn: [6, 4],
     },
+    {
+        // T-shaped corridor: wide upper chamber, narrow lower approach
+        grid: [
+            '####++####',
+            '#........#',
+            '#........#',
+            '###....###',
+            '  #....#  ',
+            '  #....#  ',
+            '  #....#  ',
+            '  ##++##  ',
+        ],
+        enemySlots: [[1, 2], [1, 7], [2, 4], [2, 5]],
+        interactSlots: [[1, 1], [1, 8], [3, 4]],
+        playerSpawn: [6, 4],
+    },
+    {
+        // Pillared room: two rows of supports create three combat lanes
+        grid: [
+            '####++####',
+            '#........#',
+            '#.##..##.#',
+            '#........#',
+            '#........#',
+            '#.##..##.#',
+            '#........#',
+            '####++####',
+        ],
+        enemySlots: [[1, 2], [1, 7], [3, 4], [4, 4]],
+        interactSlots: [[2, 4], [5, 4], [1, 8]],
+        playerSpawn: [6, 4],
+    },
 ];
 
 // ── Boss templates ───────────────────────────────────────────────────────────
@@ -153,6 +185,23 @@ const BOSS_TEMPLATES: RoomTemplate[] = [
         ],
         enemySlots: [[2, 4], [4, 3], [4, 6]],
         interactSlots: [[1, 1], [1, 8], [6, 4]],
+        playerSpawn: [7, 4],
+    },
+    {
+        // Arena: outer ring of pillars, boss in the center
+        grid: [
+            '####++####',
+            '#.##..##.#',
+            '#........#',
+            '#........#',
+            '#........#',
+            '#........#',
+            '#.##..##.#',
+            '#........#',
+            '####><####',
+        ],
+        enemySlots: [[3, 4], [4, 4]],
+        interactSlots: [[2, 1], [2, 8], [5, 1], [5, 8]],
         playerSpawn: [7, 4],
     },
 ];
@@ -221,6 +270,22 @@ const HAZARD_TEMPLATES: RoomTemplate[] = [
         ],
         enemySlots: [],
         interactSlots: [[1, 4], [3, 7], [5, 2]],
+        playerSpawn: [6, 4],
+    },
+    {
+        // Gauntlet: two rows of traps force the player to weave through
+        grid: [
+            '####++####',
+            '#........#',
+            '#^..^..^.#',
+            '#........#',
+            '#........#',
+            '#.^..^..^#',
+            '#........#',
+            '####++####',
+        ],
+        enemySlots: [],
+        interactSlots: [[1, 1], [1, 8], [3, 4]],
         playerSpawn: [6, 4],
     },
 ];

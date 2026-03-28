@@ -250,7 +250,22 @@ export function renderAsciiRoom(
             const color  = isRevealed ? symbolColor(ch, zoneTheme) : '#1e2232';
             const alpha  = isRevealed ? 1.0 : 0.20;
 
-            const txt = scene.add.text(cx, cy, isRevealed ? ch : (ch === '#' ? '#' : '?'), {
+            // Apply zone-theme symbol overrides for revealed cells.
+            // Logical grid always uses '#'/'.' for movement, but the display char
+            // can be overridden per zone for visual flavor.
+            let displayCh: string;
+            if (!isRevealed) {
+                // Hint structural shape even when unrevealed
+                displayCh = (ch === '#') ? (zoneTheme?.wallSymbol ?? '#') : '?';
+            } else if (ch === '#' && zoneTheme?.wallSymbol) {
+                displayCh = zoneTheme.wallSymbol;
+            } else if (ch === '.' && zoneTheme?.floorSymbol) {
+                displayCh = zoneTheme.floorSymbol;
+            } else {
+                displayCh = ch;
+            }
+
+            const txt = scene.add.text(cx, cy, displayCh, {
                 fontFamily: MONO_FONT,
                 fontSize: CELL_FONT,
                 color,
