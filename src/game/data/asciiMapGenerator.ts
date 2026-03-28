@@ -370,11 +370,13 @@ export function generateAsciiMap(room: Room): void {
         grid[pR][pC] = '@';
     }
 
-    // Place enemies
+    // Place enemies — never on the player spawn tile
     const enemyPlacements: RoomEnemyPlacement[] = [];
     const isBossRoom = room.type === 'boss';
     const enemiesToPlace = [...room.enemies];
-    const availableEnemySlots = [...template.enemySlots];
+    const availableEnemySlots = template.enemySlots.filter(
+        ([eR, eC]) => !(eR === pR && eC === pC),
+    );
 
     for (let i = 0; i < enemiesToPlace.length && availableEnemySlots.length > 0; i++) {
         const slotIdx = Math.floor(rand() * availableEnemySlots.length);
@@ -392,7 +394,8 @@ export function generateAsciiMap(room: Room): void {
         }
     }
 
-    // Place interactables (1-2 for combat/entrance, 2-3 for loot, 1 for hazard)
+    // Place interactables — only on floor tiles not occupied by enemies or player
+    // (1-2 for combat/entrance, 2-3 for loot, 1 for hazard)
     const interactables: RoomInteractable[] = [];
     const availableInteractSlots = [...template.interactSlots];
     let numInteract: number;
@@ -405,6 +408,7 @@ export function generateAsciiMap(room: Room): void {
         const [iR, iC] = availableInteractSlots.splice(slotIdx, 1)[0];
         const pick = pickInteractSymbol(room.type, rand);
 
+        // Only place on an unoccupied floor tile
         if (iR < grid.length && iC < grid[iR].length && grid[iR][iC] === '.') {
             grid[iR][iC] = pick.symbol;
             interactables.push({

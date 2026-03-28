@@ -194,7 +194,7 @@ export const ZONE_THEMES: Record<string, ZoneTheme> = {
  */
 export function getZoneTheme(dungeonId: string): ZoneTheme {
     // Match by dungeon ID prefix or keyword
-    if (dungeonId.includes('relay') || dungeonId.includes('transit-node') && !dungeonId.includes('zero'))
+    if ((dungeonId.includes('relay') || dungeonId.includes('transit-node')) && !dungeonId.includes('zero'))
         return ZONE_THEMES.relay;
     if (dungeonId.includes('ghost') || dungeonId.includes('transit-node-zero'))
         return ZONE_THEMES.ghost;

@@ -634,7 +634,11 @@ export class DungeonScene extends Scene {
 
             // Interaction log area (below the map, updates when tiles are clicked)
             const logY = 108 + (this.asciiRender?.height ?? 0);
-            this.addContentText(40, logY, 'TACTICAL SCAN — click highlighted symbols to interact  ·  green tiles: click to move', {
+            const hasInteractables = (room.interactables?.length ?? 0) > 0;
+            const hintParts: string[] = [];
+            if (hasInteractables) hintParts.push('click highlighted symbols to interact');
+            hintParts.push('green tiles: click to move');
+            this.addContentText(40, logY, `TACTICAL SCAN — ${hintParts.join('  ·  ')}`, {
                 fontFamily: 'Arial', fontSize: 11, color: C.textSecond,
             });
         } else {
@@ -1482,7 +1486,7 @@ export class DungeonScene extends Scene {
         } else {
             cb.log.push('You brace and dodge — reduced incoming damage this turn.');
             const rawDmg = Phaser.Math.Between(enemy.attackMin, enemy.attackMax);
-            const dodgeDmg = Math.max(1, Math.floor(rawDmg * DODGE_DAMAGE_MULT) - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus));
+            const dodgeDmg = Math.max(1, Math.floor((rawDmg - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus)) * DODGE_DAMAGE_MULT));
             const { dmg: reduced, covered } = this.applyCoverReduction(dodgeDmg);
             GameState.damagePilot(reduced);
             cb.damageTakenThisRoom += reduced;
@@ -1609,7 +1613,6 @@ export class DungeonScene extends Scene {
         const enrageMult = cb.bossEnrageActive ? BOSS_ENRAGE_MULTIPLIER : 1.0;
         const baseDmg = Math.max(1,
             Math.floor(rawDmg * spec.damageMult * enrageMult)
-            - 2
             - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus),
         );
         const { dmg, covered } = this.applyCoverReduction(baseDmg);
@@ -1748,7 +1751,6 @@ export class DungeonScene extends Scene {
         const enrageMult = cb.bossEnrageActive ? BOSS_ENRAGE_MULTIPLIER : 1.0;
         const scanDmg = Math.max(1,
             Math.floor(rawDmg * 0.5 * enrageMult)
-            - 2
             - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus),
         );
         const { dmg, covered } = this.applyCoverReduction(scanDmg);
@@ -1782,7 +1784,7 @@ export class DungeonScene extends Scene {
         // Boss enrage multiplier kicks in once the enrage flag is set
         const enrageMult = cb.bossEnrageActive ? BOSS_ENRAGE_MULTIPLIER : 1.0;
 
-        const baseDmg = Math.max(1, Math.floor(rawDmg * (isEnemyCrit ? CRIT_MULTIPLIER : 1.0) * enrageMult) - 2 - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus));
+        const baseDmg = Math.max(1, Math.floor(rawDmg * (isEnemyCrit ? CRIT_MULTIPLIER : 1.0) * enrageMult) - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus));
         const { dmg, covered } = this.applyCoverReduction(baseDmg);
         GameState.damagePilot(dmg);
         cb.damageTakenThisRoom += dmg;
@@ -1858,8 +1860,11 @@ export class DungeonScene extends Scene {
             this.buildHeader();
             this.renderCombat();
         } else {
-            // All enemies cleared
+            // All enemies cleared — announce flawless before transitioning
             this.rooms[this.currentRoomIdx].cleared = true;
+            if ((cb.damageTakenThisRoom) === 0) {
+                cb.log.push('★ No damage taken — FLAWLESS bonus incoming!');
+            }
             this.showPostCombat();
         }
     }

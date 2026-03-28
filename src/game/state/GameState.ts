@@ -68,6 +68,8 @@ interface State {
     tutorialSeen: boolean;
     /** IDs of lore entries the player has unlocked (shown in Codex panel). */
     unlockedLoreIds: string[];
+    /** Which hub the player is currently docked at ('meridian' or 'farpoint'). */
+    currentHubId: 'meridian' | 'farpoint';
 }
 
 const state: State = {
