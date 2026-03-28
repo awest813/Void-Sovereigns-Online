@@ -79,6 +79,32 @@ const COMBAT_REPOSITION_RANGE = 2;
 const DODGE_DAMAGE_MULT = 0.35;
 /** Maximum number of entries kept in the tile-interaction log shown below the ASCII map. */
 const MAX_INTERACTION_LOG_ENTRIES = 3;
+// ── Level milestone passive bonuses ─────────────────────────────────────────
+/** Level at which Tactical Edge activates: +8% crit chance on all player attacks. */
+const LEVEL_CRIT_BONUS_THRESHOLD = 3;
+/** Additive crit chance bonus from Tactical Edge (level 3+). */
+const LEVEL_CRIT_BONUS = 0.08;
+/** Level at which Hardened Pilot activates: 5% flat reduction to all incoming damage. */
+const LEVEL_DMG_REDUCE_THRESHOLD = 5;
+/** Fraction of incoming damage absorbed by Hardened Pilot (level 5+). */
+const LEVEL_DMG_REDUCE = 0.05;
+/** Level at which Veteran Instinct activates: Momentum triggers after 2 hits instead of 3. */
+const VETERAN_INSTINCT_THRESHOLD = 8;
+/** Reduced hit streak required for Momentum while Veteran Instinct is active. */
+const VETERAN_MOMENTUM_STREAK = 2;
+/** Level at which the OVERCHARGE combat action is unlocked. */
+const OVERCHARGE_UNLOCK_LEVEL = 10;
+/** HP cost deducted from the pilot when OVERCHARGE is used. */
+const OVERCHARGE_HP_COST = 20;
+/** Extra damage multiplier applied on top of a forced crit during OVERCHARGE. */
+const OVERCHARGE_DMG_MULT = 1.8;
+// ── Fragmentation Charge ─────────────────────────────────────────────────────
+/** Minimum direct damage dealt by a Fragmentation Charge (ignores enemy defense). */
+const FRAG_CHARGE_DMG_MIN = 30;
+/** Maximum direct damage dealt by a Fragmentation Charge (ignores enemy defense). */
+const FRAG_CHARGE_DMG_MAX = 50;
+/** DEF reduction applied to the current enemy while WEAKENED is active. */
+const WEAKENED_DEF_REDUCTION = 8;
 /** Milliseconds to wait after an enemy makes contact before auto-starting combat. */
 const ENEMY_CONTACT_DELAY_MS = 350;
 /** Varied hit messages for normal player attacks. */
@@ -152,6 +178,8 @@ interface CombatState {
     playerHitStreak: number;
     /** Total HP damage dealt to the player during this combat room (used for flawless detection). */
     damageTakenThisRoom: number;
+    /** Remaining turns the current enemy is WEAKENED (reduces their effective defense). */
+    enemyWeakenedTurns: number;
 }
 
 export class DungeonScene extends Scene {
@@ -394,7 +422,9 @@ export class DungeonScene extends Scene {
         if (line.startsWith('⚡'))                           return '#ffdd00'; // player crit — gold
         if (line.startsWith('⚠'))                           return C.textWarn; // generic warning — amber
         if (line.startsWith('💚'))                           return C.textSuccess; // healing/regen — green
+        if (line.startsWith('🔥 OVERCHARGE'))               return '#ff4488'; // overcharge action — hot pink
         if (line.startsWith('🔥') || line.includes('BURNING')) return '#ff8844'; // burn — orange-red
+        if (line.startsWith('💥 FRAG') || line.includes('WEAKENED')) return '#cc44ff'; // frag/weaken — purple
         if (line.startsWith('💥'))                           return '#ffdd44'; // combat stim — yellow
         // Substring checks
         if (line.includes('PHASE 2') || line.includes('OVERCHARGE INITIATED')) return '#ff6622'; // boss escalation
@@ -1027,6 +1057,7 @@ export class DungeonScene extends Scene {
             enemyExploitUsed: false,
             playerHitStreak: 0,
             damageTakenThisRoom: 0,
+            enemyWeakenedTurns: 0,
         };
 
         const firstEnemy = this.combat.enemies[0];
@@ -1149,6 +1180,7 @@ export class DungeonScene extends Scene {
         const anomalyKits = GameState.countItem('anomaly-field-kit');
         const nanoKits = GameState.countItem('nano-repair-kit');
         const stimKits = GameState.countItem('combat-stim');
+        const fragCharges = GameState.countItem('frag-charge');
 
         const kitsLine1 = [
             { label: 'Med:', val: medKits },
@@ -1158,6 +1190,7 @@ export class DungeonScene extends Scene {
         const kitsLine2 = [
             { label: 'Nano-Rep:', val: nanoKits },
             { label: 'Stim:', val: stimKits },
+            { label: 'Frag:', val: fragCharges },
         ];
         const drawKitLine = (x: number, y: number, kits: {label: string; val: number}[]) => {
             let curX = x;
@@ -1193,6 +1226,14 @@ export class DungeonScene extends Scene {
             statusY += 20;
         }
 
+        // WEAKENED enemy debuff indicator
+        if (cb.enemyWeakenedTurns > 0) {
+            this.addContentText(80, statusY, `⬇ ${enemy.name}: WEAKENED — −${WEAKENED_DEF_REDUCTION} DEF (${cb.enemyWeakenedTurns} turn${cb.enemyWeakenedTurns !== 1 ? 's' : ''})`, {
+                fontFamily: 'Arial', fontSize: 12, color: '#cc44ff',
+            });
+            statusY += 20;
+        }
+
         // Cover indicator — shown when the player is adjacent to a wall on the grid
         const inCover = this.gridState?.isInCover() ?? false;
         if (inCover) {
@@ -1202,13 +1243,27 @@ export class DungeonScene extends Scene {
             statusY += 20;
         }
 
-        // Momentum indicator — show when one hit away from or at threshold
-        if (cb.playerHitStreak >= MOMENTUM_THRESHOLD - 1) {
-            const bonusLabel = cb.playerHitStreak >= MOMENTUM_THRESHOLD
+        // Momentum indicator — uses level-based effective threshold
+        const effectiveThreshold = this.effectiveMomentumThreshold();
+        if (cb.playerHitStreak >= effectiveThreshold - 1) {
+            const bonusLabel = cb.playerHitStreak >= effectiveThreshold
                 ? `⚡ MOMENTUM ×${cb.playerHitStreak} — +25% DAMAGE ACTIVE`
                 : `⚡ MOMENTUM ×${cb.playerHitStreak} — building… (1 more)`;
             this.addContentText(80, statusY, bonusLabel, {
                 fontFamily: 'Arial', fontSize: 12, color: '#ffdd44',
+            });
+            statusY += 20;
+        }
+
+        // Level milestone passive badges (Tactical Edge, Hardened Pilot, Veteran Instinct, Overcharge Protocol)
+        if (gs.level >= LEVEL_CRIT_BONUS_THRESHOLD) {
+            const passives: string[] = [];
+            passives.push(`🎯 TACTICAL EDGE (+${Math.round(LEVEL_CRIT_BONUS * 100)}% crit)`);
+            if (gs.level >= LEVEL_DMG_REDUCE_THRESHOLD) passives.push(`🔰 HARDENED PILOT (−${Math.round(LEVEL_DMG_REDUCE * 100)}% dmg in)`);
+            if (gs.level >= VETERAN_INSTINCT_THRESHOLD) passives.push(`⚡ VETERAN INSTINCT (2-hit momentum)`);
+            if (gs.level >= OVERCHARGE_UNLOCK_LEVEL) passives.push(`🔥 OVERCHARGE UNLOCKED`);
+            this.addContentText(80, statusY, `PASSIVE: ${passives.join('  ·  ')}`, {
+                fontFamily: 'Arial', fontSize: 12, color: '#99aacc',
             });
         }
 
@@ -1227,18 +1282,26 @@ export class DungeonScene extends Scene {
             nanoKits > 0 ? '#44dd88' : C.textSecond, nanoKits === 0);
         this.addActionButton(410, actionY + 48, '[ COMBAT STIM ]', () => this.combatUseItem('combat-stim'),
             stimKits > 0 ? '#ffdd44' : C.textSecond, stimKits === 0);
-        this.addActionButton(650, actionY + 48, '[ ANOMALY KIT ]', () => this.combatUseItem('anomaly-field-kit'),
+        this.addActionButton(610, actionY + 48, '[ ANOMALY KIT ]', () => this.combatUseItem('anomaly-field-kit'),
             anomalyKits > 0 ? '#88ddff' : C.textSecond, anomalyKits === 0);
+        this.addActionButton(820, actionY + 48, '[ FRAG CHARGE ]', () => this.combatUseItem('frag-charge'),
+            fragCharges > 0 ? '#cc44ff' : C.textSecond, fragCharges === 0);
 
-        // Row 3 — intel / reposition / exploit
-        this.addActionButton(210, actionY + 96, '[ SCAN TARGET ]', () => this.combatScan(), C.textAccent);
+        // Row 3 — intel / reposition / exploit / overcharge
+        this.addActionButton(155, actionY + 96, '[ SCAN TARGET ]', () => this.combatScan(), C.textAccent);
         if (this.gridState) {
-            this.addActionButton(490, actionY + 96, '[ REPOSITION ]',
+            this.addActionButton(400, actionY + 96, '[ REPOSITION ]',
                 () => this.combatReposition(this.rooms[this.currentRoomIdx]), '#44aaff');
         }
         if (cb.enemyScanned && !cb.enemyExploitUsed) {
-            this.addActionButton(790, actionY + 96, '[ EXPLOIT SCAN DATA ]',
+            this.addActionButton(650, actionY + 96, '[ EXPLOIT SCAN DATA ]',
                 () => this.combatExploit(), '#ffaa00');
+        }
+        if (gs.level >= OVERCHARGE_UNLOCK_LEVEL) {
+            const canOvercharge = gs.pilotHull > OVERCHARGE_HP_COST;
+            this.addActionButton(870, actionY + 96, `[ OVERCHARGE −${OVERCHARGE_HP_COST}HP ]`,
+                () => this.combatOvercharge(),
+                canOvercharge ? '#ff4488' : C.textSecond, !canOvercharge);
         }
 
         // Row 4 — retreat
@@ -1313,13 +1376,24 @@ export class DungeonScene extends Scene {
     }
 
     /**
+     * Returns the effective Momentum hit-streak threshold for the current player level.
+     * Level 8+ reduces the requirement from 3 consecutive hits to 2 (Veteran Instinct).
+     */
+    private effectiveMomentumThreshold(): number {
+        return GameState.get().level >= VETERAN_INSTINCT_THRESHOLD
+            ? VETERAN_MOMENTUM_STREAK
+            : MOMENTUM_THRESHOLD;
+    }
+
+    /**
      * Increment the hit streak and log when momentum activates.
      * Call after any player action that doesn't trigger an enemy counter-attack for damage.
      */
     private incrementMomentum() {
         const cb = this.combat!;
+        const threshold = this.effectiveMomentumThreshold();
         cb.playerHitStreak++;
-        if (cb.playerHitStreak === MOMENTUM_THRESHOLD) {
+        if (cb.playerHitStreak === threshold) {
             cb.log.push(`⚡ MOMENTUM ×${cb.playerHitStreak} — +25% damage bonus activated!`);
         }
     }
@@ -1426,15 +1500,20 @@ export class DungeonScene extends Scene {
         }
 
         // Apply Momentum bonus if streak threshold reached
-        const momentumMult = cb.playerHitStreak >= MOMENTUM_THRESHOLD ? (1.0 + MOMENTUM_DAMAGE_BONUS) : 1.0;
+        const threshold = this.effectiveMomentumThreshold();
+        const momentumMult = cb.playerHitStreak >= threshold ? (1.0 + MOMENTUM_DAMAGE_BONUS) : 1.0;
 
         // Player attack — base damage scales +PLAYER_LEVEL_DAMAGE_BONUS per level above 1
         const levelBonus = (gs.level - 1) * PLAYER_LEVEL_DAMAGE_BONUS;
         const rawRoll = Phaser.Math.Between(PLAYER_BASE_DMG_MIN + levelBonus, PLAYER_BASE_DMG_MAX + levelBonus);
-        const isPlayerCrit = Math.random() < PLAYER_CRIT_CHANCE;
+        // Tactical Edge (level 3+): +8% crit chance
+        const critChance = PLAYER_CRIT_CHANCE + (gs.level >= LEVEL_CRIT_BONUS_THRESHOLD ? LEVEL_CRIT_BONUS : 0);
+        const isPlayerCrit = Math.random() < critChance;
+        // WEAKENED debuff: reduce enemy effective defense
+        const effectiveDefense = cb.enemyWeakenedTurns > 0 ? Math.max(0, enemy.defense - WEAKENED_DEF_REDUCTION) : enemy.defense;
         const playerDmg = Math.max(1, Math.floor(
             rawRoll * (isPlayerCrit ? CRIT_MULTIPLIER : 1.0) * disruptMult * boostMult * momentumMult,
-        ) - enemy.defense);
+        ) - effectiveDefense);
         enemy.currentHp = Math.max(0, enemy.currentHp - playerDmg);
 
         // Build combat log message
@@ -1443,6 +1522,7 @@ export class DungeonScene extends Scene {
         if (disrupted && disruptMult < 1.0) suffixes.push('[disrupted]');
         if (boosted) suffixes.push('[stimmed]');
         if (momentumMult > 1.0) suffixes.push('[momentum]');
+        if (cb.enemyWeakenedTurns > 0) suffixes.push('[weakened]');
         const suffix = suffixes.length > 0 ? `  ${suffixes.join(' ')}` : '';
         cb.log.push(`${hitMsg} ${playerDmg} damage.${suffix} (${enemy.currentHp}/${enemy.hp} HP)`);
 
@@ -1487,11 +1567,16 @@ export class DungeonScene extends Scene {
             cb.log.push('You brace and dodge — reduced incoming damage this turn.');
             const rawDmg = Phaser.Math.Between(enemy.attackMin, enemy.attackMax);
             const dodgeDmg = Math.max(1, Math.floor((rawDmg - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus)) * DODGE_DAMAGE_MULT));
-            const { dmg: reduced, covered } = this.applyCoverReduction(dodgeDmg);
+            const { dmg: postCover, covered } = this.applyCoverReduction(dodgeDmg);
+            // Hardened Pilot (level 5+): additional 5% incoming damage reduction
+            const reduced = gs.level >= LEVEL_DMG_REDUCE_THRESHOLD
+                ? Math.max(1, Math.floor(postCover * (1 - LEVEL_DMG_REDUCE)))
+                : postCover;
             GameState.damagePilot(reduced);
             cb.damageTakenThisRoom += reduced;
             // Taking damage breaks the streak
-            if (cb.playerHitStreak >= MOMENTUM_THRESHOLD) cb.log.push('Momentum broken.');
+            const effectiveThreshold = this.effectiveMomentumThreshold();
+            if (cb.playerHitStreak >= effectiveThreshold) cb.log.push('Momentum broken.');
             cb.playerHitStreak = 0;
             const coverLabel = covered ? ' [cover]' : '';
             cb.log.push(`${enemy.name} attacks for ${reduced} damage (reduced${coverLabel}). Pilot HP: ${GameState.get().pilotHull}`);
@@ -1555,6 +1640,19 @@ export class DungeonScene extends Scene {
             }
             this.buildHeader();
             if (!this.checkPlayerDeath()) this.renderCombat();
+        } else if (itemId === 'frag-charge') {
+            // Fragmentation Charge: direct damage (bypasses defense) + WEAKENED debuff, no counter-attack
+            const fragDmg = Phaser.Math.Between(FRAG_CHARGE_DMG_MIN, FRAG_CHARGE_DMG_MAX);
+            enemy.currentHp = Math.max(0, enemy.currentHp - fragDmg);
+            cb.enemyWeakenedTurns = 2;
+            cb.log.push(`💥 FRAG CHARGE — ${fragDmg} direct damage (ignores armor)! ${enemy.name} is WEAKENED (−${WEAKENED_DEF_REDUCTION} DEF) for 2 turns. (${enemy.currentHp}/${enemy.hp} HP)`);
+            this.checkBossPhases(enemy);
+            if (enemy.currentHp <= 0) {
+                this.onEnemyDefeated();
+                return;
+            }
+            this.buildHeader();
+            if (!this.checkPlayerDeath()) this.renderCombat();
         } else {
             // Enemy still attacks
             this.processEnemyTurn();
@@ -1576,6 +1674,14 @@ export class DungeonScene extends Scene {
         // Move the active enemy one step toward the player on the grid
         if (this.gridState) {
             this.gridState.stepEnemyToward(enemy.id);
+        }
+
+        // Decrement WEAKENED debuff (if active)
+        if (cb.enemyWeakenedTurns > 0) {
+            cb.enemyWeakenedTurns--;
+            if (cb.enemyWeakenedTurns === 0) {
+                cb.log.push(`${enemy.name} recovers — WEAKENED state cleared.`);
+            }
         }
 
         // Fire the queued special — spec is guaranteed because enemyCharging is only set
@@ -1615,13 +1721,17 @@ export class DungeonScene extends Scene {
             Math.floor(rawDmg * spec.damageMult * enrageMult)
             - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus),
         );
-        const { dmg, covered } = this.applyCoverReduction(baseDmg);
+        const { dmg: postCover, covered } = this.applyCoverReduction(baseDmg);
+        // Hardened Pilot (level 5+): additional 5% incoming damage reduction
+        const dmg = gs.level >= LEVEL_DMG_REDUCE_THRESHOLD
+            ? Math.max(1, Math.floor(postCover * (1 - LEVEL_DMG_REDUCE)))
+            : postCover;
         GameState.damagePilot(dmg);
         cb.damageTakenThisRoom += dmg;
 
         // Break momentum streak when the player takes damage from a special
         if (dmg > 0) {
-            if (cb.playerHitStreak >= MOMENTUM_THRESHOLD) {
+            if (cb.playerHitStreak >= this.effectiveMomentumThreshold()) {
                 cb.log.push('Momentum broken.');
             }
             cb.playerHitStreak = 0;
@@ -1689,17 +1799,21 @@ export class DungeonScene extends Scene {
         }
 
         // Apply Momentum bonus if streak threshold reached
-        const momentumMult = cb.playerHitStreak >= MOMENTUM_THRESHOLD ? (1.0 + MOMENTUM_DAMAGE_BONUS) : 1.0;
+        const exploitThreshold = this.effectiveMomentumThreshold();
+        const momentumMult = cb.playerHitStreak >= exploitThreshold ? (1.0 + MOMENTUM_DAMAGE_BONUS) : 1.0;
 
         const levelBonus = (gs.level - 1) * PLAYER_LEVEL_DAMAGE_BONUS;
         const rawRoll = Phaser.Math.Between(PLAYER_BASE_DMG_MIN + levelBonus, PLAYER_BASE_DMG_MAX + levelBonus);
-        const playerDmg = Math.max(1, Math.floor(rawRoll * EXPLOIT_DAMAGE_MULT * disruptMult * boostMult * momentumMult) - enemy.defense);
+        // WEAKENED debuff: reduce enemy effective defense
+        const effectiveDefense = cb.enemyWeakenedTurns > 0 ? Math.max(0, enemy.defense - WEAKENED_DEF_REDUCTION) : enemy.defense;
+        const playerDmg = Math.max(1, Math.floor(rawRoll * EXPLOIT_DAMAGE_MULT * disruptMult * boostMult * momentumMult) - effectiveDefense);
         enemy.currentHp = Math.max(0, enemy.currentHp - playerDmg);
 
         const suffixes: string[] = [];
         if (disrupted && disruptMult < 1.0) suffixes.push('[disrupted]');
         if (boosted) suffixes.push('[stimmed]');
         if (momentumMult > 1.0) suffixes.push('[momentum]');
+        if (cb.enemyWeakenedTurns > 0) suffixes.push('[weakened]');
         const suffix = suffixes.length > 0 ? `  ${suffixes.join(' ')}` : '';
         cb.log.push(`🎯 EXPLOIT — scan data leveraged for a precision strike! ${playerDmg} damage.${suffix} (${enemy.currentHp}/${enemy.hp} HP)`);
 
@@ -1720,9 +1834,84 @@ export class DungeonScene extends Scene {
     }
 
     /**
-     * SCAN action: reveals detailed enemy intel in the combat log.
-     * The enemy fires back at 50% damage (player is distracted by scanning).
+     * OVERCHARGE action (unlocked at level 10): burn OVERCHARGE_HP_COST HP to unleash
+     * a guaranteed critical strike with 1.8× extra damage multiplier.
+     * The enemy still counter-attacks — the risk is trading HP for burst damage.
      */
+    private combatOvercharge() {
+        const cb = this.combat!;
+        const enemy = cb.enemies[cb.enemyIndex];
+        const gs = GameState.get();
+
+        if (gs.pilotHull <= OVERCHARGE_HP_COST) {
+            cb.log.push(`Insufficient HP — OVERCHARGE requires more than ${OVERCHARGE_HP_COST} HP.`);
+            this.renderCombat();
+            return;
+        }
+
+        if (this.processPlayerTurnStart()) return;
+
+        // Spend HP to power the overcharge
+        GameState.damagePilot(OVERCHARGE_HP_COST);
+        cb.damageTakenThisRoom += OVERCHARGE_HP_COST;
+        this.buildHeader();
+        if (this.checkPlayerDeath()) return;
+
+        // Apply DISRUPTED penalty if active
+        const disrupted = cb.playerStatus.find(s => s.type === 'disrupted');
+        const disruptMult = disrupted ? DISRUPTED_ATTACK_MULT : 1.0;
+        if (disrupted) {
+            disrupted.turnsLeft--;
+            if (disrupted.turnsLeft <= 0) {
+                cb.playerStatus = cb.playerStatus.filter(s => s.type !== 'disrupted');
+                cb.log.push('Disruption cleared.');
+            }
+        }
+
+        // Apply BOOSTED status if active (+50% attack output)
+        const boosted = cb.playerStatus.find(s => s.type === 'boosted');
+        const boostMult = boosted ? (1.0 + BOOSTED_ATTACK_MULT) : 1.0;
+        if (boosted) {
+            boosted.turnsLeft--;
+            if (boosted.turnsLeft <= 0) {
+                cb.playerStatus = cb.playerStatus.filter(s => s.type !== 'boosted');
+                cb.log.push('Combat stim wearing off — attack boost fading.');
+            }
+        }
+
+        // Apply Momentum bonus if streak threshold reached
+        const overchargeThreshold = this.effectiveMomentumThreshold();
+        const momentumMult = cb.playerHitStreak >= overchargeThreshold ? (1.0 + MOMENTUM_DAMAGE_BONUS) : 1.0;
+
+        // OVERCHARGE: forced crit × OVERCHARGE_DMG_MULT — but no random crit variance
+        const levelBonus = (gs.level - 1) * PLAYER_LEVEL_DAMAGE_BONUS;
+        const rawRoll = Phaser.Math.Between(PLAYER_BASE_DMG_MIN + levelBonus, PLAYER_BASE_DMG_MAX + levelBonus);
+        const effectiveDefense = cb.enemyWeakenedTurns > 0 ? Math.max(0, enemy.defense - WEAKENED_DEF_REDUCTION) : enemy.defense;
+        const playerDmg = Math.max(1, Math.floor(
+            rawRoll * CRIT_MULTIPLIER * OVERCHARGE_DMG_MULT * disruptMult * boostMult * momentumMult,
+        ) - effectiveDefense);
+        enemy.currentHp = Math.max(0, enemy.currentHp - playerDmg);
+
+        const suffixes: string[] = ['[auto-crit]', '[×1.8]'];
+        if (disrupted && disruptMult < 1.0) suffixes.push('[disrupted]');
+        if (boosted) suffixes.push('[stimmed]');
+        if (momentumMult > 1.0) suffixes.push('[momentum]');
+        if (cb.enemyWeakenedTurns > 0) suffixes.push('[weakened]');
+        cb.log.push(`🔥 OVERCHARGE — ${OVERCHARGE_HP_COST} HP burned for a supercharged strike! ${playerDmg} damage. ${suffixes.join(' ')} (${enemy.currentHp}/${enemy.hp} HP)`);
+
+        this.incrementMomentum();
+        this.checkBossPhases(enemy);
+
+        if (enemy.currentHp <= 0) {
+            this.onEnemyDefeated();
+            return;
+        }
+
+        // Enemy still counter-attacks
+        this.processEnemyTurn();
+    }
+
+
     private combatScan() {
         const cb = this.combat!;
         const enemy = cb.enemies[cb.enemyIndex];
@@ -1753,13 +1942,17 @@ export class DungeonScene extends Scene {
             Math.floor(rawDmg * 0.5 * enrageMult)
             - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus),
         );
-        const { dmg, covered } = this.applyCoverReduction(scanDmg);
+        const { dmg: postCoverScan, covered } = this.applyCoverReduction(scanDmg);
+        // Hardened Pilot (level 5+): additional 5% incoming damage reduction
+        const dmg = gs.level >= LEVEL_DMG_REDUCE_THRESHOLD
+            ? Math.max(1, Math.floor(postCoverScan * (1 - LEVEL_DMG_REDUCE)))
+            : postCoverScan;
         GameState.damagePilot(dmg);
         cb.damageTakenThisRoom += dmg;
 
         // Break momentum streak when the player takes damage during a scan
         if (dmg > 0) {
-            if (cb.playerHitStreak >= MOMENTUM_THRESHOLD) {
+            if (cb.playerHitStreak >= this.effectiveMomentumThreshold()) {
                 cb.log.push('Momentum broken.');
             }
             cb.playerHitStreak = 0;
@@ -1785,13 +1978,17 @@ export class DungeonScene extends Scene {
         const enrageMult = cb.bossEnrageActive ? BOSS_ENRAGE_MULTIPLIER : 1.0;
 
         const baseDmg = Math.max(1, Math.floor(rawDmg * (isEnemyCrit ? CRIT_MULTIPLIER : 1.0) * enrageMult) - shieldDamageReduction(gs.shipStatOverrides.shieldingBonus));
-        const { dmg, covered } = this.applyCoverReduction(baseDmg);
+        const { dmg: postCoverAttack, covered } = this.applyCoverReduction(baseDmg);
+        // Hardened Pilot (level 5+): additional 5% incoming damage reduction
+        const dmg = gs.level >= LEVEL_DMG_REDUCE_THRESHOLD
+            ? Math.max(1, Math.floor(postCoverAttack * (1 - LEVEL_DMG_REDUCE)))
+            : postCoverAttack;
         GameState.damagePilot(dmg);
         cb.damageTakenThisRoom += dmg;
 
         // Break the momentum streak when the player takes damage
         if (dmg > 0) {
-            if (cb.playerHitStreak >= MOMENTUM_THRESHOLD) {
+            if (cb.playerHitStreak >= this.effectiveMomentumThreshold()) {
                 cb.log.push('Momentum broken.');
             }
             cb.playerHitStreak = 0;
@@ -1856,6 +2053,7 @@ export class DungeonScene extends Scene {
             cb.enemyExploitUsed = false;
             cb.bossEnrageActive = false;
             cb.bossPhase2Active = false;
+            cb.enemyWeakenedTurns = 0; // WEAKENED is per-enemy
             cb.log.push(`${nextEnemy.name} engages.`);
             this.buildHeader();
             this.renderCombat();
