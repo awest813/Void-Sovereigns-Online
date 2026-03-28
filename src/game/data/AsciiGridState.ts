@@ -239,9 +239,8 @@ export class AsciiGridState {
      */
     updateAggro(): void {
         for (const enemy of this.enemies) {
-            const dist = Math.abs(enemy.pos.row - this.playerPos.row) +
-                         Math.abs(enemy.pos.col - this.playerPos.col);
-            if (dist <= enemy.aggroRange && this.hasLineOfSight(enemy.pos, this.playerPos)) {
+            if (AsciiGridState.manhattanDist(enemy.pos, this.playerPos) <= enemy.aggroRange
+                && this.hasLineOfSight(enemy.pos, this.playerPos)) {
                 enemy.aggrod = true;
             }
         }
@@ -351,6 +350,13 @@ export class AsciiGridState {
     getCell(pos: GridPos): string {
         if (!this.isInBounds(pos)) return '#';
         return this.grid[pos.row][pos.col];
+    }
+
+    /**
+     * Manhattan distance between two grid positions.
+     */
+    static manhattanDist(a: GridPos, b: GridPos): number {
+        return Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
     }
 
     /**

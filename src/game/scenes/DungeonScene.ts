@@ -77,6 +77,10 @@ const EXPLORATION_MOVE_RANGE = 3;
 const COMBAT_REPOSITION_RANGE = 2;
 /** Damage multiplier applied to enemy attacks when the player successfully dodges (not a full evade). */
 const DODGE_DAMAGE_MULT = 0.35;
+/** Maximum number of entries kept in the tile-interaction log shown below the ASCII map. */
+const MAX_INTERACTION_LOG_ENTRIES = 3;
+/** Milliseconds to wait after an enemy makes contact before auto-starting combat. */
+const ENEMY_CONTACT_DELAY_MS = 350;
 /** Varied hit messages for normal player attacks. */
 const PLAYER_HIT_MSGS = [
     'You attack for',
@@ -344,9 +348,9 @@ export class DungeonScene extends Scene {
             this.buildHeader();
         }
 
-        // Add to interaction log (keep last 3)
+        // Add to interaction log (keep last N)
         this.interactionLog.push({ message: result.message, color: result.color });
-        if (this.interactionLog.length > 3) {
+        if (this.interactionLog.length > MAX_INTERACTION_LOG_ENTRIES) {
             this.interactionLog.shift();
         }
 
@@ -613,10 +617,20 @@ export class DungeonScene extends Scene {
 
             // Room description on the right side, beside the map
             const descX = 40 + (this.asciiRender?.width ?? 0);
+            const descWidth = 980 - (this.asciiRender?.width ?? 0) - 60;
             this.addContentText(descX, 104, room.description, {
                 fontFamily: 'Arial', fontSize: 13, color: C.textPrimary, lineSpacing: 4,
-                wordWrap: { width: 980 - (this.asciiRender?.width ?? 0) - 60 },
+                wordWrap: { width: descWidth },
             });
+
+            // Zone atmosphere text (one-per-room flavor from zone theme)
+            if (this.zoneTheme?.atmosphereTexts?.length) {
+                const atmIdx = this.currentRoomIdx % this.zoneTheme.atmosphereTexts.length;
+                this.addContentText(descX, 170, `"${this.zoneTheme.atmosphereTexts[atmIdx]}"`, {
+                    fontFamily: 'Arial', fontSize: 11, color: C.textSecond, fontStyle: 'italic',
+                    wordWrap: { width: descWidth },
+                });
+            }
 
             // Interaction log area (below the map, updates when tiles are clicked)
             const logY = 108 + (this.asciiRender?.height ?? 0);
@@ -755,7 +769,75 @@ export class DungeonScene extends Scene {
     /** Handle a player movement click during room exploration — update grid, re-render. */
     private onMovePlayer(row: number, col: number, room: Room) {
         if (!this.gridState) return;
+
+        // Capture the cell character BEFORE movement (grid is mutated by movePlayer)
+        const cellAtTarget = this.gridState.getCell({ row, col });
+
         if (!this.gridState.movePlayer({ row, col })) return;
+
+        // ── Hazard tile damage ────────────────────────────────────────────
+        // Walking onto a '^' trap tile deals environmental damage.
+        if (cellAtTarget === '^') {
+            const trapDmg = Phaser.Math.Between(5, 12);
+            GameState.damagePilot(trapDmg);
+            this.buildHeader();
+            this.interactionLog.push({
+                message: `⚠ TRAP TRIGGERED — ${trapDmg} pilot HP damage taken`,
+                color: '#ff9922',
+            });
+            if (this.interactionLog.length > MAX_INTERACTION_LOG_ENTRIES) this.interactionLog.shift();
+
+            if (GameState.get().pilotHull <= 0) {
+                this.phase = 'dead';
+                this.clearContent();
+                this.showDeathScreen();
+                return;
+            }
+        }
+
+        // ── Enemy patrol step ─────────────────────────────────────────────
+        // After each player move in a combat/boss room, aggro'd enemies close in.
+        if (room.type === 'combat' || room.type === 'boss') {
+            // Snapshot which enemies were already aggro'd before this move
+            const prevAggrod = new Set(this.gridState.enemies.filter(e => e.aggrod).map(e => e.id));
+
+            // Re-evaluate aggro after the player moved
+            this.gridState.updateAggro();
+            let contactTriggered = false;
+
+            for (const enemy of this.gridState.enemies) {
+                if (!enemy.aggrod) continue;
+
+                const moved = this.gridState.stepEnemyToward(enemy.id);
+
+                // Notify once when an enemy newly aggros and starts moving
+                if (!prevAggrod.has(enemy.id) && moved) {
+                    this.interactionLog.push({
+                        message: `⚠ ${enemy.symbol} CONTACT — enemy closing!`,
+                        color: '#ff2244',
+                    });
+                    if (this.interactionLog.length > MAX_INTERACTION_LOG_ENTRIES) this.interactionLog.shift();
+                }
+
+                // If an enemy is now adjacent to the player, trigger combat
+                if (AsciiGridState.manhattanDist(enemy.pos, this.gridState.playerPos) <= 1) {
+                    contactTriggered = true;
+                }
+            }
+
+            // Re-render the grid so enemy positions update before combat starts
+            this.renderAsciiGrid(room);
+            this.renderInteractionLog();
+
+            if (contactTriggered) {
+                // Short delay so the player can see the enemy adjacent before combat
+                this.time.delayedCall(ENEMY_CONTACT_DELAY_MS, () => {
+                    if (this.phase === 'room-enter') this.startCombat(room);
+                });
+            }
+            return;
+        }
+
         // Re-render the grid with the new position and updated fog-of-war
         this.renderAsciiGrid(room);
         // Also refresh the interaction log so it stays at the correct Y position
