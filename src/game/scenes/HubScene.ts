@@ -359,6 +359,12 @@ const CONTRACT_LORE_UNLOCKS: Record<string, string[]> = {
     'redline-origin-architect-seal':    ['null-architect-origin-statement'],
 };
 
+/** Paired pointerdown / pointermove handlers used for touch drag-to-scroll. */
+type TouchScrollHandlers = [
+    onDown: (ptr: Phaser.Input.Pointer) => void,
+    onMove: (ptr: Phaser.Input.Pointer) => void,
+];
+
 export class HubScene extends Scene {
     private panels: Map<string, Phaser.GameObjects.Container> = new Map();
     private statusBarTexts: { credits: Phaser.GameObjects.Text; xp: Phaser.GameObjects.Text; level: Phaser.GameObjects.Text; pilotHp: Phaser.GameObjects.Text } | null = null;
@@ -374,6 +380,11 @@ export class HubScene extends Scene {
     private _codexScrollHandler: ((...args: unknown[]) => void) | null = null;
     // Wheel-scroll handler wired during inventory panel — removed when leaving that panel.
     private _inventoryScrollHandler: ((...args: unknown[]) => void) | null = null;
+    // Touch drag-to-scroll handlers (pointerdown + pointermove) for mobile devices.
+    private _contractTouchHandlers: TouchScrollHandlers | null = null;
+    private _npcTouchHandlers:      TouchScrollHandlers | null = null;
+    private _codexTouchHandlers:    TouchScrollHandlers | null = null;
+    private _inventoryTouchHandlers:TouchScrollHandlers | null = null;
 
     constructor() {
         super('Hub');
@@ -554,20 +565,40 @@ export class HubScene extends Scene {
             this.input.off('wheel', this._npcScrollHandler);
             this._npcScrollHandler = null;
         }
+        if (name !== 'npc-dialogue' && this._npcTouchHandlers) {
+            this.input.off('pointerdown', this._npcTouchHandlers[0]);
+            this.input.off('pointermove', this._npcTouchHandlers[1]);
+            this._npcTouchHandlers = null;
+        }
         // Tear down the contract board scroll handler whenever we leave that panel.
         if (name !== 'contracts' && this._contractScrollHandler) {
             this.input.off('wheel', this._contractScrollHandler);
             this._contractScrollHandler = null;
+        }
+        if (name !== 'contracts' && this._contractTouchHandlers) {
+            this.input.off('pointerdown', this._contractTouchHandlers[0]);
+            this.input.off('pointermove', this._contractTouchHandlers[1]);
+            this._contractTouchHandlers = null;
         }
         // Tear down the codex scroll handler whenever we leave that panel.
         if (name !== 'codex' && this._codexScrollHandler) {
             this.input.off('wheel', this._codexScrollHandler);
             this._codexScrollHandler = null;
         }
+        if (name !== 'codex' && this._codexTouchHandlers) {
+            this.input.off('pointerdown', this._codexTouchHandlers[0]);
+            this.input.off('pointermove', this._codexTouchHandlers[1]);
+            this._codexTouchHandlers = null;
+        }
         // Tear down the inventory scroll handler whenever we leave that panel.
         if (name !== 'inventory' && this._inventoryScrollHandler) {
             this.input.off('wheel', this._inventoryScrollHandler);
             this._inventoryScrollHandler = null;
+        }
+        if (name !== 'inventory' && this._inventoryTouchHandlers) {
+            this.input.off('pointerdown', this._inventoryTouchHandlers[0]);
+            this.input.off('pointermove', this._inventoryTouchHandlers[1]);
+            this._inventoryTouchHandlers = null;
         }
         // Re-populate the main panel so contract badges reflect the latest state.
         if (name === 'main') {
@@ -622,6 +653,35 @@ export class HubScene extends Scene {
                 }).setOrigin(0.5),
             );
         }
+    }
+
+    /**
+     * Wires drag-to-scroll (touch) on a masked scroll container.
+     * Registers pointerdown/pointermove on the scene input, stores the pair
+     * in the returned TouchScrollHandlers tuple, and updates both the caller's
+     * scroll-state variable (via getter/setter) and the container Y offset.
+     */
+    private addTouchScroll(
+        scrollCt: Phaser.GameObjects.Container,
+        maxScroll: number,
+        getScroll: () => number,
+        setScroll: (y: number) => void,
+    ): TouchScrollHandlers {
+        let startY = 0;
+        let startScroll = 0;
+        const onDown = (ptr: Phaser.Input.Pointer) => {
+            startY = ptr.y;
+            startScroll = getScroll();
+        };
+        const onMove = (ptr: Phaser.Input.Pointer) => {
+            if (!ptr.isDown) return;
+            const y = Math.max(0, Math.min(maxScroll, startScroll + (startY - ptr.y)));
+            setScroll(y);
+            scrollCt.setY(-y);
+        };
+        this.input.on('pointerdown', onDown);
+        this.input.on('pointermove', onMove);
+        return [onDown, onMove];
     }
 
     /**
@@ -840,6 +900,11 @@ export class HubScene extends Scene {
             this.input.off('wheel', this._contractScrollHandler);
             this._contractScrollHandler = null;
         }
+        if (this._contractTouchHandlers) {
+            this.input.off('pointerdown', this._contractTouchHandlers[0]);
+            this.input.off('pointermove', this._contractTouchHandlers[1]);
+            this._contractTouchHandlers = null;
+        }
 
         const contractMaskGfx = this.make.graphics({ x: 0, y: 0 });
         contractMaskGfx.fillRect(0, CONTRACT_VIEWPORT_TOP, 1024, CONTRACT_VIEWPORT_HEIGHT);
@@ -1029,6 +1094,12 @@ export class HubScene extends Scene {
                 scrollCt.setY(-contractScrollY);
             };
             this.input.on('wheel', this._contractScrollHandler);
+            // Touch drag-to-scroll for mobile.
+            this._contractTouchHandlers = this.addTouchScroll(
+                scrollCt, maxContractScroll,
+                () => contractScrollY,
+                (y) => { contractScrollY = y; },
+            );
         }
 
         this.makeButton(c, 512, 730, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
@@ -1315,6 +1386,11 @@ export class HubScene extends Scene {
             this.input.off('wheel', this._npcScrollHandler);
             this._npcScrollHandler = null;
         }
+        if (this._npcTouchHandlers) {
+            this.input.off('pointerdown', this._npcTouchHandlers[0]);
+            this.input.off('pointermove', this._npcTouchHandlers[1]);
+            this._npcTouchHandlers = null;
+        }
 
         const existing = this.panels.get('npc-dialogue');
         if (existing) existing.destroy();
@@ -1370,6 +1446,12 @@ export class HubScene extends Scene {
                 scrollCt.setY(-scrollY);
             };
             this.input.on('wheel', this._npcScrollHandler);
+            // Touch drag-to-scroll for mobile.
+            this._npcTouchHandlers = this.addTouchScroll(
+                scrollCt, maxScroll,
+                () => scrollY,
+                (y) => { scrollY = y; },
+            );
         }
 
         if (npc.services && npc.services.length > 0) {
@@ -1432,6 +1514,11 @@ export class HubScene extends Scene {
         if (this._codexScrollHandler) {
             this.input.off('wheel', this._codexScrollHandler);
             this._codexScrollHandler = null;
+        }
+        if (this._codexTouchHandlers) {
+            this.input.off('pointerdown', this._codexTouchHandlers[0]);
+            this.input.off('pointermove', this._codexTouchHandlers[1]);
+            this._codexTouchHandlers = null;
         }
 
         this.panelHeader(c, 'CODEX', 'Unlocked field intelligence and personal records');
@@ -1510,6 +1597,12 @@ export class HubScene extends Scene {
                 scrollCt.setY(-codexScrollY);
             };
             this.input.on('wheel', this._codexScrollHandler);
+            // Touch drag-to-scroll for mobile.
+            this._codexTouchHandlers = this.addTouchScroll(
+                scrollCt, maxScroll,
+                () => codexScrollY,
+                (y) => { codexScrollY = y; },
+            );
         }
 
         this.makeButton(c, 512, 730, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);
@@ -2184,6 +2277,11 @@ export class HubScene extends Scene {
             this.input.off('wheel', this._npcScrollHandler);
             this._npcScrollHandler = null;
         }
+        if (this._npcTouchHandlers) {
+            this.input.off('pointerdown', this._npcTouchHandlers[0]);
+            this.input.off('pointermove', this._npcTouchHandlers[1]);
+            this._npcTouchHandlers = null;
+        }
 
         const existing = this.panels.get('npc-dialogue');
         if (existing) existing.destroy();
@@ -2232,6 +2330,12 @@ export class HubScene extends Scene {
                 scrollCt.setY(-scrollY);
             };
             this.input.on('wheel', this._npcScrollHandler);
+            // Touch drag-to-scroll for mobile.
+            this._npcTouchHandlers = this.addTouchScroll(
+                scrollCt, maxScroll,
+                () => scrollY,
+                (y) => { scrollY = y; },
+            );
         }
 
         if (npc.services && npc.services.length > 0) {
@@ -2263,6 +2367,11 @@ export class HubScene extends Scene {
         if (this._inventoryScrollHandler) {
             this.input.off('wheel', this._inventoryScrollHandler);
             this._inventoryScrollHandler = null;
+        }
+        if (this._inventoryTouchHandlers) {
+            this.input.off('pointerdown', this._inventoryTouchHandlers[0]);
+            this.input.off('pointermove', this._inventoryTouchHandlers[1]);
+            this._inventoryTouchHandlers = null;
         }
 
         this.panelHeader(c, 'LOADOUT / INVENTORY', 'Field gear · Consumables · Salvage · Key items');
@@ -2424,6 +2533,12 @@ export class HubScene extends Scene {
                 scrollCt.setY(-scrollY);
             };
             this.input.on('wheel', this._inventoryScrollHandler);
+            // Touch drag-to-scroll for mobile.
+            this._inventoryTouchHandlers = this.addTouchScroll(
+                scrollCt, maxScroll,
+                () => scrollY,
+                (y) => { scrollY = y; },
+            );
         }
 
         this.makeButton(c, 512, 730, '[ ← BACK TO STATION ]', () => this.showPanel('main'), C.textSecond);

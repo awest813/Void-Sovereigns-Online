@@ -3,12 +3,24 @@
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- iOS home-screen / web-app hints -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Prevent iOS phone-number detection from reformatting game text -->
+    <meta name="format-detection" content="telephone=no" />
     <link rel="stylesheet" href="/style.css">
     <title>Void Sovereigns Online</title>
 </head>
 
 <body>
+    <!-- Portrait-mode warning shown by CSS media query on small portrait screens -->
+    <div id="portrait-overlay" aria-live="polite">
+        <div class="overlay-icon">📱</div>
+        <strong>Rotate your device</strong>
+        <p>Void Sovereigns Online is designed for landscape play.<br>Please rotate your device to continue.</p>
+    </div>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 

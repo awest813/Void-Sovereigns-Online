@@ -49,6 +49,8 @@ body {
     letter-spacing: 0.04em;
     text-transform: uppercase;
     transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+    /* Prevent double-tap zoom on mobile buttons */
+    touch-action: manipulation;
 
     &:hover {
         border-color: var(--color-accent);
@@ -65,5 +67,74 @@ body {
         cursor: not-allowed;
         border-color: rgba(232, 224, 204, 0.18);
         color: rgba(232, 224, 204, 0.25);
+    }
+}
+
+/* ── Mobile / touch device improvements ─────────────────────────────────── */
+
+/* Prevent browser pull-to-refresh and overscroll glow on the page. */
+html, body {
+    overscroll-behavior: none;
+}
+
+/* Stop the browser from panning or zooming when the player touches the game
+   canvas — all pointer input is handled by Phaser directly. */
+canvas {
+    touch-action: none;
+    /* Prevent iOS long-press context menu on the canvas. */
+    -webkit-touch-callout: none;
+}
+
+/* Prevent text selection highlights while interacting with the game. */
+#app, #game-container {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Portrait orientation warning overlay — only visible on portrait screens. */
+#portrait-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background-color: #04060e;
+    color: rgba(192, 216, 240, 0.9);
+    font-family: var(--font-ui);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    text-align: center;
+    padding: 32px;
+}
+
+#portrait-overlay .overlay-icon {
+    font-size: 3rem;
+    animation: rotate-hint 2s ease-in-out infinite alternate;
+}
+
+#portrait-overlay p {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: rgba(192, 216, 240, 0.75);
+}
+
+#portrait-overlay strong {
+    color: var(--color-accent);
+    font-size: 1.1rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+@keyframes rotate-hint {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(15deg); }
+}
+
+/* Show the overlay only when the device is taller than it is wide (portrait). */
+@media (max-width: 767px) and (orientation: portrait) {
+    #portrait-overlay {
+        display: flex;
     }
 }
