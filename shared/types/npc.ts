@@ -29,5 +29,7 @@ export interface NPC {
     dialogue: NPCDialogueLine[];
     /** Service IDs available from this NPC, e.g. "repair", "contracts", "trade". */
     services?: string[];
+    /** Whether the player can pursue a romance with this NPC. */
+    romanceable?: boolean;
     tags: string[];
 }
