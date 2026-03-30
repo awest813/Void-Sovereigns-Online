@@ -70,6 +70,8 @@ interface State {
     unlockedLoreIds: string[];
     /** Which hub the player is currently docked at ('meridian' or 'farpoint'). */
     currentHubId: 'meridian' | 'farpoint';
+    /** Per-NPC affection score (0–100) used by the romance system. */
+    affection: Record<string, number>;
 }
 
 const state: State = {
@@ -126,6 +128,7 @@ const state: State = {
     tutorialSeen: false,
     currentHubId: 'meridian',
     unlockedLoreIds: [],
+    affection: {},
 };
 
 function clampMin(n: number, min = 0): number {
@@ -427,5 +430,16 @@ export const GameState = {
     },
     isLoreUnlocked(id: string): boolean {
         return state.unlockedLoreIds.includes(id);
+    },
+
+    // ── Romance / affection ────────────────────────────────────────────────
+    /** Returns the player's affection score (0–100) with the given NPC. */
+    getAffection(npcId: string): number {
+        return state.affection[npcId] ?? 0;
+    },
+    /** Increases affection with an NPC by the given amount, capped at 100. */
+    increaseAffection(npcId: string, amount: number) {
+        const current = state.affection[npcId] ?? 0;
+        state.affection[npcId] = Math.min(100, current + amount);
     },
 };

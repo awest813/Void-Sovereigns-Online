@@ -21,6 +21,7 @@ import { phase8NPCs } from '../../../content/npcs/phase8-npcs';
 import { phase9NPCs } from '../../../content/npcs/phase9-npcs';
 import { phase10NPCs } from '../../../content/npcs/phase10-npcs';
 import { phase11NPCs } from '../../../content/npcs/phase11-npcs';
+import { romanceNPCs } from '../../../content/npcs/romance-npcs';
 import { phase5Lore } from '../../../content/lore/phase5-lore';
 import { phase6Lore } from '../../../content/lore/phase6-lore';
 import { phase7Lore } from '../../../content/lore/phase7-lore';
@@ -228,6 +229,9 @@ const HUB_NPC_IDS = [
     'ica-agent-vorren',
     'void-covenant-kestrel',
     'farpoint-kael',
+    // Romance NPCs
+    'mira-sael',
+    'tavos-rynn',
 ];
 
 // NPCs shown in the Station Contacts panel when at Farpoint hub
@@ -258,6 +262,8 @@ const FARPOINT_HUB_NPC_IDS = [
     'crow-veslin',
     'operative-sable',
     'frontier-agent-leva',
+    // Romance NPCs
+    'rysa-ofen',
 ];
 
 // Phase 4+5 faction contact NPC IDs shown in the Faction Standings panel
@@ -288,6 +294,16 @@ const DIALOGUE_LINE_HEIGHT       = 80;   // px per NPC dialogue row
 const DIALOGUE_VIEWPORT_TOP      = 260;  // y where the masked dialogue area begins
 const DIALOGUE_VIEWPORT_HEIGHT   = 316;  // visible height of the dialogue clip region
 const DIALOGUE_SCROLL_SPEED      = 0.3;  // wheel-delta multiplier for NPC dialogue scroll
+
+// ── Romance system constants ─────────────────────────────────────────────────
+const ROMANCE_AFFECTION_GAIN     = 15;   // affection gained per bonding interaction
+const ROMANCE_TIERS = [
+    { threshold: 100, label: 'PARTNER',      color: '#ff6699', actionLabel: '[ ♥ PARTNERED ]' },
+    { threshold:  75, label: 'CLOSE',        color: '#ff99bb', actionLabel: '[ ♥ OPEN UP ]' },
+    { threshold:  50, label: 'FRIEND',       color: '#ffaabb', actionLabel: '[ ♥ GROW CLOSER ]' },
+    { threshold:  25, label: 'ACQUAINTANCE', color: '#ddaacc', actionLabel: '[ ♥ FLIRT ]' },
+    { threshold:   0, label: 'STRANGER',     color: '#888899', actionLabel: '[ ♥ INTRODUCE YOURSELF ]' },
+] as const;
 const CODEX_SCROLL_SPEED         = 0.3;  // wheel-delta multiplier for codex scroll
 const INVENTORY_SCROLL_SPEED     = 0.3;  // wheel-delta multiplier for inventory scroll
 const CODEX_CONTENT_MAX_LENGTH   = 360;  // max characters shown per lore entry in codex
@@ -1332,7 +1348,7 @@ export class HubScene extends Scene {
             : 'Meridian Station — talk to the locals';
         this.panelHeader(c, 'STATION CONTACTS', subtitle);
 
-        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs, ...phase10NPCs, ...phase11NPCs];
+        const allNPCs = [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs, ...phase10NPCs, ...phase11NPCs, ...romanceNPCs];
         const npcIds = isFarpoint ? FARPOINT_HUB_NPC_IDS : HUB_NPC_IDS;
         const npcs = allNPCs.filter(n => npcIds.includes(n.id));
         const colW = 290;
@@ -1350,6 +1366,13 @@ export class HubScene extends Scene {
             c.add(this.add.text(x + 100, y + 20, npc.name, {
                 fontFamily: 'Arial Black', fontSize: 14, color: C.textPrimary, align: 'center',
             }).setOrigin(0.5));
+
+            // Romance heart badge
+            if (npc.romanceable) {
+                c.add(this.add.text(x + 215, y + 20, '♥', {
+                    fontFamily: 'Arial', fontSize: 13, color: '#ff6699', align: 'center',
+                }).setOrigin(0.5));
+            }
 
             const roleLine = npc.role.map(r => r.replace('-', ' ')).join(', ').toUpperCase();
             c.add(this.add.text(x + 100, y + 40, roleLine, {
@@ -1461,9 +1484,39 @@ export class HubScene extends Scene {
             }).setOrigin(0.5));
         }
 
-        this.makeButton(c, 512, 640, '[ ← BACK TO CONTACTS ]', () => {
-            this.showPanel('npcs');
-        }, C.textSecond);
+        // ── Romance panel for romanceable NPCs ──────────────────────────────
+        if (npc.romanceable) {
+            const aff = GameState.getAffection(npc.id);
+            const tier = ROMANCE_TIERS.find(t => aff >= t.threshold) ?? ROMANCE_TIERS[ROMANCE_TIERS.length - 1];
+            c.add(this.add.text(512, 614, `♥  RELATIONSHIP: ${tier.label}  (${aff}/100)`, {
+                fontFamily: 'Arial', fontSize: 12, color: tier.color, align: 'center',
+            }).setOrigin(0.5));
+
+            if (aff < 100) {
+                const bondBtn = this.add.text(512, 640, tier.actionLabel, {
+                    fontFamily: 'Arial Black', fontSize: 13, color: '#ff6699', align: 'center',
+                }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+                bondBtn.on('pointerover', () => bondBtn.setStyle({ color: '#ffaabb' }));
+                bondBtn.on('pointerout', () => bondBtn.setStyle({ color: '#ff6699' }));
+                bondBtn.on('pointerdown', () => {
+                    GameState.increaseAffection(npc.id, ROMANCE_AFFECTION_GAIN);
+                    this.showNpcDialogue(npc.id);
+                });
+                c.add(bondBtn);
+            } else {
+                c.add(this.add.text(512, 640, '[ ♥ PARTNERED ]', {
+                    fontFamily: 'Arial Black', fontSize: 13, color: '#ff6699', align: 'center',
+                }).setOrigin(0.5));
+            }
+
+            this.makeButton(c, 512, 665, '[ ← BACK TO CONTACTS ]', () => {
+                this.showPanel('npcs');
+            }, C.textSecond);
+        } else {
+            this.makeButton(c, 512, 640, '[ ← BACK TO CONTACTS ]', () => {
+                this.showPanel('npcs');
+            }, C.textSecond);
+        }
 
         this.showPanel('npc-dialogue');
     }
@@ -1489,6 +1542,18 @@ export class HubScene extends Scene {
                 case '==': return playerRep === threshold;
             }
         }
+        const affMatch = condition.match(/^affection\.([^\s]+)\s*(>=|<=|>|<|==)\s*(\d+)$/);
+        if (affMatch) {
+            const playerAff = GameState.getAffection(affMatch[1]);
+            const threshold = parseInt(affMatch[3], 10);
+            switch (affMatch[2]) {
+                case '>=': return playerAff >= threshold;
+                case '<=': return playerAff <= threshold;
+                case '>':  return playerAff >  threshold;
+                case '<':  return playerAff <  threshold;
+                case '==': return playerAff === threshold;
+            }
+        }
         const flagMatch = condition.match(/^flag\.(.+)$/);
         if (flagMatch) {
             return GameState.getFlag(flagMatch[1]);
@@ -1498,7 +1563,7 @@ export class HubScene extends Scene {
 
     /** Searches all NPC arrays to find an NPC by ID. */
     private findNpc(npcId: string) {
-        return [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs, ...phase10NPCs, ...phase11NPCs].find(n => n.id === npcId) ?? null;
+        return [...meridianNPCs, ...phase4NPCs, ...phase5NPCs, ...phase6NPCs, ...phase7NPCs, ...phase8NPCs, ...phase9NPCs, ...phase10NPCs, ...phase11NPCs, ...romanceNPCs].find(n => n.id === npcId) ?? null;
     }
 
     // ── Codex panel ───────────────────────────────────────────────────────
